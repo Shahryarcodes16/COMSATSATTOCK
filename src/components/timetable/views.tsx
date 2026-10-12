@@ -133,7 +133,7 @@ export function TodayView() {
             <p className="eyebrow">Choose a day & lecture</p>
             <h2>Find your window</h2>
           </div>
-          <span className="fine">Availability follows the published timetable.</span>
+          <span className="fine">Free means no class is listed in the published timetable.</span>
         </div>
         <DaySlotBar />
         <div className="availability-context" aria-live="polite" aria-atomic="true">
@@ -346,7 +346,7 @@ export function RoomsView() {
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
-      <div className="chips" role="group" aria-label="Room type">
+      <div className="chips room-type-filters" role="group" aria-label="Room type">
         {(["All", ...ROOM_GROUPS] as const).map((item) => (
           <button
             key={item}
@@ -440,6 +440,7 @@ export function RoomsView() {
           ))}
         </div>
       )}
+      <p className="fine">Availability follows the selected timetable slot. Confirm room access before you go.</p>
     </div>
   );
 }
@@ -449,6 +450,11 @@ export function FacultyView() {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
   const [sort, setSort] = useState<"az" | "light">("az");
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(18);
+  useEffect(() => {
+    setVisibleCount(18);
+  }, [query, mode, sort, savedOnly, day, slot]);
   const needle = query.trim().toLowerCase();
 
   const occupied = useMemo(() => {
@@ -472,6 +478,7 @@ export function FacultyView() {
 
   const matched = teachers
     .map((label, id) => ({ id, label }))
+    .filter((person) => !savedOnly || pinnedTeachers.includes(person.id))
     .filter((person) => person.label.toLowerCase().includes(needle))
     .sort((a, b) => order(a.id, b.id));
   const free = matched.filter((person) => isFree(forTeacher(person.id), day, slot, 1));
@@ -497,6 +504,7 @@ export function FacultyView() {
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
+      <div className="faculty-toolbar">
       <Segment
         label="Sort"
         value={sort}
@@ -515,12 +523,21 @@ export function FacultyView() {
           { value: "busy", label: `Busy ${busy.length}` },
         ]}
       />
+      </div>
+      <div className="faculty-results-head">
+        <p className="fine" role="status">
+          Showing {Math.min(visibleCount, mode === "free" ? free.length : busy.length)} of {mode === "free" ? free.length : busy.length} faculty · {DAYS[day]}, {SLOTS[slot].label}
+        </p>
+        <button type="button" className={savedOnly ? "btn solid tap" : "btn tap"} aria-pressed={savedOnly} onClick={() => setSavedOnly(!savedOnly)}>
+          <Pin size={14} aria-hidden /> Saved only
+        </button>
+      </div>
       {mode === "free" ? (
         free.length === 0 ? (
-          <p className="quiet">No free faculty member matches this search.</p>
+          <p className="quiet">{savedOnly ? "No saved faculty match this slot and search. Save a teacher from their schedule, or turn off Saved only." : "No free faculty member matches this search."}</p>
         ) : (
           <div className="people">
-            {free.map((person) => (
+            {free.slice(0, visibleCount).map((person) => (
               <button
                 key={person.id}
                 type="button"
@@ -546,7 +563,7 @@ export function FacultyView() {
         <p className="quiet">Nobody matching this search is teaching right then.</p>
       ) : (
         <div className="stack">
-          {busy.map((person) => (
+          {busy.slice(0, visibleCount).map((person) => (
             <button
               key={person.id}
               type="button"
@@ -559,6 +576,12 @@ export function FacultyView() {
           ))}
         </div>
       )}
+      {visibleCount < (mode === "free" ? free.length : busy.length) ? (
+        <button type="button" className="btn tap faculty-show-more" onClick={() => setVisibleCount((count) => count + 18)}>
+          Show more faculty ({(mode === "free" ? free.length : busy.length) - visibleCount} remaining)
+        </button>
+      ) : null}
+      <p className="fine">Free means no scheduled class in this slot; contact the teacher to confirm availability.</p>
     </div>
   );
 }
@@ -837,10 +860,11 @@ export function FindView() {
                     </span>
                   ))}
                 </div>
-                {["L1", "L2", "L3", "L4", "L5"].map((label, slotIndex) => (
+                {SLOTS.map(({ label }, slotIndex) => (
                   <div key={label} className="week-row" role="row">
                     <span className="hd" role="rowheader">
                       {label}
+                      <small className="shared-slot-time">{rangeLabel(slotIndex)}</small>
                     </span>
                     {[0, 1, 2, 3, 4].map((dayIndex) => {
                       const openCell = free.some(
@@ -850,7 +874,7 @@ export function FindView() {
                         <i
                           key={dayIndex}
                           role="cell"
-                          aria-label={`${DAYS[dayIndex]} ${label}: ${openCell ? "free" : "busy"}`}
+                          aria-label={`${DAYS[dayIndex]} ${label}, ${rangeLabel(slotIndex)} PKT: ${openCell ? "free" : "busy"}`}
                           className={openCell ? "open" : "shut"}
                         >
                           {openCell ? "Free" : "Busy"}
@@ -860,6 +884,7 @@ export function FindView() {
                   </div>
                 ))}
               </div>
+              <p className="fine">Times are in Islamabad time (PKT). Free means neither has a class listed; confirm before arranging a meeting.</p>
             </>
           ) : null}
         </section>

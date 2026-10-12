@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, List } from "lucide-react";
 import { Segment } from "@/components/timetable/chrome";
-import { DAY_SHORT, DAYS, SLOTS, cellMap, subjects, type ClassEntry } from "@/lib/schedule";
+import { DAY_SHORT, DAYS, SLOTS, cellMap, subjects, rangeLabel, type ClassEntry } from "@/lib/schedule";
 
 type Props = {
   list: ClassEntry[];
@@ -118,7 +118,7 @@ export function WeekGrid({ list, focusDay, liveDay, liveSlot, caption, onDayChan
                 <div className="agenda-time">
                   <b>{slot.label}</b>
                   <span>
-                    {slot.start}–{slot.end}
+                    {rangeLabel(index)}
                   </span>
                 </div>
                 <div className="stack">
@@ -164,7 +164,7 @@ export function WeekGrid({ list, focusDay, liveDay, liveSlot, caption, onDayChan
                 <th scope="row" className="time">
                   <b>{slot.label}</b>
                   <span>
-                    {slot.start}–{slot.end}
+                    {rangeLabel(index)}
                   </span>
                 </th>
                 {DAY_SHORT.map((_, cellDay) => {

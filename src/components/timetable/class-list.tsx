@@ -3,6 +3,7 @@ import {
   blocksFor,
   rooms,
   SLOTS,
+  timeLabel,
   subjects,
   teachers,
   type Block,
@@ -59,8 +60,8 @@ export function ClassList({
             className={live ? "class-card live" : "class-card"}
           >
             <div className="when">
-              <b>{SLOTS[block.start].start}</b>
-              <span>{SLOTS[block.end].end}</span>
+              <b>{timeLabel(SLOTS[block.start].from)}</b>
+              <span>{timeLabel(SLOTS[block.end].to)}</span>
             </div>
             <div>
               <div className="class-kind">

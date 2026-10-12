@@ -87,17 +87,22 @@ export const programs: string[] = [];
   }
 }
 
+export function timeLabel(minutes: number): string {
+  const hour = Math.floor(minutes / 60);
+  return `${hour % 12 || 12}:${String(minutes % 60).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 export function rangeLabel(slot: number): string {
   const item = SLOTS[slot];
   if (!item) return "";
-  return `${item.start}–${item.end}`;
+  return `${timeLabel(item.from)}–${timeLabel(item.to)}`;
 }
 
 export function spanLabel(start: number, end: number): string {
   const a = SLOTS[start];
   const b = SLOTS[end];
   if (!a || !b) return "";
-  return `${a.start}–${b.end}`;
+  return `${timeLabel(a.from)}–${timeLabel(b.to)}`;
 }
 
 export type Phase = "loading" | "weekend" | "before" | "live" | "break" | "after";
@@ -164,7 +169,7 @@ export function readClock(date: Date | null): ClockInfo {
       focusDay: dayIndex,
       focusSlot: 0,
       headline: "Before the first lecture",
-      detail: `L1 starts at 8:30, in ${until} minute${until === 1 ? "" : "s"}.`,
+      detail: `L1 starts at 8:30 AM, in ${until} minute${until === 1 ? "" : "s"}.`,
     };
   }
 
@@ -176,7 +181,7 @@ export function readClock(date: Date | null): ClockInfo {
       focusDay: dayIndex,
       focusSlot: SLOTS.length - 1,
       headline: "Teaching is done for today",
-      detail: "The last lecture ended at 4:30.",
+      detail: "The last lecture ended at 4:30 PM.",
     };
   }
 
@@ -191,7 +196,7 @@ export function readClock(date: Date | null): ClockInfo {
     headline: "Break between lectures",
     detail:
       next >= 0
-        ? `${SLOTS[next].label} starts at ${SLOTS[next].start}, in ${until} minute${until === 1 ? "" : "s"}.`
+        ? `${SLOTS[next].label} starts at ${timeLabel(SLOTS[next].from)}, in ${until} minute${until === 1 ? "" : "s"}.`
         : "",
   };
 }

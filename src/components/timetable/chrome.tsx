@@ -18,7 +18,7 @@ import {
   DEVELOPER_PHONE,
   DEVELOPER_PHONE_HREF,
 } from "@/lib/campus";
-import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, type ClockInfo } from "@/lib/schedule";
+import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, timeLabel, type ClockInfo } from "@/lib/schedule";
 import { useDesk, type View } from "@/components/timetable/context";
 
 const NAV: { id: View; label: string; icon: typeof Clock }[] = [
@@ -274,7 +274,7 @@ export function DaySlotBar() {
           label: (
             <>
               {item.label}
-              <small>{item.start}</small>
+              <small>{timeLabel(item.from)}</small>
             </>
           ),
           mark: clock.dayIndex === day && clock.liveSlot === index,

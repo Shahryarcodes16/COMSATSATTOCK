@@ -1811,7 +1811,7 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.35rem 0.6rem;
-    border-radius: var(--r-sm);
+    border-radius: var(--r-md);
     background: var(--c-brass-soft);
     color: var(--c-accent);
     font-weight: 700;
@@ -2649,4 +2649,76 @@
   .batch-controls .today-indicator {
     margin-left: 0;
   }
+}
+
+/* Availability details stay readable at phone widths. */
+@layer components {
+  .faculty-results-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+  .faculty-results-head p { margin: 0; }
+  .faculty-show-more { justify-self: center; }
+  .faculty-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .room-type-filters {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .free-grid { grid-template-columns: 4.5rem repeat(5, minmax(0, 1fr)); }
+  .shared-slot-time {
+    display: block;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .free-grid .hd:has(.shared-slot-time) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+@media (max-width: 639px) {
+  .quiet { font-size: 0.875rem; line-height: 1.6; }
+  .search input,
+  .select { font-size: 1rem; }
+  .faculty-toolbar { gap: 0.5rem; }
+  .faculty-toolbar .seg button { font-size: 0.75rem; padding-inline: 0.35rem; min-height: 3rem; }
+  .faculty-results-head { gap: 0.5rem; }
+  .faculty-results-head p { flex: 1 1 10rem; }
+  .rooms-page .room-type-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .room-type-filters .chip { min-height: 2.75rem; padding-inline: 0.5rem; }
+  .when b { font-size: 0.875rem; line-height: 1.5; }
+  .when span { font-size: 0.75rem; line-height: 1.5; }
+  .agenda-time span,
+  .week .time span { line-height: 1.6; overflow-wrap: anywhere; }
+  .person-copy > b { font-size: 0.875rem; }
+  .class-meta .btn { min-height: 2.75rem; }
+  .hello,
+  .fine,
+  .selection-bar .status,
+  .availability-context { font-size: 0.8125rem; line-height: 1.6; }
+  .stat span { font-size: 0.75rem; }
+  .stat-window { font-size: 0.75rem; }
+  .seg button small { font-size: 0.6875rem; line-height: 1.5; }
+  .overview-availability .availability-heading > .fine { display: block; }
+  .availability-heading { align-items: flex-start; flex-direction: column; gap: 0.5rem; }
+  .free-grid { grid-template-columns: 4.25rem repeat(5, minmax(0, 1fr)); gap: 0.2rem; }
+  .free-grid span,
+  .free-grid i { font-size: 0.6875rem; min-height: 2.75rem; }
+  .shared-slot-time { font-size: 0.6875rem; }
+  .faculty-results-head .btn { min-height: 2.75rem; }
 }
