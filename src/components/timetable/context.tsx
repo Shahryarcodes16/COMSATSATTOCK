@@ -90,6 +90,22 @@ type DeskApi = {
 
 const DeskContext = createContext<DeskApi | null>(null);
 
+function urlSelection() {
+  const params = new URLSearchParams(window.location.search);
+  const view = params.get("view");
+  const batch = params.get("batch");
+  const day = params.get("day");
+  const slot = params.get("slot");
+  return {
+    view: VIEWS.includes(view as View) ? (view as View) : undefined,
+    batchId: batch !== null && inRange(Number(batch), batches.length) ? Number(batch) : undefined,
+    pick:
+      day !== null && slot !== null && inRange(Number(day), 5) && inRange(Number(slot), 5)
+        ? { day: Number(day), slot: Number(slot) }
+        : null,
+  };
+}
+
 export function DeskProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [ready, setReady] = useState(false);
@@ -98,27 +114,88 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   const [detail, setDetail] = useState<Detail | null>(null);
 
   useEffect(() => {
+    let saved = DEFAULTS;
     try {
-      setPrefs(sanitize(JSON.parse(localStorage.getItem(KEY) || "null")));
+      saved = sanitize(JSON.parse(localStorage.getItem(KEY) || "null"));
     } catch {
-      setPrefs(DEFAULTS);
+      /* Preferences remain available for this session when storage is blocked. */
     }
+    const selection = urlSelection();
+    setPrefs({
+      ...saved,
+      view: selection.view ?? saved.view,
+      batchId: selection.batchId ?? saved.batchId,
+    });
+    setPick(selection.pick);
     setReady(true);
   }, []);
 
   useEffect(() => {
-    const tick = () => setNow(new Date());
+    let timer: number;
+    const tick = () => {
+      const date = new Date();
+      setNow(date);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(tick, 60000 - (date.getSeconds() * 1000 + date.getMilliseconds()));
+    };
     tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
+    const resume = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("focus", resume);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("focus", resume);
+    };
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    localStorage.setItem(KEY, JSON.stringify(prefs));
+    try {
+      localStorage.setItem(KEY, JSON.stringify(prefs));
+    } catch {
+      /* Keep working without persistent storage. */
+    }
     if (prefs.theme === "ink") document.documentElement.dataset.theme = "ink";
     else delete document.documentElement.dataset.theme;
   }, [prefs, ready]);
+
+  const historyReady = useRef(false);
+  useEffect(() => {
+    if (!ready) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", prefs.view);
+    url.searchParams.set("batch", String(prefs.batchId));
+    if (pick) {
+      url.searchParams.set("day", String(pick.day));
+      url.searchParams.set("slot", String(pick.slot));
+    } else {
+      url.searchParams.delete("day");
+      url.searchParams.delete("slot");
+    }
+    if (url.href !== window.location.href) {
+      if (historyReady.current) window.history.pushState(null, "", url);
+      else window.history.replaceState(null, "", url);
+    }
+    historyReady.current = true;
+  }, [ready, prefs.view, prefs.batchId, pick]);
+
+  useEffect(() => {
+    const restore = () => {
+      const selection = urlSelection();
+      setPrefs((current) => ({
+        ...current,
+        view: selection.view ?? "today",
+        batchId: selection.batchId ?? current.batchId,
+      }));
+      setPick(selection.pick);
+      setDetail(null);
+    };
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
 
   const clock = useMemo(() => readClock(now), [now]);
   const clockRef = useRef(clock);
@@ -134,6 +211,8 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   }, []);
   const setView = useCallback((view: View) => {
     setPrefs((current) => ({ ...current, view }));
+    setDetail(null);
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
   const setDay = useCallback((nextDay: number) => {
     setPick((current) => ({

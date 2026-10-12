@@ -1,6 +1,12 @@
-import { BatchesView, FacultyView, FindView, RoomsView, TodayView } from "@/components/timetable/views";
+import {
+  BatchesView,
+  FacultyView,
+  FindView,
+  RoomsView,
+  TodayView,
+} from "@/components/timetable/views";
 import { DeskProvider, useDesk } from "@/components/timetable/context";
-import { Dock, Sidebar, Topbar } from "@/components/timetable/chrome";
+import { CampusFooter, Dock, Sidebar, Topbar } from "@/components/timetable/chrome";
 import { DetailSheet } from "@/components/timetable/sheet";
 
 export function Desk() {
@@ -12,26 +18,39 @@ export function Desk() {
 }
 
 function Frame() {
-  const { view } = useDesk();
+  const { view, detail } = useDesk();
   return (
     <div className="app">
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <div className="shell">
+      <div className="shell" inert={detail ? true : undefined}>
         <Sidebar />
         <div className="column">
           <Topbar />
-          <main id="main" data-view={view}>
-            {view === "today" ? <TodayView /> : null}
-            {view === "rooms" ? <RoomsView /> : null}
-            {view === "faculty" ? <FacultyView /> : null}
-            {view === "batches" ? <BatchesView /> : null}
-            {view === "find" ? <FindView /> : null}
+          <main id="main" tabIndex={-1} data-view={view}>
+            <div hidden={view !== "today"}>
+              <TodayView />
+            </div>
+            <div hidden={view !== "rooms"}>
+              <RoomsView />
+            </div>
+            <div hidden={view !== "faculty"}>
+              <FacultyView />
+            </div>
+            <div hidden={view !== "batches"}>
+              <BatchesView />
+            </div>
+            <div hidden={view !== "find"}>
+              <FindView />
+            </div>
           </main>
+          <CampusFooter />
         </div>
       </div>
-      <Dock />
+      <div inert={detail ? true : undefined}>
+        <Dock />
+      </div>
       <DetailSheet />
     </div>
   );

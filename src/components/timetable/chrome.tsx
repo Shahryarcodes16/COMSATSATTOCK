@@ -1,14 +1,24 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Clock, DoorOpen, GraduationCap, Moon, Search, Sun, Users } from "lucide-react";
+import {
+  ArrowUpRight,
+  Clock,
+  DoorOpen,
+  GraduationCap,
+  Moon,
+  Phone,
+  Search,
+  Sun,
+  Users,
+} from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
-  DAY_SHORT,
-  DAYS,
-  SLOTS,
-  greeting,
-  rangeLabel,
-  type ClockInfo,
-} from "@/lib/schedule";
+  APP_NAME,
+  CAMPUS_TIME_LABEL,
+  DEVELOPER_NAME,
+  DEVELOPER_PHONE,
+  DEVELOPER_PHONE_HREF,
+} from "@/lib/campus";
+import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, type ClockInfo } from "@/lib/schedule";
 import { useDesk, type View } from "@/components/timetable/context";
 
 const NAV: { id: View; label: string; icon: typeof Clock }[] = [
@@ -16,16 +26,16 @@ const NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
   { id: "batches", label: "Batches", icon: Users },
-  { id: "find", label: "Find", icon: Search },
+  { id: "find", label: "Search", icon: Search },
 ];
 
 export function Brand() {
   return (
-    <div className="brand">
-      <img className="crest" src={crest} alt="COMSATS University Islamabad" />
+    <div className="brand" aria-label={APP_NAME}>
+      <img className="crest" src={crest} alt="COMSATS University Islamabad, Attock Campus" />
       <div>
-        <p className="eyebrow">COMSATS</p>
-        <p className="brand-name">Attock</p>
+        <p className="eyebrow">CUI Attock</p>
+        <p className="brand-name">Campus Timetable</p>
       </div>
     </div>
   );
@@ -36,6 +46,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <Brand />
+      <p className="nav-label">Campus workspace</p>
       <nav className="side-nav" aria-label="Sections">
         {NAV.map((item) => {
           const Icon = item.icon;
@@ -50,50 +61,77 @@ export function Sidebar() {
             >
               <Icon size={18} strokeWidth={1.75} aria-hidden />
               {item.label}
+              {on ? <ArrowUpRight className="nav-arrow" size={15} aria-hidden /> : null}
             </button>
           );
         })}
       </nav>
-      <p className="side-foot">
-        Timetable w.e.f. 5 Oct 2026.
-        <br />
-        Developed by Shahryar.
-      </p>
+      <div className="side-foot">
+        <span className="side-campus">
+          <GraduationCap size={18} aria-hidden />
+          Attock Campus
+        </span>
+        <p>Timetable from 5 Oct 2026</p>
+        <p>{CAMPUS_TIME_LABEL}</p>
+        <span className="side-note">A clearer view of campus life.</span>
+      </div>
     </aside>
   );
 }
 
 export function Topbar() {
-  const { now, theme, toggleTheme } = useDesk();
+  const { now, theme, toggleTheme, setView } = useDesk();
   const ink = theme === "ink";
   return (
     <header className="topbar">
       <div>
-        <div className="mobile-brand brand">
-          <img className="crest" src={crest} alt="" />
-          <div>
-            <p className="eyebrow">Attock Campus</p>
-            <p className="brand-name">Timetable</p>
-          </div>
+        <div className="mobile-brand">
+          <Brand />
         </div>
         <p className="hello">{greeting(now)}</p>
       </div>
-      <button
-        type="button"
-        className="icon-btn tap"
-        aria-label={ink ? "Use the paper theme" : "Use the ink theme"}
-        onClick={toggleTheme}
-      >
-        <span className="icon-swap">
-          <span className={ink ? "off" : ""}>
-            <Moon size={18} strokeWidth={1.75} aria-hidden />
+      <div className="topbar-actions">
+        <button type="button" className="topbar-search" onClick={() => setView("find")}>
+          <Search size={17} aria-hidden />
+          <span>Search campus</span>
+          <ArrowUpRight size={15} aria-hidden />
+        </button>
+        <button
+          type="button"
+          className="icon-btn tap"
+          aria-label={ink ? "Use the paper theme" : "Use the ink theme"}
+          onClick={toggleTheme}
+        >
+          <span className="icon-swap">
+            <span className={ink ? "off" : ""}>
+              <Moon size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className={ink ? "" : "off"}>
+              <Sun size={18} strokeWidth={1.75} aria-hidden />
+            </span>
           </span>
-          <span className={ink ? "" : "off"}>
-            <Sun size={18} strokeWidth={1.75} aria-hidden />
-          </span>
-        </span>
-      </button>
+        </button>
+      </div>
     </header>
+  );
+}
+
+export function CampusFooter() {
+  return (
+    <footer className="campus-footer">
+      <div>
+        <p>Developed by {DEVELOPER_NAME}</p>
+        <p className="fine">Attock Campus · {CAMPUS_TIME_LABEL}</p>
+      </div>
+      <a
+        className="btn tap"
+        href={DEVELOPER_PHONE_HREF}
+        aria-label={`Call developer ${DEVELOPER_NAME} at ${DEVELOPER_PHONE}`}
+      >
+        <Phone size={16} aria-hidden />
+        {DEVELOPER_PHONE}
+      </a>
+    </footer>
   );
 }
 
@@ -141,7 +179,7 @@ export function Segment({
   return (
     <div
       className="seg"
-      role="tablist"
+      role="group"
       aria-label={label}
       style={{ "--n": options.length, "--i": index } as CSSProperties}
     >
@@ -152,8 +190,8 @@ export function Segment({
           <button
             key={option.value}
             type="button"
-            role="tab"
-            aria-selected={on}
+            aria-pressed={on}
+            aria-description={option.mark ? "Current campus day or lecture" : undefined}
             disabled={option.disabled}
             className={[on ? "on" : "", option.mark ? "mark" : ""].filter(Boolean).join(" ")}
             onClick={() => onChange(option.value)}
@@ -181,10 +219,42 @@ export function showingCopy(
   return `Coming up · ${when}`;
 }
 
+export function DayPicker() {
+  const { day, setDay, clock, following, backToNow } = useDesk();
+  return (
+    <div className="selection-bar stack">
+      <Segment
+        label="Day"
+        value={String(day)}
+        onChange={(value) => setDay(Number(value))}
+        options={DAY_SHORT.map((label, index) => ({
+          value: String(index),
+          label,
+          mark: clock.dayIndex === index,
+        }))}
+      />
+      <div className="status">
+        <span>{DAYS[day]} schedule</span>
+        {clock.dayIndex !== null ? (
+          <span className="today-indicator">
+            <i aria-hidden />
+            Today
+          </span>
+        ) : null}
+        {!following ? (
+          <button type="button" className="btn tap" onClick={backToNow}>
+            Back to today
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function DaySlotBar() {
   const { day, slot, setDay, setSlot, clock, following, backToNow } = useDesk();
   return (
-    <div className="stack">
+    <div className="selection-bar stack">
       <Segment
         label="Day"
         value={String(day)}
@@ -210,7 +280,7 @@ export function DaySlotBar() {
           mark: clock.dayIndex === day && clock.liveSlot === index,
         }))}
       />
-      <div className="status">
+      <div className="status" aria-live="polite">
         <span>{showingCopy(day, slot, following, clock)}</span>
         {following ? null : (
           <button type="button" className="btn tap" onClick={backToNow}>

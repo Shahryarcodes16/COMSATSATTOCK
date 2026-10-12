@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Pin, X } from "lucide-react";
+import { Pin, X } from "lucide-react";
+import { CopySchedule } from "@/components/timetable/copy-schedule";
 import { useDesk, type Detail } from "@/components/timetable/context";
 import { WeekGrid } from "@/components/timetable/week-grid";
 import {
@@ -11,7 +12,6 @@ import {
   forRoom,
   forSubject,
   forTeacher,
-  formatSchedule,
   programOf,
   rangeLabel,
   roomGroup,
@@ -20,6 +20,7 @@ import {
   subjects,
   teachers,
   teachingLoad,
+  teachingHours,
 } from "@/lib/schedule";
 
 export function DetailSheet() {
@@ -46,8 +47,11 @@ export function DetailSheet() {
     const root = panelRef.current;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const items = () =>
-      [...root.querySelectorAll<HTMLElement>("button, select, a, input, textarea")].filter(
-        (node) => !node.hasAttribute("disabled"),
+      [
+        ...root.querySelectorAll<HTMLElement>("button, select, a, input, textarea, [tabindex]"),
+      ].filter(
+        (node) =>
+          !node.hasAttribute("disabled") && node.tabIndex >= 0 && node.getClientRects().length > 0,
       );
     items()[0]?.focus();
     const onKey = (event: KeyboardEvent) => {
@@ -76,13 +80,19 @@ export function DetailSheet() {
       document.body.style.overflow = previousOverflow;
       previous?.focus();
     };
-  }, [open, shown]);
+  }, [open]);
 
   if (!shown) return null;
 
   return (
-    <div className={open ? "sheet-root open" : "sheet-root"}>
-      <button type="button" className="sheet-back" aria-label="Close details" onClick={close} />
+    <div className={open ? "sheet-root open" : "sheet-root"} inert={open ? undefined : true}>
+      <button
+        type="button"
+        tabIndex={-1}
+        className="sheet-back"
+        aria-label="Close details"
+        onClick={close}
+      />
       <div
         ref={panelRef}
         className="sheet"
@@ -103,7 +113,7 @@ export function DetailSheet() {
           </button>
         </div>
         <div className="sheet-body">
-          <SheetBody detail={shown} />
+          <SheetBody key={`${shown.type}-${shown.id}`} detail={shown} />
         </div>
       </div>
     </div>
@@ -125,18 +135,7 @@ function titleOf(detail: Detail): string {
 }
 
 function SheetBody({ detail }: { detail: Detail }) {
-  const { clock, open, pinBatch, pinnedBatch, pinnedTeachers, togglePinTeacher } = useDesk();
-  const [copied, setCopied] = useState(false);
-
-  async function copy(title: string, list: Parameters<typeof formatSchedule>[1]) {
-    try {
-      await navigator.clipboard.writeText(formatSchedule(title, list));
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
-  }
+  const { clock, day, open, pinBatch, pinnedBatch, pinnedTeachers, togglePinTeacher } = useDesk();
 
   if (detail.type === "room") {
     const list = forRoom(detail.id);
@@ -151,11 +150,13 @@ function SheetBody({ detail }: { detail: Detail }) {
         </div>
         <WeekGrid
           list={list}
-          focusDay={clock.focusDay}
+          focusDay={day}
           liveDay={clock.dayIndex}
           liveSlot={clock.liveSlot}
           caption={(entry) =>
-            [batches[entry.batch], entry.teacher >= 0 ? teachers[entry.teacher] : ""].filter(Boolean).join(" · ")
+            [batches[entry.batch], entry.teacher >= 0 ? teachers[entry.teacher] : ""]
+              .filter(Boolean)
+              .join(" · ")
           }
         />
       </div>
@@ -170,7 +171,7 @@ function SheetBody({ detail }: { detail: Detail }) {
     return (
       <div className="stack">
         <p className="quiet">
-          {load} teaching hours this week
+          {teachingHours(detail.id)} teaching hours · {load} lecture slots this week
           {names.length ? ` · ${names.slice(0, 4).join(", ")}${names.length > 4 ? "…" : ""}` : ""}
         </p>
         <div className="meter" aria-hidden>
@@ -181,18 +182,17 @@ function SheetBody({ detail }: { detail: Detail }) {
             <Pin size={16} aria-hidden />
             {pinned ? "Unpin" : "Pin to Today"}
           </button>
-          <button type="button" className="btn tap" onClick={() => copy(teachers[detail.id], list)}>
-            <Copy size={16} aria-hidden />
-            {copied ? "Copied" : "Copy week"}
-          </button>
+          <CopySchedule title={teachers[detail.id]} list={list} />
         </div>
         <WeekGrid
           list={list}
-          focusDay={clock.focusDay}
+          focusDay={day}
           liveDay={clock.dayIndex}
           liveSlot={clock.liveSlot}
           caption={(entry) =>
-            [batches[entry.batch], entry.room >= 0 ? rooms[entry.room] : ""].filter(Boolean).join(" · ")
+            [batches[entry.batch], entry.room >= 0 ? rooms[entry.room] : ""]
+              .filter(Boolean)
+              .join(" · ")
           }
         />
       </div>
@@ -205,22 +205,26 @@ function SheetBody({ detail }: { detail: Detail }) {
     return (
       <div className="stack">
         <div className="row-actions">
-          <button type="button" className="btn tap" onClick={() => pinBatch(pinned ? null : detail.id)}>
+          <button
+            type="button"
+            className="btn tap"
+            onClick={() => pinBatch(pinned ? null : detail.id)}
+          >
             <Pin size={16} aria-hidden />
             {pinned ? "Unpin" : "Pin to Today"}
           </button>
-          <button type="button" className="btn tap" onClick={() => copy(batches[detail.id], list)}>
-            <Copy size={16} aria-hidden />
-            {copied ? "Copied" : "Copy week"}
-          </button>
+          <CopySchedule title={batches[detail.id]} list={list} />
         </div>
         <WeekGrid
           list={list}
-          focusDay={clock.focusDay}
+          focusDay={day}
           liveDay={clock.dayIndex}
           liveSlot={clock.liveSlot}
           caption={(entry) =>
-            [entry.teacher >= 0 ? teachers[entry.teacher] : "", entry.room >= 0 ? rooms[entry.room] : ""]
+            [
+              entry.teacher >= 0 ? teachers[entry.teacher] : "",
+              entry.room >= 0 ? rooms[entry.room] : "",
+            ]
               .filter(Boolean)
               .join(" · ")
           }
@@ -246,16 +250,28 @@ function SheetBody({ detail }: { detail: Detail }) {
           </strong>
           <small>{entry.repeater ? "Repeater section" : "Regular section"}</small>
           <div className="links">
-            <button type="button" className="btn tap" onClick={() => open({ type: "batch", id: entry.batch })}>
+            <button
+              type="button"
+              className="btn tap"
+              onClick={() => open({ type: "batch", id: entry.batch })}
+            >
               {batches[entry.batch]}
             </button>
             {entry.teacher >= 0 ? (
-              <button type="button" className="btn tap" onClick={() => open({ type: "teacher", id: entry.teacher })}>
+              <button
+                type="button"
+                className="btn tap"
+                onClick={() => open({ type: "teacher", id: entry.teacher })}
+              >
                 {teachers[entry.teacher]}
               </button>
             ) : null}
             {entry.room >= 0 ? (
-              <button type="button" className="btn tap" onClick={() => open({ type: "room", id: entry.room })}>
+              <button
+                type="button"
+                className="btn tap"
+                onClick={() => open({ type: "room", id: entry.room })}
+              >
                 {rooms[entry.room]}
               </button>
             ) : null}

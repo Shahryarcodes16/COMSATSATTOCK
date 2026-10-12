@@ -1,4 +1,24 @@
 import raw from "@/data/timetable.json";
+import { CAMPUS_TIME_ZONE } from "@/lib/campus";
+
+const campusPartsFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: CAMPUS_TIME_ZONE,
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function campusParts(date: Date) {
+  const parts = campusPartsFormatter.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? "";
+  return {
+    weekday: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(part("weekday")),
+    hour: Number(part("hour")),
+    minute: Number(part("minute")),
+  };
+}
 
 export const batches = raw.b;
 export const rooms = raw.r;
@@ -42,12 +62,7 @@ export const WEEK_CELLS = DAYS.length * SLOTS.length;
 
 export type RoomGroup = "Lecture halls" | "Classrooms" | "Lecture theatres" | "Labs";
 
-export const ROOM_GROUPS: RoomGroup[] = [
-  "Lecture halls",
-  "Classrooms",
-  "Lecture theatres",
-  "Labs",
-];
+export const ROOM_GROUPS: RoomGroup[] = ["Lecture halls", "Classrooms", "Lecture theatres", "Labs"];
 
 export function roomGroup(name: string): RoomGroup {
   if (name.startsWith("LH")) return "Lecture halls";
@@ -110,8 +125,8 @@ export function readClock(date: Date | null): ClockInfo {
     };
   }
 
-  const weekday = date.getDay();
-  const minutes = date.getHours() * 60 + date.getMinutes();
+  const { weekday, hour, minute } = campusParts(date);
+  const minutes = hour * 60 + minute;
 
   if (weekday === 0 || weekday === 6) {
     return {
@@ -182,10 +197,11 @@ export function readClock(date: Date | null): ClockInfo {
 }
 
 export function greeting(date: Date | null): string {
-  if (!date) return "COMSATS University Islamabad";
-  const hour = date.getHours();
+  if (!date) return "COMSATS University Islamabad · Attock Campus";
+  const { hour } = campusParts(date);
   const hello = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const when = date.toLocaleDateString(undefined, {
+  const when = date.toLocaleDateString("en-GB", {
+    timeZone: CAMPUS_TIME_ZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -195,7 +211,12 @@ export function greeting(date: Date | null): string {
 
 export function clockFace(date: Date | null): string {
   if (!date) return "–:–";
-  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return date.toLocaleTimeString("en-PK", {
+    timeZone: CAMPUS_TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 const byBatch: ClassEntry[][] = batches.map(() => []);
@@ -251,11 +272,14 @@ export function blocksFor(list: ClassEntry[], day: number): Block[] {
     .slice()
     .sort((a, b) => a.slot - b.slot || a.subject - b.subject || a.room - b.room);
   const blocks: Block[] = [];
+  const lastBySession = new Map<string, Block>();
   for (const entry of rows) {
-    const prev = blocks[blocks.length - 1];
+    const key = `${entry.batch}|${entry.room}|${entry.teacher}|${entry.subject}|${entry.repeater}`;
+    const prev = lastBySession.get(key);
     if (
       prev &&
       prev.end === entry.slot - 1 &&
+      SLOTS[prev.end].to === SLOTS[entry.slot].from &&
       prev.entry.batch === entry.batch &&
       prev.entry.room === entry.room &&
       prev.entry.teacher === entry.teacher &&
@@ -264,10 +288,12 @@ export function blocksFor(list: ClassEntry[], day: number): Block[] {
     ) {
       prev.end = entry.slot;
     } else {
-      blocks.push({ start: entry.slot, end: entry.slot, entry });
+      const block = { start: entry.slot, end: entry.slot, entry };
+      blocks.push(block);
+      lastBySession.set(key, block);
     }
   }
-  return blocks;
+  return blocks.sort((a, b) => a.start - b.start || a.entry.subject - b.entry.subject);
 }
 
 function uniqueSlots(list: ClassEntry[]): number {
@@ -280,6 +306,17 @@ export function teachingLoad(teacherId: number): number {
   return uniqueSlots(forTeacher(teacherId));
 }
 
+export function teachingHours(teacherId: number): number {
+  const cells = new Map(
+    forTeacher(teacherId).map((entry) => [`${entry.day}|${entry.slot}`, entry.slot]),
+  );
+  const minutes = [...cells.values()].reduce(
+    (total, slot) => total + SLOTS[slot].to - SLOTS[slot].from,
+    0,
+  );
+  return Math.round((minutes / 60) * 10) / 10;
+}
+
 export function roomLoad(roomId: number): number {
   return uniqueSlots(forRoom(roomId));
 }
@@ -288,12 +325,7 @@ export function batchLoad(batchId: number): number {
   return uniqueSlots(forBatch(batchId));
 }
 
-export function isFree(
-  list: ClassEntry[],
-  day: number,
-  slot: number,
-  span: 1 | 2,
-): boolean {
+export function isFree(list: ClassEntry[], day: number, slot: number, span: 1 | 2): boolean {
   const last = Math.min(SLOTS.length, slot + span);
   for (let cursor = slot; cursor < last; cursor += 1) {
     if (list.some((entry) => entry.day === day && entry.slot === cursor)) return false;
@@ -313,22 +345,21 @@ export function searchCatalog(query: string): {
   const empty = { batches: [], teachers: [], rooms: [], subjects: [] };
   if (needle.length < 1) return empty;
 
-  const take = (labels: readonly string[], limit: number): CatalogHit[] => {
+  const take = (labels: readonly string[]): CatalogHit[] => {
     const hits: CatalogHit[] = [];
     for (let id = 0; id < labels.length; id += 1) {
       if (labels[id].toLowerCase().includes(needle)) {
         hits.push({ id, label: labels[id] });
-        if (hits.length >= limit) break;
       }
     }
     return hits;
   };
 
   return {
-    batches: take(batches, 6),
-    teachers: take(teachers, 6),
-    rooms: take(rooms, 6),
-    subjects: take(subjects, 8),
+    batches: take(batches),
+    teachers: take(teachers),
+    rooms: take(rooms),
+    subjects: take(subjects),
   };
 }
 
@@ -343,7 +374,12 @@ export function summarize(list: ClassEntry[]): string {
 }
 
 export function formatSchedule(title: string, list: ClassEntry[]): string {
-  const lines = [title, "COMSATS University Islamabad, Attock Campus", "Timetable w.e.f. 5 Oct 2026", ""];
+  const lines = [
+    title,
+    "COMSATS University Islamabad, Attock Campus",
+    "Timetable w.e.f. 5 Oct 2026",
+    "",
+  ];
   for (let day = 0; day < DAYS.length; day += 1) {
     lines.push(DAYS[day]);
     const blocks = blocksFor(list, day);

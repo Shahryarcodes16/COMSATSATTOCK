@@ -39,7 +39,8 @@ export function ClassList({
     <div className="stack">
       {overlaps(blocks) ? (
         <p className="note">
-          More than one class shares a slot. These run in parallel, so confirm which section is yours.
+          More than one class shares a slot. These run in parallel, so confirm which section is
+          yours.
         </p>
       ) : null}
       {blocks.map((block) => {
@@ -62,6 +63,13 @@ export function ClassList({
               <span>{SLOTS[block.end].end}</span>
             </div>
             <div>
+              <div className="class-kind">
+                <span>{/lab/i.test(subjects[entry.subject]) ? "Practical lab" : "Lecture"}</span>
+                <span>
+                  {SLOTS[block.start].label}
+                  {block.end !== block.start ? `–${SLOTS[block.end].label}` : ""}
+                </span>
+              </div>
               <p className="subject">
                 {subjects[entry.subject]}
                 <span className="flags">
@@ -69,19 +77,31 @@ export function ClassList({
                   {live ? <span className="flag now">Now</span> : null}
                 </span>
               </p>
-              <div className="links">
+              <div className="links class-meta">
                 {who === "batch" && person ? (
-                  <button type="button" className="btn tap" onClick={() => open({ type: "teacher", id: entry.teacher })}>
+                  <button
+                    type="button"
+                    className="btn tap"
+                    onClick={() => open({ type: "teacher", id: entry.teacher })}
+                  >
                     {person}
                   </button>
                 ) : null}
                 {who === "teacher" ? (
-                  <button type="button" className="btn tap" onClick={() => open({ type: "batch", id: entry.batch })}>
+                  <button
+                    type="button"
+                    className="btn tap"
+                    onClick={() => open({ type: "batch", id: entry.batch })}
+                  >
                     {batch}
                   </button>
                 ) : null}
                 {room ? (
-                  <button type="button" className="btn tap" onClick={() => open({ type: "room", id: entry.room })}>
+                  <button
+                    type="button"
+                    className="btn tap"
+                    onClick={() => open({ type: "room", id: entry.room })}
+                  >
                     {room}
                   </button>
                 ) : null}

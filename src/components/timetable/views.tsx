@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Copy, Pin, Printer, Search } from "lucide-react";
-import { DaySlotBar, Segment } from "@/components/timetable/chrome";
+import {
+  ArrowUpRight,
+  CalendarDays,
+  Clock,
+  DoorOpen,
+  GraduationCap,
+  Pin,
+  Printer,
+  Search,
+  Users,
+} from "lucide-react";
+import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
 import { WeekGrid } from "@/components/timetable/week-grid";
+import { CopySchedule } from "@/components/timetable/copy-schedule";
+import { NextClassPanel } from "@/components/timetable/next-class";
 import {
   ROOM_GROUPS,
   WEEK_CELLS,
@@ -13,22 +25,23 @@ import {
   batchLoad,
   clockFace,
   DAYS,
+  SLOTS,
+  rangeLabel,
   forBatch,
   forRoom,
   forSubject,
   forTeacher,
-  formatSchedule,
   groupBySlot,
   isFree,
   mutualFree,
   programs,
-  programOf,
   roomGroup,
   rooms,
   searchCatalog,
   summarize,
   teachers,
   teachingLoad,
+  teachingHours,
   type RoomGroup,
 } from "@/lib/schedule";
 
@@ -38,6 +51,16 @@ function Meter({ value }: { value: number }) {
       <span style={{ width: `${Math.round((value / WEEK_CELLS) * 100)}%` }} />
     </div>
   );
+}
+
+function initials(name: string) {
+  return name
+    .replace(/\b(Prof|Dr|Mr|Ms)\.?\s*/g, "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("");
 }
 
 export function TodayView() {
@@ -59,116 +82,211 @@ export function TodayView() {
   const busyRooms = new Set(cell.map((entry) => entry.room).filter((id) => id >= 0));
   const busyTeachers = new Set(cell.map((entry) => entry.teacher).filter((id) => id >= 0));
   const mine = pinnedBatch === null ? [] : forBatch(pinnedBatch);
+  const currentLecture = ready && clock.dayIndex === day && clock.liveSlot === slot;
+  const availabilityWindow = `${DAYS[day]} · ${SLOTS[slot].label}`;
 
   return (
-    <div className="page">
-      <section className="hero">
-        <p className="kicker">
-          <i className={clock.phase === "live" ? "pip live" : "pip"} aria-hidden />
-          {clock.phase === "live" ? "In session" : "Campus clock"}
-        </p>
-        <h1 className="display">{clock.phase === "loading" ? "Attock Campus" : clockFace(now)}</h1>
-        <p className="lede">
-          <strong>{clock.headline}.</strong> {clock.detail}
-        </p>
+    <div className="page today-page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">COMSATS University Islamabad · Attock Campus</p>
+          <h1 className="page-title">Campus overview</h1>
+          <p className="quiet">Your schedule. Your spaces. Your next move.</p>
+        </div>
+        <span className="term-badge">Timetable · 5 Oct 2026</span>
+      </div>
+      <section className="campus-overview">
+        <div className="overview-copy">
+          <span className="campus-badge">
+            <GraduationCap size={16} aria-hidden />
+            Attock campus timetable
+          </span>
+          <h2>
+            A little more clarity.
+            <br />A lot less rushing.
+          </h2>
+          <p>Know where to be, find a free room, and make time to connect.</p>
+          <div className="overview-actions">
+            <button type="button" className="btn" onClick={() => setView("batches")}>
+              <CalendarDays size={16} aria-hidden />
+              Explore schedules
+            </button>
+            <button type="button" className="overview-link" onClick={() => setView("find")}>
+              Find on campus <ArrowUpRight size={16} aria-hidden />
+            </button>
+          </div>
+        </div>
+        <div className="overview-clock">
+          <p className="kicker">
+            <i className={clock.phase === "live" ? "pip live" : "pip"} aria-hidden />
+            Islamabad time
+          </p>
+          <p className="display">{clock.phase === "loading" ? "–:–" : clockFace(now)}</p>
+          <span className="clock-zone">PKT · UTC+5</span>
+          <p className="clock-state">{clock.headline}</p>
+          <span className="clock-detail">{clock.detail}</span>
+        </div>
+      </section>
+      <section className="overview-availability" aria-label="Campus availability">
+        <div className="availability-heading">
+          <div>
+            <p className="eyebrow">Choose a day & lecture</p>
+            <h2>Find your window</h2>
+          </div>
+          <span className="fine">Availability follows the published timetable.</span>
+        </div>
+        <DaySlotBar />
+        <div className="availability-context" aria-live="polite" aria-atomic="true">
+          <span className="availability-mode">
+            <Clock size={14} aria-hidden />
+            {currentLecture ? "Current lecture" : "Selected timetable slot"}
+          </span>
+          <p>
+            Counts below are for <strong>{availabilityWindow}</strong>, {rangeLabel(slot)} PKT.
+          </p>
+        </div>
         <div className="stats">
           <button type="button" className="stat tap" onClick={() => setView("batches")}>
-            <b>{cell.length}</b>
-            <span>Classes this lecture</span>
+            <span className="stat-icon">
+              <Users size={20} aria-hidden />
+            </span>
+            <div>
+              <b>{ready ? cell.length : "—"}</b>
+              <span>Batch listings</span>
+              <small className="stat-window">{availabilityWindow} · {rangeLabel(slot)}</small>
+            </div>
+            <ArrowUpRight size={18} aria-hidden />
           </button>
           <button type="button" className="stat tap" onClick={() => setView("rooms")}>
-            <b>{rooms.length - busyRooms.size}</b>
-            <span>Rooms free</span>
+            <span className="stat-icon">
+              <DoorOpen size={20} aria-hidden />
+            </span>
+            <div>
+              <b>{ready ? rooms.length - busyRooms.size : "—"}</b>
+              <span>Rooms free</span>
+              <small className="stat-window">{availabilityWindow} · {rangeLabel(slot)}</small>
+            </div>
+            <ArrowUpRight size={18} aria-hidden />
           </button>
           <button type="button" className="stat tap" onClick={() => setView("faculty")}>
-            <b>{teachers.length - busyTeachers.size}</b>
-            <span>Faculty free</span>
+            <span className="stat-icon">
+              <GraduationCap size={20} aria-hidden />
+            </span>
+            <div>
+              <b>{ready ? teachers.length - busyTeachers.size : "—"}</b>
+              <span>Faculty free</span>
+              <small className="stat-window">{availabilityWindow} · {rangeLabel(slot)}</small>
+            </div>
+            <ArrowUpRight size={18} aria-hidden />
           </button>
         </div>
       </section>
-
-      <section className="panel">
-        <div className="panel-head">
-          <h2>My batch</h2>
-          {pinnedBatch !== null ? (
-            <button type="button" className="btn tap" onClick={() => pinBatch(null)}>
-              Unpin
-            </button>
-          ) : null}
-        </div>
-        {!ready ? (
-          <p className="quiet">Opening your desk…</p>
-        ) : pinnedBatch === null ? (
-          <div className="stack">
-            <p className="quiet">Pin a batch and today’s classes stay on this page.</p>
-            <label className="stack">
-              <span className="quiet">Batch</span>
-              <select
-                className="select"
-                aria-label="Batch to pin"
-                value={batchId}
-                onChange={(event) => setBatchId(Number(event.target.value))}
+      <div className="today-layout">
+        <section className="panel my-batch-panel">
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">Your schedule</p>
+              <h2>My batch</h2>
+            </div>
+            {pinnedBatch !== null ? (
+              <button type="button" className="btn tap" onClick={() => pinBatch(null)}>
+                Change batch
+              </button>
+            ) : null}
+          </div>
+          {!ready ? (
+            <p className="quiet">Opening your timetable…</p>
+          ) : pinnedBatch === null ? (
+            <div className="empty-state stack">
+              <Users size={28} aria-hidden />
+              <h3>Make this timetable yours</h3>
+              <p className="quiet">
+                Choose your batch to see your classes here every time you visit.
+              </p>
+              <label className="stack">
+                <span className="field-label">Your batch</span>
+                <select
+                  className="select"
+                  value={batchId}
+                  onChange={(event) => setBatchId(Number(event.target.value))}
+                >
+                  {programs.map((program) => (
+                    <optgroup key={program} label={program}>
+                      {batchesInProgram(program).map((id) => (
+                        <option key={id} value={id}>
+                          {batches[id]}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className="btn solid tap" onClick={() => pinBatch(batchId)}>
+                <Pin size={16} aria-hidden />
+                Save my batch
+              </button>
+            </div>
+          ) : (
+            <div className="stack">
+              <p className="batch-heading">
+                {batches[pinnedBatch]} <span>{DAYS[day]}</span>
+              </p>
+              <ClassList list={mine} day={day} who="batch" />
+              <button
+                type="button"
+                className="btn solid tap"
+                onClick={() => {
+                  setBatchId(pinnedBatch);
+                  setView("batches");
+                }}
               >
-                {programs.map((program) => (
-                  <optgroup key={program} label={program}>
-                    {batchesInProgram(program).map((id) => (
-                      <option key={id} value={id}>
-                        {batches[id]}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="btn solid tap" onClick={() => pinBatch(batchId)}>
-              <Pin size={16} aria-hidden />
-              Pin {batches[batchId]}
-            </button>
-          </div>
-        ) : (
-          <div className="stack">
-            <p className="quiet">
-              {batches[pinnedBatch]} · {batchLoad(pinnedBatch)} lectures this week
-            </p>
-            <ClassList list={mine} day={day} who="batch" />
-            <button type="button" className="btn tap" onClick={() => setView("batches")}>
-              Open the full week
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Watching</h2>
-          <button type="button" className="btn tap" onClick={() => setView("faculty")}>
-            Faculty
-          </button>
+                Open the full week <ArrowUpRight size={16} aria-hidden />
+              </button>
+            </div>
+          )}
+        </section>
+        <div className="today-side stack">
+          <NextClassPanel />
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Saved faculty</h2>
+              <button type="button" className="btn tap" onClick={() => setView("faculty")}>
+                Faculty
+              </button>
+            </div>
+            {pinnedTeachers.length === 0 ? (
+              <p className="quiet">
+                Save a faculty member from their schedule to see their availability here.
+              </p>
+            ) : (
+              <div className="stack">
+                {pinnedTeachers.map((id) => {
+                  const hits = groupBySlot(forTeacher(id), day, slot);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className="watch tap"
+                      onClick={() => open({ type: "teacher", id })}
+                    >
+                      <span>
+                        <b>{teachers[id]}</b>
+                        <span className="sub">
+                          {hits.length === 0 ? "Free this lecture" : summarize(hits)}
+                        </span>
+                      </span>
+                      <Clock size={16} aria-hidden />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
-        {pinnedTeachers.length === 0 ? (
-          <p className="quiet">Pin faculty from their week and their current lecture shows up here.</p>
-        ) : (
-          <div className="stack">
-            {pinnedTeachers.map((id) => {
-              const hits = groupBySlot(forTeacher(id), day, slot);
-              return (
-                <button key={id} type="button" className="watch tap" onClick={() => open({ type: "teacher", id })}>
-                  <span>
-                    <b>{teachers[id]}</b>
-                    <span className="sub">
-                      {hits.length === 0 ? "Free this lecture" : summarize(hits)}
-                    </span>
-                  </span>
-                  <Clock size={16} aria-hidden />
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      </div>
       <p className="fine">
-        Only rooms and teachers on the published sheet are listed. Make-up classes are not included, so confirm
-        before you go.
+        Only rooms and teachers on the published sheet are listed. Make-up classes are not included,
+        so confirm before you go.
       </p>
     </div>
   );
@@ -184,14 +302,14 @@ export function RoomsView() {
 
   const occupied = useMemo(() => {
     const map = new Map<number, ReturnType<typeof at>>();
-    for (const entry of at(day, slot)) {
+    for (const entry of [...at(day, slot), ...(effectiveSpan === 2 ? at(day, slot + 1) : [])]) {
       if (entry.room < 0) continue;
       const list = map.get(entry.room);
       if (list) list.push(entry);
       else map.set(entry.room, [entry]);
     }
     return map;
-  }, [day, slot]);
+  }, [day, slot, effectiveSpan]);
 
   const needle = query.trim().toLowerCase();
   const matched = rooms
@@ -200,18 +318,22 @@ export function RoomsView() {
     .filter((room) => room.label.toLowerCase().includes(needle));
 
   const free = matched.filter((room) => isFree(forRoom(room.id), day, slot, effectiveSpan));
-  const busy = matched.filter((room) => occupied.has(room.id));
+  const busy = matched.filter((room) => !isFree(forRoom(room.id), day, slot, effectiveSpan));
 
   return (
-    <div className="page">
+    <div className="page rooms-page">
       <div className="panel-head">
-        <h1 className="section-title">Rooms</h1>
+        <div>
+          <p className="eyebrow">Find your space</p>
+          <h1 className="page-title">Rooms</h1>
+          <p className="quiet">Find an available room for the lecture you choose.</p>
+        </div>
       </div>
       <DaySlotBar />
       {day === 2 && slot === 1 ? (
         <p className="note">
-          Wednesday 10:00–11:30 is the activity slot. A few regular classes are still on the sheet, so free counts
-          follow those listings.
+          Wednesday 10:00–11:30 is the activity slot. A few regular classes are still on the sheet,
+          so free counts follow those listings.
         </p>
       ) : null}
       <label className="search">
@@ -219,15 +341,17 @@ export function RoomsView() {
         <input
           type="search"
           value={query}
+          aria-label="Search rooms"
           placeholder="Search a room"
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
-      <div className="chips" role="tablist" aria-label="Room type">
+      <div className="chips" role="group" aria-label="Room type">
         {(["All", ...ROOM_GROUPS] as const).map((item) => (
           <button
             key={item}
             type="button"
+            aria-pressed={group === item}
             className={group === item ? "chip on" : "chip"}
             onClick={() => setGroup(item)}
           >
@@ -282,8 +406,16 @@ export function RoomsView() {
                       className="tile tap"
                       onClick={() => open({ type: "room", id: room.id })}
                     >
-                      <i className="dot" aria-hidden />
-                      {room.label}
+                      <span className="room-icon">
+                        <DoorOpen size={19} aria-hidden />
+                      </span>
+                      <span className="room-copy">
+                        <b>{room.label}</b>
+                        <span>
+                          Available this {effectiveSpan === 2 ? "and next lecture" : "lecture"}
+                        </span>
+                      </span>
+                      <ArrowUpRight size={16} className="card-arrow" aria-hidden />
                     </button>
                   ))}
                 </div>
@@ -346,9 +478,13 @@ export function FacultyView() {
   const busy = matched.filter((person) => occupied.has(person.id));
 
   return (
-    <div className="page">
+    <div className="page faculty-page">
       <div className="panel-head">
-        <h1 className="section-title">Faculty</h1>
+        <div>
+          <p className="eyebrow">Connect on campus</p>
+          <h1 className="page-title">Faculty</h1>
+          <p className="quiet">Explore teaching schedules and free lectures.</p>
+        </div>
       </div>
       <DaySlotBar />
       <label className="search">
@@ -356,6 +492,7 @@ export function FacultyView() {
         <input
           type="search"
           value={query}
+          aria-label="Search faculty"
           placeholder="Search faculty"
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -390,8 +527,17 @@ export function FacultyView() {
                 className="person tap"
                 onClick={() => open({ type: "teacher", id: person.id })}
               >
-                {person.label}
-                {pinnedTeachers.includes(person.id) ? " · pinned" : ""}
+                <span className="avatar" aria-hidden>
+                  {initials(person.label)}
+                </span>
+                <span className="person-copy">
+                  <b>{person.label}</b>
+                  <span>
+                    {teachingHours(person.id)} teaching hours / week
+                    {pinnedTeachers.includes(person.id) ? " · Saved" : ""}
+                  </span>
+                </span>
+                <span className="availability-tag">Free</span>
               </button>
             ))}
           </div>
@@ -418,91 +564,105 @@ export function FacultyView() {
 }
 
 export function BatchesView() {
-  const { batchId, setBatchId, day, clock, pinBatch, pinnedBatch } = useDesk();
+  const { batchId, setBatchId, day, setDay, clock, pinBatch, pinnedBatch } = useDesk();
   const [program, setProgram] = useState("All");
-  const [copied, setCopied] = useState(false);
   const ids = batchesInProgram(program);
   const list = forBatch(batchId);
 
   useEffect(() => {
     const next = batchesInProgram(program);
-    if (!next.includes(batchId) && next[0] !== undefined) setBatchId(next[0]);
+    if (!next.includes(batchId)) setProgram("All");
   }, [program, batchId, setBatchId]);
 
-  async function copy() {
-    const text = formatSchedule(batches[batchId], list);
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   return (
-    <div className="page">
+    <div className="page batches-page">
+      <p className="print-batch-title">{batches[batchId]} · Timetable from 5 October 2026</p>
       <div className="panel-head">
-        <h1 className="section-title">Batches</h1>
+        <div>
+          <p className="eyebrow">Plan your week</p>
+          <h1 className="page-title">Batch schedules</h1>
+          <p className="quiet">Your classes, from Monday to Friday.</p>
+        </div>
         <button
           type="button"
           className="btn tap"
+          aria-pressed={pinnedBatch === batchId}
           onClick={() => pinBatch(pinnedBatch === batchId ? null : batchId)}
         >
           <Pin size={16} aria-hidden />
           {pinnedBatch === batchId ? "Pinned" : "Pin"}
         </button>
       </div>
-      <div className="chips" aria-label="Programme">
-        {["All", ...programs].map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={program === item ? "chip on" : "chip"}
-            onClick={() => setProgram(item)}
-          >
-            {item.replace("BS(", "").replace(")", "")}
-          </button>
-        ))}
-      </div>
-      <select
-        className="select"
-        aria-label="Choose batch"
-        value={ids.includes(batchId) ? batchId : (ids[0] ?? batchId)}
-        onChange={(event) => setBatchId(Number(event.target.value))}
-      >
-        {(program === "All" ? programs : [program]).map((name) => (
-          <optgroup key={name} label={name}>
-            {batchesInProgram(name).map((id) => (
-              <option key={id} value={id}>
-                {batches[id]}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-      <p className="quiet">
-        {programOf(batches[batchId])} · {batchLoad(batchId)} of {WEEK_CELLS} lectures filled
-      </p>
-      <Meter value={batchLoad(batchId)} />
+      <section className="batch-controls panel" aria-label="Choose your batch and day">
+        <div className="chips" aria-label="Programme">
+          {["All", ...programs].map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-pressed={program === item}
+              className={program === item ? "chip on" : "chip"}
+              onClick={() => {
+                setProgram(item);
+                const next = batchesInProgram(item);
+                if (!next.includes(batchId) && next[0] !== undefined) setBatchId(next[0]);
+              }}
+            >
+              {item.replace("BS(", "").replace(")", "")}
+            </button>
+          ))}
+        </div>
+        <div className="batch-selection">
+          <label className="batch-picker stack">
+            <span className="field-label">Batch</span>
+            <select
+              className="select"
+              aria-label="Choose batch"
+              value={ids.includes(batchId) ? batchId : (ids[0] ?? batchId)}
+              onChange={(event) => setBatchId(Number(event.target.value))}
+            >
+              {(program === "All" ? programs : [program]).map((name) => (
+                <optgroup key={name} label={name}>
+                  {batchesInProgram(name).map((id) => (
+                    <option key={id} value={id}>
+                      {batches[id]}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <div className="batch-load stack">
+            <p className="quiet">
+              {batchLoad(batchId)} / {WEEK_CELLS} lecture slots scheduled
+            </p>
+            <Meter value={batchLoad(batchId)} />
+          </div>
+        </div>
+        <DayPicker />
+      </section>
       <WeekGrid
         list={list}
+        onDayChange={setDay}
         focusDay={day}
         liveDay={clock.dayIndex}
         liveSlot={clock.liveSlot}
         caption={(entry) =>
-          [entry.teacher >= 0 ? teachers[entry.teacher] : "", entry.room >= 0 ? rooms[entry.room] : ""]
+          [
+            entry.teacher >= 0 ? teachers[entry.teacher] : "",
+            entry.room >= 0 ? rooms[entry.room] : "",
+          ]
             .filter(Boolean)
             .join(" · ")
         }
       />
-      <h2 className="section-title">{clock.dayIndex === day ? "This day" : DAYS[day]}</h2>
-      <ClassList list={list} day={day} who="batch" />
+      <section className="daily-summary stack">
+        <h2 className="section-title">
+          {DAYS[day]} · {batches[batchId]}
+        </h2>
+        <ClassList list={list} day={day} who="batch" />
+      </section>
       <div className="row-actions noprint">
-        <button type="button" className="btn tap" onClick={copy}>
-          {copied ? "Copied" : "Copy week"}
-          <Copy size={16} aria-hidden />
-        </button>
+        <CopySchedule key={batchId} title={batches[batchId]} list={list} />
         <button type="button" className="btn tap" onClick={() => window.print()}>
           <Printer size={16} aria-hidden />
           Print
@@ -524,9 +684,17 @@ function HitGroup({
   if (hits.length === 0) return null;
   return (
     <section className="stack">
-      <h2 className="group-label">{title}</h2>
+      <h2 className="group-label">
+        {title}
+        <span>{hits.length} matches</span>
+      </h2>
       {hits.map((hit) => (
-        <button key={`${title}-${hit.id}`} type="button" className="hit tap" onClick={() => onOpen(hit.id)}>
+        <button
+          key={`${title}-${hit.id}`}
+          type="button"
+          className="hit tap"
+          onClick={() => onOpen(hit.id)}
+        >
           {hit.label}
           {title === "Subjects" ? <small>{forSubject(hit.id).length} offerings</small> : null}
         </button>
@@ -547,34 +715,52 @@ export function FindView() {
   const rightId = right === "" ? -1 : Number(right);
   const ready = leftId >= 0 && rightId >= 0 && (meet === "batch" || leftId !== rightId);
   const free = ready
-    ? mutualFree(
-        meet === "teachers" ? forTeacher(leftId) : forBatch(leftId),
-        forTeacher(rightId),
-      )
+    ? mutualFree(meet === "teachers" ? forTeacher(leftId) : forBatch(leftId), forTeacher(rightId))
     : [];
   const freeNow = free.some((cell) => cell.day === day && cell.slot === slot);
 
   return (
-    <div className="page">
+    <div className="page search-page">
       <div className="panel-head">
-        <h1 className="section-title">Find</h1>
+        <div>
+          <p className="eyebrow">Everything on the timetable</p>
+          <h1 className="page-title">Search & meet</h1>
+          <p className="quiet">Find a class or a shared free lecture.</p>
+        </div>
       </div>
       <label className="search">
         <Search size={18} aria-hidden />
         <input
           type="search"
           value={query}
+          aria-label="Search subjects, faculty, rooms, or batches"
           placeholder="Subject, teacher, room, or batch"
           onChange={(event) => setQuery(event.target.value)}
         />
       </label>
       {query.trim() ? (
         <div className="stack">
-          <HitGroup title="Batches" hits={hits.batches} onOpen={(id) => { setBatchId(id); setView("batches"); }} />
-          <HitGroup title="Faculty" hits={hits.teachers} onOpen={(id) => open({ type: "teacher", id })} />
+          <HitGroup
+            title="Batches"
+            hits={hits.batches}
+            onOpen={(id) => {
+              setBatchId(id);
+              setView("batches");
+            }}
+          />
+          <HitGroup
+            title="Faculty"
+            hits={hits.teachers}
+            onOpen={(id) => open({ type: "teacher", id })}
+          />
           <HitGroup title="Rooms" hits={hits.rooms} onOpen={(id) => open({ type: "room", id })} />
-          <HitGroup title="Subjects" hits={hits.subjects} onOpen={(id) => open({ type: "subject", id })} />
-          {hits.batches.length + hits.teachers.length + hits.rooms.length + hits.subjects.length === 0 ? (
+          <HitGroup
+            title="Subjects"
+            hits={hits.subjects}
+            onOpen={(id) => open({ type: "subject", id })}
+          />
+          {hits.batches.length + hits.teachers.length + hits.rooms.length + hits.subjects.length ===
+          0 ? (
             <p className="quiet">Nothing on the sheet matches that.</p>
           ) : null}
         </div>
@@ -582,7 +768,8 @@ export function FindView() {
         <section className="panel stack">
           <h2>When are they both free?</h2>
           <p className="quiet">
-            Pick two teachers, or a batch and a teacher, and see the lectures where neither is already booked.
+            Pick two teachers, or a batch and a teacher, and see the lectures where neither is
+            already booked.
           </p>
           <Segment
             label="Who to compare"
@@ -599,7 +786,11 @@ export function FindView() {
           />
           <label className="stack">
             <span className="quiet">{meet === "batch" ? "Batch" : "First teacher"}</span>
-            <select className="select" value={left} onChange={(event) => setLeft(event.target.value)}>
+            <select
+              className="select"
+              value={left}
+              onChange={(event) => setLeft(event.target.value)}
+            >
               <option value="">Choose</option>
               {meet === "batch"
                 ? batches.map((label, id) => (
@@ -616,7 +807,11 @@ export function FindView() {
           </label>
           <label className="stack">
             <span className="quiet">{meet === "batch" ? "Teacher" : "Second teacher"}</span>
-            <select className="select" value={right} onChange={(event) => setRight(event.target.value)}>
+            <select
+              className="select"
+              value={right}
+              onChange={(event) => setRight(event.target.value)}
+            >
               <option value="">Choose</option>
               {teachers.map((label, id) => (
                 <option key={label} value={id}>
@@ -631,21 +826,34 @@ export function FindView() {
                 {free.length} shared free lecture{free.length === 1 ? "" : "s"} this week.
                 {freeNow ? " Both are free in the lecture you are viewing." : ""}
               </p>
-              <div className="free-grid" aria-label="Shared free lectures">
-                <span className="hd" />
-                {["M", "T", "W", "T", "F"].map((label, index) => (
-                  <span key={`${label}${index}`} className="hd">
-                    {label}
+              <div className="free-grid" role="table" aria-label="Shared free lectures">
+                <div className="week-row" role="row">
+                  <span className="hd" role="columnheader">
+                    Slot
                   </span>
-                ))}
+                  {["Mon", "Tue", "Wed", "Thu", "Fri"].map((label, index) => (
+                    <span key={`${label}${index}`} className="hd" role="columnheader">
+                      {label}
+                    </span>
+                  ))}
+                </div>
                 {["L1", "L2", "L3", "L4", "L5"].map((label, slotIndex) => (
-                  <div key={label} className="week-row">
-                    <span className="hd">{label.replace("L", "")}</span>
+                  <div key={label} className="week-row" role="row">
+                    <span className="hd" role="rowheader">
+                      {label}
+                    </span>
                     {[0, 1, 2, 3, 4].map((dayIndex) => {
-                      const openCell = free.some((cell) => cell.day === dayIndex && cell.slot === slotIndex);
+                      const openCell = free.some(
+                        (cell) => cell.day === dayIndex && cell.slot === slotIndex,
+                      );
                       return (
-                        <i key={dayIndex} className={openCell ? "open" : "shut"}>
-                          {openCell ? "Free" : ""}
+                        <i
+                          key={dayIndex}
+                          role="cell"
+                          aria-label={`${DAYS[dayIndex]} ${label}: ${openCell ? "free" : "busy"}`}
+                          className={openCell ? "open" : "shut"}
+                        >
+                          {openCell ? "Free" : "Busy"}
                         </i>
                       );
                     })}
@@ -659,4 +867,3 @@ export function FindView() {
     </div>
   );
 }
-
