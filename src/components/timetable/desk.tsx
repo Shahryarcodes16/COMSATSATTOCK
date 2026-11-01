@@ -5,6 +5,7 @@ import {
   RoomsView,
   TodayView,
 } from "@/components/timetable/views";
+import { MyScheduleView } from "@/components/timetable/my-schedule-view";
 import { DeskProvider, useDesk } from "@/components/timetable/context";
 import { CampusFooter, Dock, Sidebar, Topbar } from "@/components/timetable/chrome";
 import { DetailSheet } from "@/components/timetable/sheet";
@@ -31,6 +32,9 @@ function Frame() {
           <main id="main" tabIndex={-1} data-view={view}>
             <div hidden={view !== "today"}>
               <TodayView />
+            </div>
+            <div hidden={view !== "custom"}>
+              <MyScheduleView />
             </div>
             <div hidden={view !== "rooms"}>
               <RoomsView />

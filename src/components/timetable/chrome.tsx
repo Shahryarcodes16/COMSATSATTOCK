@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowUpRight,
+  CalendarCheck,
   Clock,
   DoorOpen,
   GraduationCap,
@@ -23,6 +24,7 @@ import { useDesk, type View } from "@/components/timetable/context";
 
 const NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
+  { id: "custom", label: "My Schedule", icon: CalendarCheck },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
   { id: "batches", label: "Batches", icon: Users },
@@ -139,7 +141,7 @@ export function Dock() {
   const { view, setView } = useDesk();
   const index = NAV.findIndex((item) => item.id === view);
   return (
-    <nav className="dock" aria-label="Sections" style={{ "--i": index } as CSSProperties}>
+    <nav className="dock" aria-label="Sections" style={{ "--i": index, "--n": NAV.length } as CSSProperties}>
       <i className="dock-thumb" aria-hidden />
       {NAV.map((item) => {
         const Icon = item.icon;
