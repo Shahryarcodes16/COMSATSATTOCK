@@ -1,4 +1,5 @@
 import raw from "@/data/timetable.json";
+import { getFacultyEmail } from "@/lib/faculty";
 import { CAMPUS_TIME_ZONE } from "@/lib/campus";
 
 const campusPartsFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -360,9 +361,24 @@ export function searchCatalog(query: string): {
     return hits;
   };
 
+  const takeTeachers = (): CatalogHit[] => {
+    const hits: CatalogHit[] = [];
+    for (let id = 0; id < teachers.length; id += 1) {
+      const label = teachers[id];
+      const email = getFacultyEmail(id, label);
+      if (
+        label.toLowerCase().includes(needle) ||
+        (email && email.toLowerCase().includes(needle))
+      ) {
+        hits.push({ id, label });
+      }
+    }
+    return hits;
+  };
+
   return {
     batches: take(batches),
-    teachers: take(teachers),
+    teachers: takeTeachers(),
     rooms: take(rooms),
     subjects: take(subjects),
   };

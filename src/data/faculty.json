@@ -1,0 +1,802 @@
+[
+  {
+    "id": 1,
+    "name": "Dr. Muazzam Maqsood",
+    "email": "muazzam.maqsood@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 28,
+    "timetableName": "Dr. Muazzam Maqsood"
+  },
+  {
+    "id": 2,
+    "name": "Dr. Farman Ali Khan",
+    "email": "farman_marwat@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 15,
+    "timetableName": "Dr. Farman Ali Khan"
+  },
+  {
+    "id": 3,
+    "name": "Dr. Khalid Mehmood Awan",
+    "email": "khalid.awan@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 20,
+    "timetableName": "Dr. Khalid Awan"
+  },
+  {
+    "id": 4,
+    "name": "Dr. Sadaf Yasmin",
+    "email": "sadaf_yasmin@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 38,
+    "timetableName": "Dr. Sadaf Yasmin"
+  },
+  {
+    "id": 5,
+    "name": "Dr. Muhammad Sardaraz",
+    "email": "sardaraz@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 23,
+    "timetableName": "Dr. M. Sardaraz"
+  },
+  {
+    "id": 6,
+    "name": "Dr. Muhammad Shahzad Faisal",
+    "email": "shahzad_faisal@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 46,
+    "timetableName": "Dr. Shahzad Faisal"
+  },
+  {
+    "id": 7,
+    "name": "Dr. Yaser Ali Shah",
+    "email": "yaser@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 53,
+    "timetableName": "Dr. Yasir Ali Shah"
+  },
+  {
+    "id": 8,
+    "name": "Mr. Shahzad Rizwan",
+    "email": "shehzad.rizwan@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 77,
+    "timetableName": "Mr. Shahzad Rizwan"
+  },
+  {
+    "id": 9,
+    "name": "Mr. Armughan Ali",
+    "email": "armughan_ali@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 62,
+    "timetableName": "Mr. Armaghan Ali"
+  },
+  {
+    "id": 10,
+    "name": "Dr. Muhammad Sharif",
+    "email": "m.sharif@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 24,
+    "timetableName": "Dr. M. Sharif"
+  },
+  {
+    "id": 11,
+    "name": "Mr. Bilal Haider Bukhari",
+    "email": "bukhari@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 64,
+    "timetableName": "Mr. Bilal Bukhari"
+  },
+  {
+    "id": 12,
+    "name": "Dr. Muhammad Fahad Khan",
+    "email": "m.fahad@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 12,
+    "timetableName": "Dr. Fahad"
+  },
+  {
+    "id": 13,
+    "name": "Dr. Tahira Sadaf",
+    "email": "taira_sadaf@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 51,
+    "timetableName": "Dr. Tahira Sadaf"
+  },
+  {
+    "id": 14,
+    "name": "Dr. Muhammad Saleem Khan",
+    "email": "saleem_khan@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 41,
+    "timetableName": "Dr. Saleem Khan"
+  },
+  {
+    "id": 15,
+    "name": "Mr. Muhammad Fawad",
+    "email": "muhammad.fawad@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 71,
+    "timetableName": "Mr. Muhammad Fawad"
+  },
+  {
+    "id": 16,
+    "name": "Mr. Muhammad Kamran",
+    "email": "m.kamran@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 72,
+    "timetableName": "Mr. Muhammad Kamran"
+  },
+  {
+    "id": 17,
+    "name": "Ms. Fouzia Jabeen",
+    "email": "fouzia.jabeen@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 85,
+    "timetableName": "Ms. Fouzia Jabeen"
+  },
+  {
+    "id": 18,
+    "name": "Ms. Mehreen Wahab",
+    "email": "Mehreen.wahab@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 86,
+    "timetableName": "Ms. Mehreen Wahab"
+  },
+  {
+    "id": 19,
+    "name": "Mr. Umar Zia",
+    "email": "umarzia@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 78,
+    "timetableName": "Mr. Umar Zia"
+  },
+  {
+    "id": 20,
+    "name": "Mr. Salah Ud Din",
+    "email": "salah_ud_din@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 76,
+    "timetableName": "Mr. Salah Uddin"
+  },
+  {
+    "id": 21,
+    "name": "Mr. Babar Shahzad",
+    "email": "babar.shazad@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 63,
+    "timetableName": "Mr. Babar Shahzad"
+  },
+  {
+    "id": 22,
+    "name": "Ms. Faiza Khan",
+    "email": "faiza@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 83,
+    "timetableName": "Ms. Faiza Khan"
+  },
+  {
+    "id": 23,
+    "name": "Mr. Irshad Ullah",
+    "email": "irshadullah@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 67,
+    "timetableName": "Mr. Irshad"
+  },
+  {
+    "id": 24,
+    "name": "Ms. Anam Moin",
+    "email": "anam.moin@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 81,
+    "timetableName": "Ms. Anum Moin"
+  },
+  {
+    "id": 25,
+    "name": "Mr. Waqas Ahmed",
+    "email": "waqas.ahmad@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 80,
+    "timetableName": "Mr. Waqas Ahmed"
+  },
+  {
+    "id": 26,
+    "name": "Mr. Muhammad Qasim Khan",
+    "email": "qasimkhan@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 73,
+    "timetableName": "Mr. Qasim Khan"
+  },
+  {
+    "id": 27,
+    "name": "Mr. Muhammad Waseem Khan",
+    "email": "waseem.khan@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 70,
+    "timetableName": "Mr. M. Waseem Khan"
+  },
+  {
+    "id": 28,
+    "name": "Mr. Kamran Ali",
+    "email": "kamran@ciit-attock.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 68,
+    "timetableName": "Mr. Kamran Ali"
+  },
+  {
+    "id": 29,
+    "name": "Mr. Syed Usman Anwar",
+    "email": "usman.anwar@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 79,
+    "timetableName": "Mr. Usman Anwar"
+  },
+  {
+    "id": 30,
+    "name": "Ms. Marwa Khanam",
+    "email": "marwa.khanam@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 56,
+    "timetableName": "Marwa Khanum"
+  },
+  {
+    "id": 31,
+    "name": "Ms. Maryam Bibi",
+    "email": "maryam.bibi@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 57,
+    "timetableName": "Maryam Bibi"
+  },
+  {
+    "id": 32,
+    "name": "Ms. Shanza Zafar",
+    "email": "shanza_zafar@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 96,
+    "timetableName": "Shanza Zafar"
+  },
+  {
+    "id": 33,
+    "name": "Ms. Tahreem Khalil",
+    "email": "tahreem_khalil@cuiatk.edu.pk",
+    "department": "Computer Science",
+    "teacherId": 98,
+    "timetableName": "Tehreem Khalil"
+  },
+  {
+    "id": 34,
+    "name": "Prof. Dr. Laiq Khan",
+    "email": "laiq@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 95,
+    "timetableName": "Prof. Dr. Laiq Khan"
+  },
+  {
+    "id": 35,
+    "name": "Dr. Yasir Muhammad",
+    "email": "hod_ee@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 54,
+    "timetableName": "Dr. Yasir Muhammad"
+  },
+  {
+    "id": 36,
+    "name": "Dr. Atta Ur Rehman",
+    "email": "dr.ataurrehman@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 9,
+    "timetableName": "Dr. Atta Ur Rehman"
+  },
+  {
+    "id": 37,
+    "name": "Dr. Mubashir Rehman",
+    "email": "mubashir_rehman7@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 29,
+    "timetableName": "Dr. Mubashir"
+  },
+  {
+    "id": 38,
+    "name": "Dr. Ihtesham Jadoon",
+    "email": "jadoon@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 18,
+    "timetableName": "Dr. Ihtesham Jadoon"
+  },
+  {
+    "id": 39,
+    "name": "Dr. Babar Sattar Khan",
+    "email": "babar.sattar@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 10,
+    "timetableName": "Dr. Babar Sattar"
+  },
+  {
+    "id": 40,
+    "name": "Mr. Kashif Ejaz Jatoi",
+    "email": "kashif.jatoi@ciit-attock.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 69,
+    "timetableName": "Mr. Kashif Jatoi"
+  },
+  {
+    "id": 41,
+    "name": "Dr. Assad Hafiz",
+    "email": "assad@cuiatk.edu.pk",
+    "department": "Electrical & Computer Engineering",
+    "teacherId": 6,
+    "timetableName": "Dr. Assad Hafiz"
+  },
+  {
+    "id": 42,
+    "name": "Mr. Mohsin Riaz",
+    "email": "mohsin_riaz@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 43,
+    "name": "Prof. Dr. Aamir Ali",
+    "email": "aamir_ali@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 1,
+    "timetableName": "Dr. Aamir Ali"
+  },
+  {
+    "id": 44,
+    "name": "Dr. Asif Waheed",
+    "email": "drasif.waheed@ciit-attock.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 4,
+    "timetableName": "Dr. Asif Waheed"
+  },
+  {
+    "id": 45,
+    "name": "Prof. Dr. Muhammad Awais",
+    "email": "awais@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 22,
+    "timetableName": "Dr. M. Awais"
+  },
+  {
+    "id": 46,
+    "name": "Dr. Farooq Ahmed Shah",
+    "email": "farooq.a.shah@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 16,
+    "timetableName": "Dr. Farooq Ahmad Shah"
+  },
+  {
+    "id": 47,
+    "name": "Dr. Shafiq ur Rehman",
+    "email": "shafiq@comsats.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 48,
+    "name": "Dr. Atiq ur Rehman",
+    "email": "atiq@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 7,
+    "timetableName": "Dr. Atiq ur Rehman"
+  },
+  {
+    "id": 49,
+    "name": "Dr. Muhammad Zeb",
+    "email": "zeb@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 35,
+    "timetableName": "Dr. Muhammad Zeb"
+  },
+  {
+    "id": 50,
+    "name": "Dr. Sohail Ahmad",
+    "email": "drsohailahmad@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 48,
+    "timetableName": "Dr. Sohail Ahmad"
+  },
+  {
+    "id": 51,
+    "name": "Dr. Takasar Hussain",
+    "email": "htakasr@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 52,
+    "timetableName": "Dr. Takasar Hussain"
+  },
+  {
+    "id": 52,
+    "name": "Dr. Muhammad Ozair",
+    "email": "dr.m.ozair@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 32,
+    "timetableName": "Dr. Muhammad Ozair"
+  },
+  {
+    "id": 53,
+    "name": "Dr. Muhammad Numan",
+    "email": "dr.numan@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 31,
+    "timetableName": "Dr. Muhammad Numan"
+  },
+  {
+    "id": 54,
+    "name": "Dr. Ali Imran",
+    "email": "ali.imran@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 3,
+    "timetableName": "Dr. Ali Imran"
+  },
+  {
+    "id": 55,
+    "name": "Dr. Maimona Rafiq",
+    "email": "maimona.rafiq@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 26,
+    "timetableName": "Dr. Maimoona Rafiq"
+  },
+  {
+    "id": 56,
+    "name": "Dr. Noor Muhammad",
+    "email": "mnoor@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 37,
+    "timetableName": "Dr. Noor Muhammad"
+  },
+  {
+    "id": 57,
+    "name": "Dr. Shahid Hussain",
+    "email": "shahidhussain@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 45,
+    "timetableName": "Dr. Shahid Hussain"
+  },
+  {
+    "id": 58,
+    "name": "Dr. Muhammad Sulaiman",
+    "email": "m.sulaiman@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 33,
+    "timetableName": "Dr. Muhammad Sulaiman"
+  },
+  {
+    "id": 59,
+    "name": "Ms. Sania Irum",
+    "email": "sania.iram@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 91,
+    "timetableName": "Ms. Sania Irum"
+  },
+  {
+    "id": 60,
+    "name": "Dr. Atta Ullah",
+    "email": "attaullah@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 8,
+    "timetableName": "Dr. Atta Ullah"
+  },
+  {
+    "id": 61,
+    "name": "Mr. Adil Ihsan",
+    "email": "adilihsan@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": 60,
+    "timetableName": "Mr. Adil Ihsan"
+  },
+  {
+    "id": 62,
+    "name": "Mr. Mohsin Mumtaz",
+    "email": "mohsinmumtaz@cuiatk.edu.pk",
+    "department": "Mathematics & Sciences",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 63,
+    "name": "Dr. Shujaat Ali Khan Tanoli",
+    "email": "shujat@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 47,
+    "timetableName": "Dr. Shujaat"
+  },
+  {
+    "id": 64,
+    "name": "Prof. Dr. Saeed Ehsan Awan",
+    "email": "saeed.ehsan@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 40,
+    "timetableName": "Dr. Saeed Ehsan"
+  },
+  {
+    "id": 65,
+    "name": "Dr. Faiza Nawaz",
+    "email": "faiza.nawaz@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 66,
+    "name": "Engr. Qazi Zia Ullah",
+    "email": "qazizia@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 74,
+    "timetableName": "Mr. Qazi Zia"
+  },
+  {
+    "id": 67,
+    "name": "Ms. Farwida Javed",
+    "email": "farwida.javed@ciit-attock.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 84,
+    "timetableName": "Ms. Farwida"
+  },
+  {
+    "id": 68,
+    "name": "Dr. Muhammad Ismail Khan",
+    "email": "ismail.khan@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 19,
+    "timetableName": "Dr. Ismail"
+  },
+  {
+    "id": 69,
+    "name": "Mr. Akbar Ali Khan",
+    "email": "akbarafridi@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 61,
+    "timetableName": "Mr. Akbar Ali Afridi"
+  },
+  {
+    "id": 70,
+    "name": "Ms. Rabia Khatoon",
+    "email": "rabiakhatoon@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 89,
+    "timetableName": "Ms. Rabia Khatoon"
+  },
+  {
+    "id": 71,
+    "name": "Mr. Raheel Zaman",
+    "email": "raheelzaman@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 75,
+    "timetableName": "Mr. Raheel Zaman"
+  },
+  {
+    "id": 72,
+    "name": "Mr. Abdul Ahad Khan",
+    "email": "abdul.ahadkhan@ciit-attock.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": 59,
+    "timetableName": "Mr. Abdul Ahad"
+  },
+  {
+    "id": 73,
+    "name": "Mr. Muhammad Shoaib",
+    "email": "m.shoaib@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 74,
+    "name": "Mr. Shahid Mehmood",
+    "email": "shahid_malik@cuiatk.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 75,
+    "name": "Mr. Muhammad Rashid",
+    "email": "rashidkhan@ciit-attock.edu.pk",
+    "department": "Engineering & Technology",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 76,
+    "name": "Prof. Dr. Faisal Nawaz",
+    "email": "hod_ms@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 13,
+    "timetableName": "Dr. Faisal Nawaz Mir"
+  },
+  {
+    "id": 77,
+    "name": "Dr. Faisal Shahzad",
+    "email": "muhammadfaisal@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 14,
+    "timetableName": "Dr. Faisal Shahzad"
+  },
+  {
+    "id": 78,
+    "name": "Prof. Dr. Saddam Hussain",
+    "email": "dr.saddam@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 39,
+    "timetableName": "Dr. Saddam Hussain"
+  },
+  {
+    "id": 79,
+    "name": "Prof. Dr. Shabir Hyder",
+    "email": "hydershabir@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 44,
+    "timetableName": "Dr. Shabir Hyder"
+  },
+  {
+    "id": 80,
+    "name": "Dr. Muhammad Imran Malik",
+    "email": "dr.imran@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 21,
+    "timetableName": "Dr. M Imran Malik"
+  },
+  {
+    "id": 81,
+    "name": "Dr. Muhammad Ayub",
+    "email": "m.ayub@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 30,
+    "timetableName": "Dr. Muhammad Ayub"
+  },
+  {
+    "id": 82,
+    "name": "Dr. Noman Khan",
+    "email": "dr.noman@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 36,
+    "timetableName": "Dr. Noman Khan"
+  },
+  {
+    "id": 83,
+    "name": "Dr. Asim Anwar",
+    "email": "asimm.anwar@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 5,
+    "timetableName": "Dr. Asim Anwar"
+  },
+  {
+    "id": 84,
+    "name": "Dr. Syed Asim Shah",
+    "email": "syedasim@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 49,
+    "timetableName": "Dr. Syed Asim Shah"
+  },
+  {
+    "id": 85,
+    "name": "Dr. Muhammad Yousaf Khan",
+    "email": "usafmarwat@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 25,
+    "timetableName": "Dr. M. Yousaf Khan"
+  },
+  {
+    "id": 86,
+    "name": "Dr. Adeel Saqib",
+    "email": "A.saqib@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 2,
+    "timetableName": "Dr. Adeel Saqib"
+  },
+  {
+    "id": 87,
+    "name": "Dr. Muhammad Usman",
+    "email": "m.usman@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 34,
+    "timetableName": "Dr. Muhammad Usman"
+  },
+  {
+    "id": 88,
+    "name": "Dr. Muhammad Usman Shah",
+    "email": "u.shah@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 50,
+    "timetableName": "Dr. Syed Usman Shah"
+  },
+  {
+    "id": 89,
+    "name": "Dr. Ameena Arshad",
+    "email": "ameena.arshad@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": null,
+    "timetableName": null
+  },
+  {
+    "id": 90,
+    "name": "Dr. Hamid Masud",
+    "email": "hamid.masood@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 17,
+    "timetableName": "Dr. Hamid Masood"
+  },
+  {
+    "id": 91,
+    "name": "Dr. Ehtesham Ul Mujeeb",
+    "email": "ehteshamul.mujeeb@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 11,
+    "timetableName": "Dr. Ehtisham Mujeeb"
+  },
+  {
+    "id": 92,
+    "name": "Mr. Imran Bashir",
+    "email": "imranbashir@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 66,
+    "timetableName": "Mr. Imran Bashir"
+  },
+  {
+    "id": 93,
+    "name": "Dr. Salman Yahya",
+    "email": "salman_yahya@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 42,
+    "timetableName": "Dr. Salman Yahya"
+  },
+  {
+    "id": 94,
+    "name": "Ms. Nazish Yameen Malak",
+    "email": "nymalik@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 88,
+    "timetableName": "Ms. Nazish Yameen"
+  },
+  {
+    "id": 95,
+    "name": "Ms. Narmeen Khalid",
+    "email": "narmeen_khalid@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 87,
+    "timetableName": "Ms. Narmeen Khalid"
+  },
+  {
+    "id": 96,
+    "name": "Dr. Sameen Khalid",
+    "email": "sameen_khalid@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 43,
+    "timetableName": "Dr. Sameen Khalid"
+  },
+  {
+    "id": 97,
+    "name": "Mr. Mushahid Hussain Baig",
+    "email": "mushahid@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 45,
+    "timetableName": "Dr. Shahid Hussain"
+  },
+  {
+    "id": 98,
+    "name": "Ms. Tasneem Fiza",
+    "email": "fizatasneem@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 93,
+    "timetableName": "Ms. Tasneem Fiza"
+  },
+  {
+    "id": 99,
+    "name": "Dr. Midrar Ullah",
+    "email": "midrar.ullah@ciit-attock.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": 27,
+    "timetableName": "Dr. Midrar Ullah"
+  },
+  {
+    "id": 100,
+    "name": "Mr. Javed Iqbal",
+    "email": "javed.iqbal@cuiatk.edu.pk",
+    "department": "Management Sciences",
+    "teacherId": null,
+    "timetableName": null
+  }
+]

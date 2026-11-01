@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Pin, X } from "lucide-react";
+import { Check, Copy, Mail, Pin, X } from "lucide-react";
 import { CopySchedule } from "@/components/timetable/copy-schedule";
 import { useDesk, type Detail } from "@/components/timetable/context";
 import { WeekGrid } from "@/components/timetable/week-grid";
+import { getFacultyByTeacher } from "@/lib/faculty";
 import {
   DAYS,
   SLOTS,
@@ -168,8 +169,70 @@ function SheetBody({ detail }: { detail: Detail }) {
     const load = teachingLoad(detail.id);
     const pinned = pinnedTeachers.includes(detail.id);
     const names = [...new Set(list.map((entry) => batches[entry.batch]))];
+    const faculty = getFacultyByTeacher(detail.id, teachers[detail.id]);
+    const [copiedEmail, setCopiedEmail] = useState(false);
+
+    const handleCopy = async (email: string) => {
+      try {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(email);
+        } else {
+          const textarea = document.createElement("textarea");
+          textarea.value = email;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+        }
+        setCopiedEmail(true);
+        setTimeout(() => setCopiedEmail(false), 2000);
+      } catch (e) {
+        console.error("Failed to copy email", e);
+      }
+    };
+
     return (
       <div className="stack">
+        {faculty?.email ? (
+          <div className="sheet-faculty-email-card">
+            <div className="sheet-faculty-email-meta">
+              <span className="fine quiet">Official Faculty Contact</span>
+              <a
+                href={`mailto:${faculty.email}`}
+                className="sheet-faculty-email-link"
+                title={`Send email to ${faculty.email}`}
+              >
+                <Mail size={15} aria-hidden />
+                <span>{faculty.email}</span>
+              </a>
+              {faculty.department ? (
+                <span className="sheet-faculty-dept-badge">{faculty.department}</span>
+              ) : null}
+            </div>
+            <div className="sheet-faculty-email-actions">
+              <button
+                type="button"
+                className={`btn tap ${copiedEmail ? "copied" : ""}`}
+                onClick={() => handleCopy(faculty.email)}
+                title="Copy email address"
+              >
+                {copiedEmail ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+                <span>{copiedEmail ? "Copied!" : "Copy"}</span>
+              </button>
+              <a
+                href={`mailto:${faculty.email}`}
+                className="btn solid tap sheet-send-email-btn"
+                title={`Send an email to ${teachers[detail.id]}`}
+              >
+                <Mail size={14} aria-hidden />
+                <span>Send Email</span>
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         <p className="quiet">
           {teachingHours(detail.id)} teaching hours · {load} lecture slots this week
           {names.length ? ` · ${names.slice(0, 4).join(", ")}${names.length > 4 ? "…" : ""}` : ""}

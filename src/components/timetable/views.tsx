@@ -5,11 +5,14 @@ import {
   Clock,
   DoorOpen,
   GraduationCap,
+  Mail,
   Pin,
   Printer,
   Search,
   Users,
 } from "lucide-react";
+import { FacultyDirectory } from "@/components/timetable/faculty-directory";
+import { getFacultyEmail } from "@/lib/faculty";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
@@ -447,6 +450,7 @@ export function RoomsView() {
 
 export function FacultyView() {
   const { day, slot, open, pinnedTeachers } = useDesk();
+  const [activeTab, setActiveTab] = useState<"directory" | "schedule">("directory");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
   const [sort, setSort] = useState<"az" | "light">("az");
@@ -479,7 +483,13 @@ export function FacultyView() {
   const matched = teachers
     .map((label, id) => ({ id, label }))
     .filter((person) => !savedOnly || pinnedTeachers.includes(person.id))
-    .filter((person) => person.label.toLowerCase().includes(needle))
+    .filter((person) => {
+      const email = getFacultyEmail(person.id, person.label);
+      return (
+        person.label.toLowerCase().includes(needle) ||
+        (email && email.toLowerCase().includes(needle))
+      );
+    })
     .sort((a, b) => order(a.id, b.id));
   const free = matched.filter((person) => isFree(forTeacher(person.id), day, slot, 1));
   const busy = matched.filter((person) => occupied.has(person.id));
@@ -490,98 +500,144 @@ export function FacultyView() {
         <div>
           <p className="eyebrow">Connect on campus</p>
           <h1 className="page-title">Faculty</h1>
-          <p className="quiet">Explore teaching schedules and free lectures.</p>
+          <p className="quiet">
+            {activeTab === "directory"
+              ? "Find faculty contact emails, departments, and offices."
+              : "Explore teaching schedules and free lectures."}
+          </p>
         </div>
       </div>
-      <DaySlotBar />
-      <label className="search">
-        <Search size={18} aria-hidden />
-        <input
-          type="search"
-          value={query}
-          aria-label="Search faculty"
-          placeholder="Search faculty"
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </label>
-      <div className="faculty-toolbar">
-      <Segment
-        label="Sort"
-        value={sort}
-        onChange={(value) => setSort(value === "light" ? "light" : "az")}
-        options={[
-          { value: "az", label: "A to Z" },
-          { value: "light", label: "Lightest week" },
-        ]}
-      />
-      <Segment
-        label="Free or busy"
-        value={mode}
-        onChange={(value) => setMode(value === "busy" ? "busy" : "free")}
-        options={[
-          { value: "free", label: `Free ${free.length}` },
-          { value: "busy", label: `Busy ${busy.length}` },
-        ]}
-      />
-      </div>
-      <div className="faculty-results-head">
-        <p className="fine" role="status">
-          Showing {Math.min(visibleCount, mode === "free" ? free.length : busy.length)} of {mode === "free" ? free.length : busy.length} faculty · {DAYS[day]}, {SLOTS[slot].label}
-        </p>
-        <button type="button" className={savedOnly ? "btn solid tap" : "btn tap"} aria-pressed={savedOnly} onClick={() => setSavedOnly(!savedOnly)}>
-          <Pin size={14} aria-hidden /> Saved only
+
+      <div className="faculty-view-tabs" role="tablist" aria-label="Faculty view mode">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "directory"}
+          className={activeTab === "directory" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+          onClick={() => setActiveTab("directory")}
+        >
+          <Mail size={16} aria-hidden />
+          <span>Faculty Directory & Emails</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "schedule"}
+          className={activeTab === "schedule" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+          onClick={() => setActiveTab("schedule")}
+        >
+          <Clock size={16} aria-hidden />
+          <span>Slot Availability</span>
         </button>
       </div>
-      {mode === "free" ? (
-        free.length === 0 ? (
-          <p className="quiet">{savedOnly ? "No saved faculty match this slot and search. Save a teacher from their schedule, or turn off Saved only." : "No free faculty member matches this search."}</p>
-        ) : (
-          <div className="people">
-            {free.slice(0, visibleCount).map((person) => (
-              <button
-                key={person.id}
-                type="button"
-                className="person tap"
-                onClick={() => open({ type: "teacher", id: person.id })}
-              >
-                <span className="avatar" aria-hidden>
-                  {initials(person.label)}
-                </span>
-                <span className="person-copy">
-                  <b>{person.label}</b>
-                  <span>
-                    {teachingHours(person.id)} teaching hours / week
-                    {pinnedTeachers.includes(person.id) ? " · Saved" : ""}
-                  </span>
-                </span>
-                <span className="availability-tag">Free</span>
-              </button>
-            ))}
-          </div>
-        )
-      ) : busy.length === 0 ? (
-        <p className="quiet">Nobody matching this search is teaching right then.</p>
+
+      {activeTab === "directory" ? (
+        <FacultyDirectory />
       ) : (
-        <div className="stack">
-          {busy.slice(0, visibleCount).map((person) => (
-            <button
-              key={person.id}
-              type="button"
-              className="busy-row tap"
-              onClick={() => open({ type: "teacher", id: person.id })}
-            >
-              <b>{person.label}</b>
-              <span>{summarize(occupied.get(person.id) ?? [])}</span>
+        <>
+          <DaySlotBar />
+          <label className="search">
+            <Search size={18} aria-hidden />
+            <input
+              type="search"
+              value={query}
+              aria-label="Search faculty"
+              placeholder="Search faculty by name or email"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="faculty-toolbar">
+            <Segment
+              label="Sort"
+              value={sort}
+              onChange={(value) => setSort(value === "light" ? "light" : "az")}
+              options={[
+                { value: "az", label: "A to Z" },
+                { value: "light", label: "Lightest week" },
+              ]}
+            />
+            <Segment
+              label="Free or busy"
+              value={mode}
+              onChange={(value) => setMode(value === "busy" ? "busy" : "free")}
+              options={[
+                { value: "free", label: `Free ${free.length}` },
+                { value: "busy", label: `Busy ${busy.length}` },
+              ]}
+            />
+          </div>
+          <div className="faculty-results-head">
+            <p className="fine" role="status">
+              Showing {Math.min(visibleCount, mode === "free" ? free.length : busy.length)} of {mode === "free" ? free.length : busy.length} faculty · {DAYS[day]}, {SLOTS[slot].label}
+            </p>
+            <button type="button" className={savedOnly ? "btn solid tap" : "btn tap"} aria-pressed={savedOnly} onClick={() => setSavedOnly(!savedOnly)}>
+              <Pin size={14} aria-hidden /> Saved only
             </button>
-          ))}
-        </div>
+          </div>
+          {mode === "free" ? (
+            free.length === 0 ? (
+              <p className="quiet">{savedOnly ? "No saved faculty match this slot and search. Save a teacher from their schedule, or turn off Saved only." : "No free faculty member matches this search."}</p>
+            ) : (
+              <div className="people">
+                {free.slice(0, visibleCount).map((person) => {
+                  const email = getFacultyEmail(person.id, person.label);
+                  return (
+                    <button
+                      key={person.id}
+                      type="button"
+                      className="person tap"
+                      onClick={() => open({ type: "teacher", id: person.id })}
+                    >
+                      <span className="avatar" aria-hidden>
+                        {initials(person.label)}
+                      </span>
+                      <span className="person-copy">
+                        <b>{person.label}</b>
+                        {email ? (
+                          <span className="faculty-card-email-preview">{email}</span>
+                        ) : null}
+                        <span>
+                          {teachingHours(person.id)} teaching hours / week
+                          {pinnedTeachers.includes(person.id) ? " · Saved" : ""}
+                        </span>
+                      </span>
+                      <span className="availability-tag">Free</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          ) : busy.length === 0 ? (
+            <p className="quiet">Nobody matching this search is teaching right then.</p>
+          ) : (
+            <div className="stack">
+              {busy.slice(0, visibleCount).map((person) => {
+                const email = getFacultyEmail(person.id, person.label);
+                return (
+                  <button
+                    key={person.id}
+                    type="button"
+                    className="busy-row tap"
+                    onClick={() => open({ type: "teacher", id: person.id })}
+                  >
+                    <b>{person.label}</b>
+                    {email ? (
+                      <span className="fine quiet" style={{ display: "block" }}>{email}</span>
+                    ) : null}
+                    <span>{summarize(occupied.get(person.id) ?? [])}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {visibleCount < (mode === "free" ? free.length : busy.length) ? (
+            <button type="button" className="btn tap faculty-show-more" onClick={() => setVisibleCount((count) => count + 18)}>
+              Show more faculty ({(mode === "free" ? free.length : busy.length) - visibleCount} remaining)
+            </button>
+          ) : null}
+          <p className="fine">Free means no scheduled class in this slot; contact the teacher to confirm availability.</p>
+        </>
       )}
-      {visibleCount < (mode === "free" ? free.length : busy.length) ? (
-        <button type="button" className="btn tap faculty-show-more" onClick={() => setVisibleCount((count) => count + 18)}>
-          Show more faculty ({(mode === "free" ? free.length : busy.length) - visibleCount} remaining)
-        </button>
-      ) : null}
-      <p className="fine">Free means no scheduled class in this slot; contact the teacher to confirm availability.</p>
     </div>
   );
 }
@@ -711,17 +767,23 @@ function HitGroup({
         {title}
         <span>{hits.length} matches</span>
       </h2>
-      {hits.map((hit) => (
-        <button
-          key={`${title}-${hit.id}`}
-          type="button"
-          className="hit tap"
-          onClick={() => onOpen(hit.id)}
-        >
-          {hit.label}
-          {title === "Subjects" ? <small>{forSubject(hit.id).length} offerings</small> : null}
-        </button>
-      ))}
+      {hits.map((hit) => {
+        const email = title === "Faculty" ? getFacultyEmail(hit.id, hit.label) : null;
+        return (
+          <button
+            key={`${title}-${hit.id}`}
+            type="button"
+            className="hit tap"
+            onClick={() => onOpen(hit.id)}
+          >
+            <div className="hit-text">
+              <span>{hit.label}</span>
+              {email ? <small className="hit-email-subtitle">{email}</small> : null}
+            </div>
+            {title === "Subjects" ? <small>{forSubject(hit.id).length} offerings</small> : null}
+          </button>
+        );
+      })}
     </section>
   );
 }
