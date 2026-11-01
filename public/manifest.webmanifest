@@ -1,0 +1,31 @@
+{
+  "name": "CUI Attock Campus Timetable",
+  "short_name": "CUI Attock",
+  "description": "COMSATS University Islamabad, Attock Campus Timetable and Faculty Directory",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#132e3d",
+  "theme_color": "#087f79",
+  "icons": [
+    {
+      "src": "/__grok/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/crest.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/crest.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

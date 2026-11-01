@@ -12,14 +12,17 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: APP_NAME },
+      { name: "application-name", content: "CUI Attock" },
+      { name: "apple-mobile-web-app-title", content: APP_NAME },
       {
         name: "description",
         content:
           "COMSATS University Islamabad, Attock Campus timetable from 5 October 2026. Free rooms, free faculty, and batch schedules.",
       },
-      { name: "theme-color", content: "#1E4D3C" },
+      { name: "theme-color", content: "#087f79" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/crest.png" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -29,7 +32,7 @@ export const Route = createRootRoute({
       },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
+      { rel: "apple-touch-icon", href: "/crest.png" },
     ],
     scripts: [{ children: THEME_BOOT }],
   }),

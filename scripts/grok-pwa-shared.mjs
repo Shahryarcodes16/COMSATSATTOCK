@@ -6,7 +6,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const DEFAULT_APP_NAME = "Grok App";
+export const DEFAULT_APP_NAME = "CUI Attock Campus Timetable";
+export const DEFAULT_SHORT_NAME = "CUI Attock";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
 export const OG_SITE_REL_PATH = "src/lib/og/site.json";
 
@@ -65,7 +66,13 @@ export function appNameFromHost(hostHeader) {
     .trim()
     .split(":")[0]
     .toLowerCase();
-  if (!host.endsWith(".grok.me")) {
+  if (
+    host.includes("comsats") ||
+    host.includes("cui") ||
+    host.includes("attock") ||
+    host.includes("workspace") ||
+    !host.endsWith(".grok.me")
+  ) {
     return DEFAULT_APP_NAME;
   }
   const slug = host.split(".")[0] ?? "";
@@ -159,22 +166,37 @@ export function renderInstallPageHtml(template, { host, url } = {}) {
 
 export function renderWebManifest(hostHeader) {
   const name = appNameFromHost(hostHeader);
+  const shortName = name === DEFAULT_APP_NAME ? DEFAULT_SHORT_NAME : (name.length > 15 ? DEFAULT_SHORT_NAME : name);
   return JSON.stringify(
     {
       name,
-      short_name: name,
+      short_name: shortName,
+      description: "COMSATS University Islamabad, Attock Campus Timetable and Faculty Directory",
       id: "/",
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#000000",
-      theme_color: "#000000",
+      background_color: "#132e3d",
+      theme_color: "#087f79",
       icons: [
         {
           src: "/__grok/icon-180.png",
           sizes: "180x180",
           type: "image/png",
+          purpose: "any"
         },
+        {
+          src: "/crest.png",
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any maskable"
+        },
+        {
+          src: "/crest.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any maskable"
+        }
       ],
     },
     null,
@@ -187,16 +209,16 @@ export function grokPwaHeadTags(appName = DEFAULT_APP_NAME) {
     // Standalone display comes from the manifest ("display": "standalone");
     // the legacy *-web-app-capable metas it replaces are deliberately absent.
     ["manifest", '<link rel="manifest" href="/__grok/manifest.webmanifest">'],
-    ["apple-touch-icon", '<link rel="apple-touch-icon" href="/__grok/icon-180.png">'],
+    ["apple-touch-icon", '<link rel="apple-touch-icon" href="/crest.png">'],
     [
       "apple-mobile-web-app-title",
       `<meta name="apple-mobile-web-app-title" content="${escapeHtml(appName)}">`,
     ],
     [
       "apple-mobile-web-app-status-bar-style",
-      '<meta name="apple-mobile-web-app-status-bar-style" content="black">',
+      '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
     ],
-    ["theme-color", '<meta name="theme-color" content="#000000">'],
+    ["theme-color", '<meta name="theme-color" content="#087f79">'],
   ];
 }
 
