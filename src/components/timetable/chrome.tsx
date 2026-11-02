@@ -22,13 +22,24 @@ import {
 import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, timeLabel, type ClockInfo } from "@/lib/schedule";
 import { useDesk, type View } from "@/components/timetable/context";
 
-const NAV: { id: View; label: string; icon: typeof Clock }[] = [
+// Desktop sidebar navigates all 6 sections
+const DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
   { id: "custom", label: "My Schedule", icon: CalendarCheck },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
   { id: "batches", label: "Batches", icon: Users },
   { id: "find", label: "Search", icon: Search },
+];
+
+// Mobile dock shows the 5 primary schedule & campus views with clean single-line labels
+// Search is prominently accessible right in the mobile header next to theme toggle
+const MOBILE_NAV: { id: View; label: string; icon: typeof Clock }[] = [
+  { id: "today", label: "Today", icon: Clock },
+  { id: "custom", label: "Schedule", icon: CalendarCheck },
+  { id: "rooms", label: "Rooms", icon: DoorOpen },
+  { id: "faculty", label: "Faculty", icon: GraduationCap },
+  { id: "batches", label: "Batches", icon: Users },
 ];
 
 export function Brand() {
@@ -50,7 +61,7 @@ export function Sidebar() {
       <Brand />
       <p className="nav-label">Campus workspace</p>
       <nav className="side-nav" aria-label="Sections">
-        {NAV.map((item) => {
+        {DESKTOP_NAV.map((item) => {
           const Icon = item.icon;
           const on = view === item.id;
           return (
@@ -82,8 +93,10 @@ export function Sidebar() {
 }
 
 export function Topbar() {
-  const { now, theme, toggleTheme, setView } = useDesk();
+  const { now, theme, toggleTheme, setView, view } = useDesk();
   const ink = theme === "ink";
+  const isSearchActive = view === "find";
+
   return (
     <header className="topbar">
       <div>
@@ -93,11 +106,30 @@ export function Topbar() {
         <p className="hello">{greeting(now)}</p>
       </div>
       <div className="topbar-actions">
-        <button type="button" className="topbar-search" onClick={() => setView("find")}>
+        {/* Desktop search button */}
+        <button
+          type="button"
+          className={`topbar-search ${isSearchActive ? "on" : ""}`}
+          onClick={() => setView("find")}
+        >
           <Search size={17} aria-hidden />
           <span>Search campus</span>
           <ArrowUpRight size={15} aria-hidden />
         </button>
+
+        {/* Mobile search icon button */}
+        <button
+          type="button"
+          className={`icon-btn tap topbar-mobile-search ${isSearchActive ? "on" : ""}`}
+          aria-label="Search campus courses, faculty, rooms, batches"
+          aria-current={isSearchActive ? "page" : undefined}
+          onClick={() => setView("find")}
+          title="Search campus"
+        >
+          <Search size={18} strokeWidth={1.8} aria-hidden />
+        </button>
+
+        {/* Theme toggle */}
         <button
           type="button"
           className="icon-btn tap"
@@ -139,11 +171,25 @@ export function CampusFooter() {
 
 export function Dock() {
   const { view, setView } = useDesk();
-  const index = NAV.findIndex((item) => item.id === view);
+  const index = MOBILE_NAV.findIndex((item) => item.id === view);
+
   return (
-    <nav className="dock" aria-label="Sections" style={{ "--i": index, "--n": NAV.length } as CSSProperties}>
-      <i className="dock-thumb" aria-hidden />
-      {NAV.map((item) => {
+    <nav
+      className="dock"
+      aria-label="Sections"
+      style={
+        {
+          "--i": Math.max(0, index),
+          "--n": MOBILE_NAV.length,
+        } as CSSProperties
+      }
+    >
+      <i
+        className="dock-thumb"
+        style={{ opacity: index === -1 ? 0 : 1 }}
+        aria-hidden
+      />
+      {MOBILE_NAV.map((item) => {
         const Icon = item.icon;
         const on = view === item.id;
         return (
@@ -155,7 +201,7 @@ export function Dock() {
             onClick={() => setView(item.id)}
           >
             <Icon size={18} strokeWidth={1.75} aria-hidden />
-            {item.label}
+            <span className="dock-label">{item.label}</span>
           </button>
         );
       })}
