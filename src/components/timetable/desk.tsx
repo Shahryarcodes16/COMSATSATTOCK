@@ -9,6 +9,7 @@ import { MyScheduleView } from "@/components/timetable/my-schedule-view";
 import { DeskProvider, useDesk } from "@/components/timetable/context";
 import { CampusFooter, Dock, Sidebar, Topbar } from "@/components/timetable/chrome";
 import { DetailSheet } from "@/components/timetable/sheet";
+import { useClassNotificationScheduler } from "@/components/timetable/notification-modal";
 
 export function Desk() {
   return (
@@ -20,6 +21,7 @@ export function Desk() {
 
 function Frame() {
   const { view, detail } = useDesk();
+  useClassNotificationScheduler();
   return (
     <div className="app">
       <a className="skip" href="#main">

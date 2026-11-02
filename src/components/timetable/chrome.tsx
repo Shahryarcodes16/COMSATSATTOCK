@@ -24,6 +24,7 @@ import {
 } from "@/lib/campus";
 import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, timeLabel, type ClockInfo } from "@/lib/schedule";
 import { useDesk, type View } from "@/components/timetable/context";
+import { NotificationBellButton } from "@/components/timetable/notification-modal";
 
 // Desktop sidebar navigates all 6 sections
 const DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
@@ -131,6 +132,9 @@ export function Topbar() {
         >
           <Search size={18} strokeWidth={1.8} aria-hidden />
         </button>
+
+        {/* Class Reminders */}
+        <NotificationBellButton />
 
         {/* Theme toggle */}
         <button

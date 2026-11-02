@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight,
+  Bell,
+  Briefcase,
   CalendarDays,
   Clock,
   DoorOpen,
@@ -13,6 +15,8 @@ import {
   Zap,
 } from "lucide-react";
 import { FacultyDirectory } from "@/components/timetable/faculty-directory";
+import { FacultyOfficeHours } from "@/components/timetable/teacher-office-hours";
+import { NotificationBellButton } from "@/components/timetable/notification-modal";
 import { FreeRoomsRadar } from "@/components/timetable/room-radar";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { getFacultyEmail } from "@/lib/faculty";
@@ -198,11 +202,14 @@ export function TodayView() {
               <p className="eyebrow">Your schedule</p>
               <h2>My batch</h2>
             </div>
-            {pinnedBatch !== null ? (
-              <button type="button" className="btn tap" onClick={() => pinBatch(null)}>
-                Change batch
-              </button>
-            ) : null}
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <NotificationBellButton showLabel={true} />
+              {pinnedBatch !== null ? (
+                <button type="button" className="btn tap" onClick={() => pinBatch(null)}>
+                  Change batch
+                </button>
+              ) : null}
+            </div>
           </div>
           {!ready ? (
             <p className="quiet">Opening your timetable…</p>
@@ -494,7 +501,7 @@ export function RoomsView() {
 
 export function FacultyView() {
   const { day, slot, open, pinnedTeachers } = useDesk();
-  const [activeTab, setActiveTab] = useState<"directory" | "schedule">("directory");
+  const [activeTab, setActiveTab] = useState<"directory" | "office-hours" | "schedule">("directory");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
   const [sort, setSort] = useState<"az" | "light">("az");
@@ -547,6 +554,8 @@ export function FacultyView() {
           <p className="quiet">
             {activeTab === "directory"
               ? "Find faculty contact emails, departments, and offices."
+              : activeTab === "office-hours"
+              ? "Find free consultation slots and request office meetings with faculty."
               : "Explore teaching schedules and free lectures."}
           </p>
         </div>
@@ -566,6 +575,16 @@ export function FacultyView() {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === "office-hours"}
+          className={activeTab === "office-hours" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+          onClick={() => setActiveTab("office-hours")}
+        >
+          <Briefcase size={16} aria-hidden />
+          <span>Office Hours & Consultation</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === "schedule"}
           className={activeTab === "schedule" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
           onClick={() => setActiveTab("schedule")}
@@ -577,6 +596,8 @@ export function FacultyView() {
 
       {activeTab === "directory" ? (
         <FacultyDirectory />
+      ) : activeTab === "office-hours" ? (
+        <FacultyOfficeHours />
       ) : (
         <>
           <DaySlotBar />

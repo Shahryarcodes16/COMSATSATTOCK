@@ -1,0 +1,339 @@
+import { useState, useMemo } from "react";
+import {
+  Briefcase,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  GraduationCap,
+  Mail,
+  Pin,
+  Search,
+  Sparkles,
+  UserCheck,
+  Users,
+} from "lucide-react";
+import {
+  DAYS,
+  SLOTS,
+  teachers,
+  forTeacher,
+  rangeLabel,
+} from "@/lib/schedule";
+import {
+  getTeacherOfficeProfile,
+  generateMeetingEmailHref,
+  type TeacherOfficeProfile,
+} from "@/lib/teacher-office-hours";
+import { DEPARTMENTS, type Department } from "@/lib/faculty";
+import { useDesk } from "@/components/timetable/context";
+
+export function FacultyOfficeHours() {
+  const { clock, day: selectedDeskDay, open, pinnedTeachers, togglePinTeacher } = useDesk();
+  const [selectedDay, setSelectedDay] = useState<number>(() => {
+    return clock.dayIndex !== null && clock.dayIndex >= 0 && clock.dayIndex < 5
+      ? clock.dayIndex
+      : selectedDeskDay;
+  });
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState<Department>("All");
+  const [freeNowOnly, setFreeNowOnly] = useState(false);
+  const [pinnedOnly, setPinnedOnly] = useState(false);
+
+  // Compute current campus minutes from clock
+  const currentMinutes = useMemo(() => {
+    const [hourStr, minStr] = clock.headline.split(" ")[0]?.split(":") ?? [];
+    const isPM = clock.headline.includes("PM");
+    let h = parseInt(hourStr || "0", 10);
+    const m = parseInt(minStr || "0", 10);
+    if (isPM && h !== 12) h += 12;
+    if (!isPM && h === 12) h = 0;
+    return h * 60 + m;
+  }, [clock.headline]);
+
+  // Compute profiles for all teachers
+  const allProfiles = useMemo(() => {
+    const list: TeacherOfficeProfile[] = [];
+    for (let id = 0; id < teachers.length; id++) {
+      list.push(getTeacherOfficeProfile(id, clock.dayIndex, currentMinutes));
+    }
+    return list;
+  }, [clock.dayIndex, currentMinutes]);
+
+  // Filter profiles
+  const needle = search.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    return allProfiles.filter((p) => {
+      // 1. Pinned filter
+      if (pinnedOnly && !pinnedTeachers.includes(p.teacherId)) return false;
+
+      // 2. Department filter
+      if (department !== "All" && p.department !== department) return false;
+
+      // 3. Free now filter
+      if (freeNowOnly && p.liveStatus.state !== "free_now") return false;
+
+      // 4. Text query filter
+      if (needle) {
+        const matchName = p.name.toLowerCase().includes(needle);
+        const matchDept = p.department.toLowerCase().includes(needle);
+        const matchEmail = p.email && p.email.toLowerCase().includes(needle);
+        if (!matchName && !matchDept && !matchEmail) return false;
+      }
+
+      return true;
+    });
+  }, [allProfiles, pinnedOnly, pinnedTeachers, department, freeNowOnly, needle]);
+
+  const freeNowCount = useMemo(() => {
+    return allProfiles.filter((p) => p.liveStatus.state === "free_now").length;
+  }, [allProfiles]);
+
+  return (
+    <div className="faculty-office-hours-hub stack">
+      {/* Overview Stat Banner */}
+      <div className="office-hours-hero">
+        <div className="office-hours-hero-content">
+          <div className="office-hours-hero-badge">
+            <span className="pulse-dot" />
+            <span>Campus Live Consultation Finder</span>
+          </div>
+          <h2>Faculty Office Hours & Free Slots</h2>
+          <p className="quiet">
+            Find out when your teachers are available in their offices for project guidance, concept clarifications, or student meetings.
+          </p>
+        </div>
+
+        <div className="office-hours-hero-stats">
+          <div className="office-stat-card">
+            <span className="office-stat-num">{freeNowCount}</span>
+            <span className="office-stat-label">Faculty Free Right Now</span>
+          </div>
+          <div className="office-stat-card">
+            <span className="office-stat-num">{teachers.length}</span>
+            <span className="office-stat-label">Total Faculty Tracked</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Control Bar: Day Selection & Search & Filters */}
+      <div className="office-hours-toolbar stack">
+        {/* Day Selector */}
+        <div className="office-day-selector" role="tablist" aria-label="Select Day">
+          {DAYS.map((name, idx) => {
+            const isToday = clock.dayIndex === idx;
+            const isSelected = selectedDay === idx;
+            return (
+              <button
+                key={name}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                className={`office-day-btn tap ${isSelected ? "active" : ""}`}
+                onClick={() => setSelectedDay(idx)}
+              >
+                <span>{name}</span>
+                {isToday ? <span className="office-today-tag">Today</span> : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filters and search row */}
+        <div className="office-filter-row">
+          <div className="office-search-wrap">
+            <Search size={16} aria-hidden />
+            <input
+              type="search"
+              className="input office-search-input"
+              placeholder="Search faculty by name or email…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="office-filter-controls">
+            <select
+              className="select office-dept-select"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value as Department)}
+              aria-label="Filter by department"
+            >
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              className={`btn tap ${freeNowOnly ? "solid active-filter-btn" : ""}`}
+              onClick={() => setFreeNowOnly(!freeNowOnly)}
+            >
+              <UserCheck size={16} aria-hidden />
+              <span>Free Now ({freeNowCount})</span>
+            </button>
+
+            <button
+              type="button"
+              className={`btn tap ${pinnedOnly ? "solid active-filter-btn" : ""}`}
+              onClick={() => setPinnedOnly(!pinnedOnly)}
+            >
+              <Pin size={16} aria-hidden />
+              <span>Pinned ({pinnedTeachers.length})</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Teachers List */}
+      <div className="office-teachers-grid">
+        {filtered.length === 0 ? (
+          <div className="empty-state stack">
+            <Users size={32} aria-hidden />
+            <h3>No faculty members match your filter</h3>
+            <p className="quiet">Try clearing the search query or changing the department filter.</p>
+            <button
+              type="button"
+              className="btn solid tap"
+              onClick={() => {
+                setSearch("");
+                setDepartment("All");
+                setFreeNowOnly(false);
+                setPinnedOnly(false);
+              }}
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          filtered.map((profile) => {
+            const dayInfo = profile.days[selectedDay];
+            const isPinned = pinnedTeachers.includes(profile.teacherId);
+            const isSelectedDayToday = clock.dayIndex === selectedDay;
+
+            return (
+              <div key={profile.teacherId} className="office-teacher-card">
+                {/* Header */}
+                <div className="office-teacher-card-head">
+                  <div>
+                    <div className="office-teacher-title-row">
+                      <h3
+                        className="office-teacher-name tap"
+                        onClick={() => open({ type: "teacher", id: profile.teacherId })}
+                      >
+                        {profile.name}
+                      </h3>
+                      <button
+                        type="button"
+                        className={`office-pin-btn tap ${isPinned ? "pinned" : ""}`}
+                        aria-label={isPinned ? "Unpin teacher" : "Pin teacher"}
+                        title={isPinned ? "Unpin teacher" : "Pin teacher"}
+                        onClick={() => togglePinTeacher(profile.teacherId)}
+                      >
+                        <Pin size={15} aria-hidden />
+                      </button>
+                    </div>
+                    <span className="office-teacher-dept">{profile.department}</span>
+                  </div>
+
+                  {/* Live Status Badge (if viewing Today) */}
+                  {isSelectedDayToday ? (
+                    <div className={`office-status-pill ${profile.liveStatus.state}`}>
+                      {profile.liveStatus.state === "free_now" && <span className="status-dot green" />}
+                      {profile.liveStatus.state === "teaching" && <span className="status-dot amber" />}
+                      <span>{profile.liveStatus.headline}</span>
+                    </div>
+                  ) : (
+                    <div className="office-status-pill scheduled">
+                      <span>{dayInfo.freeSlotsCount} free slots ({dayInfo.freeHours} hrs)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live context detail */}
+                {isSelectedDayToday && profile.liveStatus.detail ? (
+                  <p className="office-live-detail fine quiet">
+                    {profile.liveStatus.detail}
+                    {"nextClass" in profile.liveStatus && profile.liveStatus.nextClass ? (
+                      <span> · {profile.liveStatus.nextClass}</span>
+                    ) : null}
+                  </p>
+                ) : null}
+
+                {/* 5-Slot Visual Consultation Bar for Selected Day */}
+                <div className="office-day-timeline">
+                  <span className="office-timeline-label fine quiet">
+                    {DAYS[selectedDay]} Schedule:
+                  </span>
+                  <div className="office-timeline-slots">
+                    {dayInfo.slots.map((st) => {
+                      const isFree = st.state === "free";
+                      return (
+                        <div
+                          key={st.slotIndex}
+                          className={`office-timeline-cell ${isFree ? "cell-free" : "cell-teaching"}`}
+                          title={`${st.label} (${st.start}-${st.end}): ${
+                            isFree
+                              ? "🟢 Free for Office Consultation"
+                              : `🔴 Teaching ${st.subjectName} in ${st.roomName || "Class"}`
+                          }`}
+                        >
+                          <div className="office-cell-header">
+                            <span className="office-cell-slot">{st.label}</span>
+                            <span className="office-cell-time">{st.start}</span>
+                          </div>
+                          {isFree ? (
+                            <div className="office-cell-free-content">
+                              <span className="office-free-badge">Free</span>
+                              <span className="office-free-tag">Consultation</span>
+                            </div>
+                          ) : (
+                            <div className="office-cell-teach-content">
+                              <span className="office-teach-sub" title={st.subjectName}>
+                                {st.subjectName}
+                              </span>
+                              <span className="office-teach-room">📍 {st.roomName}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="office-teacher-actions">
+                  {profile.email ? (
+                    <a
+                      href={generateMeetingEmailHref(
+                        profile.name,
+                        profile.email,
+                        `${DAYS[selectedDay]} (Free Slot)`
+                      )}
+                      className="btn solid tap office-action-btn"
+                      title={`Request an office meeting with ${profile.name}`}
+                    >
+                      <Mail size={15} aria-hidden />
+                      <span>Request Meeting</span>
+                    </a>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="btn tap office-action-btn"
+                    onClick={() => open({ type: "teacher", id: profile.teacherId })}
+                  >
+                    <ExternalLink size={15} aria-hidden />
+                    <span>View Week Timetable</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}

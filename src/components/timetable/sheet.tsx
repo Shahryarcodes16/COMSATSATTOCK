@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Mail, Pin, X } from "lucide-react";
+import { Briefcase, Check, Copy, Mail, Pin, X } from "lucide-react";
 import { CopySchedule } from "@/components/timetable/copy-schedule";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { useDesk, type Detail } from "@/components/timetable/context";
@@ -240,6 +240,17 @@ function SheetBody({ detail }: { detail: Detail }) {
         </p>
         <div className="meter" aria-hidden>
           <span style={{ width: `${Math.round((load / WEEK_CELLS) * 100)}%` }} />
+        </div>
+
+        <div className="sheet-office-hours-card">
+          <div className="sheet-office-hours-head">
+            <Briefcase size={16} aria-hidden />
+            <b>Office Consultation Hours</b>
+            <span className="sheet-office-free-badge">{WEEK_CELLS - load} free slots this week</span>
+          </div>
+          <p className="fine quiet">
+            This faculty member has {WEEK_CELLS - load} free slots ({(WEEK_CELLS - load) * 1.5} hrs) this week available for student office hours, concept clarifications, and FYP guidance.
+          </p>
         </div>
         <div className="row-actions">
           <button type="button" className="btn tap" onClick={() => togglePinTeacher(detail.id)}>

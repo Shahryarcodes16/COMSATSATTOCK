@@ -3929,3 +3929,717 @@
   display: block;
   border-radius: 0.65rem;
 }
+
+/* ============================================================== */
+/* --- Class Notifications Modal & Bell --- */
+/* ============================================================== */
+.notif-active-bell {
+  color: var(--c-accent) !important;
+  position: relative;
+}
+
+.notif-badge-dot {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #22c55e;
+  border: 1.5px solid var(--c-paper);
+}
+
+.notif-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.notif-modal {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.notif-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.notif-modal-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  color: var(--c-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.notif-modal-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  gap: 1.2rem;
+}
+
+.notif-card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  background: var(--c-canvas);
+  border: 1.5px solid var(--c-line);
+  border-radius: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.notif-card-main.active {
+  border-color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 4%, var(--c-canvas));
+}
+
+.notif-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.25rem;
+}
+
+.notif-status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.notif-status-badge.active {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #16a34a;
+}
+
+.notif-status-badge.inactive {
+  background: color-mix(in srgb, var(--c-muted) 15%, transparent);
+  color: var(--c-muted);
+}
+
+.notif-toggle-btn {
+  width: 3.2rem;
+  height: 1.85rem;
+  background: var(--c-line);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.25s ease;
+  flex: none;
+}
+
+.notif-toggle-btn.on {
+  background: var(--c-accent);
+}
+
+.notif-toggle-knob {
+  position: absolute;
+  top: 0.18rem;
+  left: 0.2rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notif-toggle-btn.on .notif-toggle-knob {
+  transform: translateX(1.35rem);
+}
+
+.notif-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, #eab308 15%, transparent);
+  border: 1px solid color-mix(in srgb, #eab308 40%, transparent);
+  border-radius: 0.75rem;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+.notif-setting-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.notif-lead-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+
+.notif-lead-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.5rem;
+  background: var(--c-canvas);
+  border: 1.5px solid var(--c-line);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notif-lead-pill:hover {
+  border-color: var(--c-accent);
+}
+
+.notif-lead-pill.active {
+  border-color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  color: var(--c-accent);
+}
+
+.notif-lead-num {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.notif-lead-label {
+  font-size: 0.68rem;
+  color: var(--c-muted);
+  margin-top: 0.25rem;
+}
+
+.notif-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: var(--c-canvas);
+  border: 1px solid var(--c-line);
+  border-radius: 0.85rem;
+}
+
+.notif-source-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.notif-source-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 0.85rem;
+  background: var(--c-canvas);
+  border: 1.5px solid var(--c-line);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notif-source-card:hover {
+  border-color: var(--c-accent);
+}
+
+.notif-source-card.active {
+  border-color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+}
+
+.notif-source-card b {
+  font-size: 0.875rem;
+  margin-bottom: 0.2rem;
+}
+
+.notif-mobile-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--c-accent) 8%, var(--c-canvas));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent);
+  border-radius: 0.85rem;
+  font-size: 0.8rem;
+}
+
+.notif-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.notif-test-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ============================================================== */
+/* --- Faculty Office Hours & Consultation Finder --- */
+/* ============================================================== */
+.faculty-office-hours-hub {
+  gap: 1.5rem;
+}
+
+.office-hours-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c-accent) 14%, var(--c-paper)), var(--c-paper));
+  border: 1px solid var(--c-line);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.office-hours-hero-content {
+  max-width: 620px;
+}
+
+.office-hours-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.office-hours-hero-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.office-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.25rem;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 0.85rem;
+  min-width: 130px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.office-stat-num {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--c-accent);
+  line-height: 1;
+}
+
+.office-stat-label {
+  font-size: 0.72rem;
+  color: var(--c-muted);
+  text-align: center;
+  margin-top: 0.35rem;
+  font-weight: 600;
+}
+
+.office-hours-toolbar {
+  gap: 0.85rem;
+}
+
+.office-day-selector {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.office-day-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  background: var(--c-canvas);
+  border: 1px solid var(--c-line);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.office-day-btn:hover {
+  border-color: var(--c-accent);
+}
+
+.office-day-btn.active {
+  background: var(--c-accent);
+  color: #ffffff;
+  border-color: var(--c-accent);
+}
+
+.office-today-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+}
+
+.office-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.office-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.office-search-wrap svg {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--c-muted);
+}
+
+.office-search-input {
+  width: 100%;
+  padding-left: 2.4rem;
+}
+
+.office-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.office-dept-select {
+  font-size: 0.85rem;
+  max-width: 200px;
+}
+
+.active-filter-btn {
+  border-color: var(--c-accent) !important;
+  color: var(--c-accent) !important;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent) !important;
+}
+
+/* Teachers Office Grid */
+.office-teachers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.office-teacher-card {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 1.15rem;
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.office-teacher-card:hover {
+  border-color: color-mix(in srgb, var(--c-accent) 40%, var(--c-line));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.office-teacher-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.office-teacher-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.office-teacher-name {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--c-ink);
+  cursor: pointer;
+  margin: 0;
+}
+
+.office-teacher-name:hover {
+  color: var(--c-accent);
+}
+
+.office-pin-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--c-muted);
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.office-pin-btn.pinned {
+  color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+}
+
+.office-teacher-dept {
+  font-size: 0.78rem;
+  color: var(--c-muted);
+  font-weight: 500;
+}
+
+.office-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.office-status-pill.free_now {
+  background: color-mix(in srgb, #22c55e 15%, transparent);
+  color: #16a34a;
+  border: 1px solid color-mix(in srgb, #22c55e 30%, transparent);
+}
+
+.office-status-pill.teaching {
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  color: #d97706;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+}
+
+.office-status-pill.break,
+.office-status-pill.before_hours,
+.office-status-pill.after_hours,
+.office-status-pill.weekend,
+.office-status-pill.scheduled {
+  background: var(--c-canvas);
+  color: var(--c-muted);
+  border: 1px solid var(--c-line);
+}
+
+.office-live-detail {
+  padding: 0.45rem 0.85rem;
+  background: var(--c-canvas);
+  border-radius: 0.65rem;
+  border-left: 3px solid var(--c-accent);
+}
+
+/* 5-Slot Consultation Day Timeline */
+.office-day-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.office-timeline-label {
+  font-weight: 600;
+}
+
+.office-timeline-slots {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.office-timeline-cell {
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border: 1px solid var(--c-line);
+  min-height: 72px;
+  transition: all 0.2s ease;
+}
+
+.office-timeline-cell.cell-free {
+  background: color-mix(in srgb, #22c55e 9%, var(--c-canvas));
+  border-color: color-mix(in srgb, #22c55e 25%, transparent);
+}
+
+.office-timeline-cell.cell-teaching {
+  background: var(--c-canvas);
+  opacity: 0.88;
+}
+
+.office-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+
+.office-cell-slot {
+  font-weight: 800;
+  color: var(--c-ink);
+}
+
+.office-cell-free-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.office-free-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.office-free-tag {
+  font-size: 0.65rem;
+  color: var(--c-muted);
+}
+
+.office-cell-teach-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.office-teach-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.office-teach-room {
+  font-size: 0.65rem;
+  color: var(--c-accent);
+  font-weight: 600;
+}
+
+.office-teacher-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--c-line);
+}
+
+.office-action-btn {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.95rem;
+}
+
+/* Detail Sheet Office Widget */
+.sheet-office-hours-card {
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--c-accent) 6%, var(--c-canvas));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 22%, transparent);
+  border-radius: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sheet-office-hours-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--c-ink);
+}
+
+.sheet-office-free-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: color-mix(in srgb, #22c55e 16%, transparent);
+  color: #16a34a;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+/* Mobile Responsiveness for Office Hours & Notifications */
+@media (max-width: 680px) {
+  .office-hours-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .office-hours-hero-stats {
+    width: 100%;
+  }
+  .office-stat-card {
+    flex: 1;
+  }
+  .office-timeline-slots {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.35rem;
+  }
+  .office-timeline-cell {
+    padding: 0.45rem 0.4rem;
+    min-height: 65px;
+  }
+  .office-teach-sub {
+    font-size: 0.65rem;
+  }
+  .office-cell-time {
+    display: none;
+  }
+  .notif-modal {
+    border-radius: 1rem;
+  }
+  .notif-lead-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
