@@ -5,6 +5,7 @@ import {
   Clock,
   DoorOpen,
   GraduationCap,
+  Mail,
   Moon,
   Phone,
   Search,
@@ -16,6 +17,8 @@ import {
   APP_NAME,
   CAMPUS_TIME_LABEL,
   DEVELOPER_NAME,
+  DEVELOPER_EMAIL,
+  DEVELOPER_EMAIL_HREF,
   DEVELOPER_PHONE,
   DEVELOPER_PHONE_HREF,
 } from "@/lib/campus";
@@ -157,14 +160,24 @@ export function CampusFooter() {
         <p>Developed by {DEVELOPER_NAME}</p>
         <p className="fine">Attock Campus · {CAMPUS_TIME_LABEL}</p>
       </div>
-      <a
-        className="btn tap"
-        href={DEVELOPER_PHONE_HREF}
-        aria-label={`Call developer ${DEVELOPER_NAME} at ${DEVELOPER_PHONE}`}
-      >
-        <Phone size={16} aria-hidden />
-        {DEVELOPER_PHONE}
-      </a>
+      <div className="campus-footer-contacts">
+        <a
+          className="btn tap"
+          href={DEVELOPER_EMAIL_HREF}
+          aria-label={`Email developer ${DEVELOPER_NAME} at ${DEVELOPER_EMAIL}`}
+        >
+          <Mail size={16} aria-hidden />
+          {DEVELOPER_EMAIL}
+        </a>
+        <a
+          className="btn tap"
+          href={DEVELOPER_PHONE_HREF}
+          aria-label={`Call developer ${DEVELOPER_NAME} at ${DEVELOPER_PHONE}`}
+        >
+          <Phone size={16} aria-hidden />
+          {DEVELOPER_PHONE}
+        </a>
+      </div>
     </footer>
   );
 }

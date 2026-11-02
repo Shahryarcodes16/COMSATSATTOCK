@@ -211,6 +211,13 @@
     margin: 0;
   }
 
+  .campus-footer-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .column {
     min-width: 0;
     flex: 1;
