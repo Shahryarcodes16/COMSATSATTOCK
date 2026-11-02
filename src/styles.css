@@ -3630,3 +3630,302 @@
     height: 17px;
   }
 }
+
+/* --- Live Free Rooms Radar --- */
+.free-rooms-radar {
+  margin-bottom: 1.5rem;
+}
+
+.radar-banner {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.radar-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.radar-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.radar-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.radar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-accent);
+}
+
+.radar-dot-pulse {
+  animation: pulse-radar 1.8s infinite;
+}
+
+@keyframes pulse-radar {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-accent) 60%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.radar-headline {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--c-ink);
+  margin: 0.2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.radar-bolt {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.radar-subtext {
+  font-size: 0.8125rem;
+  color: var(--c-muted);
+  margin: 0;
+}
+
+.radar-slot-quick-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.radar-slot-btns {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.radar-slot-btns .btn {
+  min-height: 2rem;
+  padding: 0 0.65rem;
+  font-size: 0.75rem;
+}
+
+.radar-filters {
+  margin-top: 0.25rem;
+}
+
+.radar-chip-count {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.radar-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  background: var(--c-paper);
+  border: 1px dashed var(--c-line);
+  border-radius: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.radar-rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.85rem;
+}
+
+.radar-room-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 0.85rem;
+  padding: 0.95rem;
+  text-align: left;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+  cursor: pointer;
+}
+
+.radar-room-card:hover {
+  border-color: var(--c-accent);
+  transform: translateY(-2px);
+}
+
+.radar-room-card.radar-card-gold {
+  border-color: color-mix(in srgb, #f59e0b 35%, var(--c-line));
+  background: color-mix(in srgb, #f59e0b 4%, var(--c-paper));
+}
+
+.radar-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.radar-room-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.radar-room-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.radar-duration-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  color: var(--c-accent);
+  white-space: nowrap;
+}
+
+.radar-duration-tag.duration-allday {
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  color: #d97706;
+}
+
+.radar-card-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.75rem;
+  color: var(--c-muted);
+}
+
+.radar-group-label {
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.radar-until-text b {
+  color: var(--c-ink);
+}
+
+.radar-next-alert {
+  font-size: 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--c-line);
+}
+
+.radar-free-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--c-line);
+}
+
+/* --- Timetable Image & Wallpaper Modal --- */
+.image-export-modal {
+  max-width: 760px;
+}
+
+.image-export-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.image-preview-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  background: var(--c-canvas);
+  border-radius: 0.85rem;
+  border: 1px solid var(--c-line);
+  min-height: 360px;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+.canvas-scroll-wrapper {
+  max-height: 480px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  border-radius: 0.65rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-scroll-wrapper.aspect-wallpaper {
+  max-width: 280px;
+}
+
+.canvas-scroll-wrapper.aspect-card {
+  max-width: 540px;
+}
+
+.export-canvas-preview {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 0.65rem;
+}

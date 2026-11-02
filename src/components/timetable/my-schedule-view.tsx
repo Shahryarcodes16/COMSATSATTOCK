@@ -22,6 +22,7 @@ import {
 import { useDesk } from "@/components/timetable/context";
 import { Segment } from "@/components/timetable/chrome";
 import { CopySchedule } from "@/components/timetable/copy-schedule";
+import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { WeekGrid } from "@/components/timetable/week-grid";
 import {
   DAYS,
@@ -155,6 +156,8 @@ export function MyScheduleView() {
 
         {schedule.length > 0 ? (
           <>
+            <ExportScheduleImage title="My Custom Schedule" list={schedule} />
+
             <button
               type="button"
               className="btn tap"

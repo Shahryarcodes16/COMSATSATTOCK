@@ -10,8 +10,11 @@ import {
   Printer,
   Search,
   Users,
+  Zap,
 } from "lucide-react";
 import { FacultyDirectory } from "@/components/timetable/faculty-directory";
+import { FreeRoomsRadar } from "@/components/timetable/room-radar";
+import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { getFacultyEmail } from "@/lib/faculty";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
@@ -110,6 +113,10 @@ export function TodayView() {
           </h2>
           <p>Know where to be, find a free room, and make time to connect.</p>
           <div className="overview-actions">
+            <button type="button" className="btn solid tap" onClick={() => setView("rooms")}>
+              <Zap size={16} aria-hidden />
+              Free rooms right now
+            </button>
             <button type="button" className="btn" onClick={() => setView("batches")}>
               <CalendarDays size={16} aria-hidden />
               Explore schedules
@@ -296,7 +303,8 @@ export function TodayView() {
 }
 
 export function RoomsView() {
-  const { day, slot, open } = useDesk();
+  const { day, slot, setDay, setSlot, open } = useDesk();
+  const [viewMode, setViewMode] = useState<"radar" | "browser">("radar");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
   const [group, setGroup] = useState<"All" | RoomGroup>("All");
@@ -329,121 +337,157 @@ export function RoomsView() {
         <div>
           <p className="eyebrow">Find your space</p>
           <h1 className="page-title">Rooms</h1>
-          <p className="quiet">Find an available room for the lecture you choose.</p>
+          <p className="quiet">Find an available room for study, group work, or lectures.</p>
         </div>
       </div>
-      <DaySlotBar />
-      {day === 2 && slot === 1 ? (
-        <p className="note">
-          Wednesday 10:00–11:30 is the activity slot. A few regular classes are still on the sheet,
-          so free counts follow those listings.
-        </p>
-      ) : null}
-      <label className="search">
-        <Search size={18} aria-hidden />
-        <input
-          type="search"
-          value={query}
-          aria-label="Search rooms"
-          placeholder="Search a room"
-          onChange={(event) => setQuery(event.target.value)}
+
+      <div className="faculty-view-tabs" role="tablist" aria-label="Rooms view mode">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === "radar"}
+          className={viewMode === "radar" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+          onClick={() => setViewMode("radar")}
+        >
+          <Zap size={16} aria-hidden />
+          <span>⚡ Live Free Rooms Radar</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === "browser"}
+          className={viewMode === "browser" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+          onClick={() => setViewMode("browser")}
+        >
+          <Clock size={16} aria-hidden />
+          <span>All Rooms Schedule Browser</span>
+        </button>
+      </div>
+
+      {viewMode === "radar" ? (
+        <FreeRoomsRadar
+          onSelectSlot={(d, s) => {
+            setDay(d);
+            setSlot(s);
+            setViewMode("browser");
+          }}
         />
-      </label>
-      <div className="chips room-type-filters" role="group" aria-label="Room type">
-        {(["All", ...ROOM_GROUPS] as const).map((item) => (
-          <button
-            key={item}
-            type="button"
-            aria-pressed={group === item}
-            className={group === item ? "chip on" : "chip"}
-            onClick={() => setGroup(item)}
-          >
-            {item === "Lecture halls"
-              ? "Halls"
-              : item === "Lecture theatres"
-                ? "Theatres"
-                : item === "Classrooms"
-                  ? "Classrooms"
-                  : item === "Labs"
-                    ? "Labs"
-                    : "All"}
-          </button>
-        ))}
-      </div>
-      <Segment
-        label="How long the room should be free"
-        value={effectiveSpan === 2 ? "2" : "1"}
-        onChange={(value) => setSpan(value === "2" ? 2 : 1)}
-        options={[
-          { value: "1", label: "This lecture" },
-          { value: "2", label: "And the next", disabled: slot === 4 },
-        ]}
-      />
-      <Segment
-        label="Free or busy"
-        value={mode}
-        onChange={(value) => setMode(value === "busy" ? "busy" : "free")}
-        options={[
-          { value: "free", label: `Free ${free.length}` },
-          { value: "busy", label: `Busy ${busy.length}` },
-        ]}
-      />
-      {mode === "free" ? (
-        free.length === 0 ? (
-          <p className="quiet">No open room matches this filter.</p>
-        ) : (
-          ROOM_GROUPS.map((name) => {
-            const list = free.filter((room) => roomGroup(room.label) === name);
-            if (list.length === 0) return null;
-            return (
-              <section key={name}>
-                <h2 className="group-label">
-                  {name}
-                  <span>{list.length}</span>
-                </h2>
-                <div className="tile-grid">
-                  {list.map((room) => (
-                    <button
-                      key={room.id}
-                      type="button"
-                      className="tile tap"
-                      onClick={() => open({ type: "room", id: room.id })}
-                    >
-                      <span className="room-icon">
-                        <DoorOpen size={19} aria-hidden />
-                      </span>
-                      <span className="room-copy">
-                        <b>{room.label}</b>
-                        <span>
-                          Available this {effectiveSpan === 2 ? "and next lecture" : "lecture"}
-                        </span>
-                      </span>
-                      <ArrowUpRight size={16} className="card-arrow" aria-hidden />
-                    </button>
-                  ))}
-                </div>
-              </section>
-            );
-          })
-        )
-      ) : busy.length === 0 ? (
-        <p className="quiet">No busy room matches this filter.</p>
       ) : (
-        <div className="stack">
-          {busy.map((room) => (
-            <button
-              key={room.id}
-              type="button"
-              className="busy-row tap"
-              onClick={() => open({ type: "room", id: room.id })}
-            >
-              <b>{room.label}</b>
-              <span>{summarize(occupied.get(room.id) ?? [])}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <DaySlotBar />
+          {day === 2 && slot === 1 ? (
+            <p className="note">
+              Wednesday 10:00–11:30 is the activity slot. A few regular classes are still on the sheet,
+              so free counts follow those listings.
+            </p>
+          ) : null}
+          <label className="search">
+            <Search size={18} aria-hidden />
+            <input
+              type="search"
+              value={query}
+              aria-label="Search rooms"
+              placeholder="Search a room"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="chips room-type-filters" role="group" aria-label="Room type">
+            {(["All", ...ROOM_GROUPS] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={group === item}
+                className={group === item ? "chip on" : "chip"}
+                onClick={() => setGroup(item)}
+              >
+                {item === "Lecture halls"
+                  ? "Halls"
+                  : item === "Lecture theatres"
+                    ? "Theatres"
+                    : item === "Classrooms"
+                      ? "Classrooms"
+                      : item === "Labs"
+                        ? "Labs"
+                        : "All"}
+              </button>
+            ))}
+          </div>
+          <Segment
+            label="How long the room should be free"
+            value={effectiveSpan === 2 ? "2" : "1"}
+            onChange={(value) => setSpan(value === "2" ? 2 : 1)}
+            options={[
+              { value: "1", label: "This lecture" },
+              { value: "2", label: "And the next", disabled: slot === 4 },
+            ]}
+          />
+          <Segment
+            label="Free or busy"
+            value={mode}
+            onChange={(value) => setMode(value === "busy" ? "busy" : "free")}
+            options={[
+              { value: "free", label: `Free ${free.length}` },
+              { value: "busy", label: `Busy ${busy.length}` },
+            ]}
+          />
+          {mode === "free" ? (
+            free.length === 0 ? (
+              <p className="quiet">No open room matches this filter.</p>
+            ) : (
+              ROOM_GROUPS.map((name) => {
+                const list = free.filter((room) => roomGroup(room.label) === name);
+                if (list.length === 0) return null;
+                return (
+                  <section key={name}>
+                    <h2 className="group-label">
+                      {name}
+                      <span>{list.length}</span>
+                    </h2>
+                    <div className="tile-grid">
+                      {list.map((room) => (
+                        <button
+                          key={room.id}
+                          type="button"
+                          className="tile tap"
+                          onClick={() => open({ type: "room", id: room.id })}
+                        >
+                          <span className="room-icon">
+                            <DoorOpen size={19} aria-hidden />
+                          </span>
+                          <span className="room-copy">
+                            <b>{room.label}</b>
+                            <span>
+                              Available this {effectiveSpan === 2 ? "and next lecture" : "lecture"}
+                            </span>
+                          </span>
+                          <ArrowUpRight size={16} className="card-arrow" aria-hidden />
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })
+            )
+          ) : busy.length === 0 ? (
+            <p className="quiet">No busy room matches this filter.</p>
+          ) : (
+            <div className="stack">
+              {busy.map((room) => (
+                <button
+                  key={room.id}
+                  type="button"
+                  className="busy-row tap"
+                  onClick={() => open({ type: "room", id: room.id })}
+                >
+                  <b>{room.label}</b>
+                  <span>{summarize(occupied.get(room.id) ?? [])}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="fine">Availability follows the selected timetable slot. Confirm room access before you go.</p>
+        </>
       )}
-      <p className="fine">Availability follows the selected timetable slot. Confirm room access before you go.</p>
     </div>
   );
 }
@@ -741,6 +785,7 @@ export function BatchesView() {
         <ClassList list={list} day={day} who="batch" />
       </section>
       <div className="row-actions noprint">
+        <ExportScheduleImage title={batches[batchId]} list={list} />
         <CopySchedule key={batchId} title={batches[batchId]} list={list} />
         <button type="button" className="btn tap" onClick={() => window.print()}>
           <Printer size={16} aria-hidden />

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Mail, Pin, X } from "lucide-react";
 import { CopySchedule } from "@/components/timetable/copy-schedule";
+import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { useDesk, type Detail } from "@/components/timetable/context";
 import { WeekGrid } from "@/components/timetable/week-grid";
 import { getFacultyByTeacher } from "@/lib/faculty";
@@ -245,6 +246,7 @@ function SheetBody({ detail }: { detail: Detail }) {
             <Pin size={16} aria-hidden />
             {pinned ? "Unpin" : "Pin to Today"}
           </button>
+          <ExportScheduleImage title={teachers[detail.id]} list={list} />
           <CopySchedule title={teachers[detail.id]} list={list} />
         </div>
         <WeekGrid
@@ -276,6 +278,7 @@ function SheetBody({ detail }: { detail: Detail }) {
             <Pin size={16} aria-hidden />
             {pinned ? "Unpin" : "Pin to Today"}
           </button>
+          <ExportScheduleImage title={batches[detail.id]} list={list} />
           <CopySchedule title={batches[detail.id]} list={list} />
         </div>
         <WeekGrid
