@@ -154,7 +154,7 @@ export async function renderScheduleToCanvas(
     y += 180;
 
     // Days (Monday to Friday)
-    const dayHeight = 230;
+    const dayHeight = 245;
     const gap = 16;
 
     for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
@@ -189,7 +189,7 @@ export async function renderScheduleToCanvas(
       if (dayClasses.length === 0) {
         ctx.fillStyle = textSecondary;
         ctx.font = "italic 20px system-ui, -apple-system, sans-serif";
-        ctx.fillText("No classes scheduled — Free Day", 65, y + 125);
+        ctx.fillText("No classes scheduled — Free Day", 65, y + 130);
       } else {
         // Draw up to 3 slots side by side or wrapped
         let cx = 60;
@@ -199,10 +199,10 @@ export async function renderScheduleToCanvas(
         for (let i = 0; i < Math.min(dayClasses.length, 3); i++) {
           const entry = dayClasses[i];
           const subName = subjects[entry.subject] || "Subject";
-          const roomName = entry.room >= 0 ? rooms[entry.room] : "TBA";
+          const roomName = entry.room >= 0 ? rooms[entry.room] : "Room TBA";
           const teacherName = entry.teacher >= 0 ? teachers[entry.teacher] : "";
 
-          roundRect(ctx, cx, cy, itemW, 130, 14);
+          roundRect(ctx, cx, cy, itemW, 145, 14);
           ctx.fillStyle = isDark ? "#172b3c" : "#f1f5f9";
           ctx.fill();
           ctx.strokeStyle = cardBorder;
@@ -222,23 +222,28 @@ export async function renderScheduleToCanvas(
           ctx.font = "13px system-ui, -apple-system, sans-serif";
           ctx.fillText(`${SLOTS[entry.slot]?.start} – ${SLOTS[entry.slot]?.end}`, cx + 70, cy + 28);
 
-          // Subject Name (truncated if long)
+          // Subject Name
           ctx.fillStyle = textPrimary;
-          ctx.font = "bold 17px system-ui, -apple-system, sans-serif";
-          const maxChar = 22;
+          ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
+          const maxChar = 24;
           const displaySub = subName.length > maxChar ? subName.slice(0, maxChar) + "…" : subName;
-          ctx.fillText(displaySub, cx + 12, cy + 68);
+          ctx.fillText(displaySub, cx + 12, cy + 66);
 
-          // Room & Teacher footer in card
+          // Room tag
           ctx.fillStyle = accentColor;
-          ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
-          ctx.fillText(`📍 ${roomName}`, cx + 12, cy + 104);
+          ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
+          ctx.fillText(`📍 ${roomName}`, cx + 12, cy + 96);
 
+          // Full Teacher Name
           if (teacherName) {
             ctx.fillStyle = textSecondary;
             ctx.font = "13px system-ui, -apple-system, sans-serif";
-            const shortTeacher = teacherName.split(" ").slice(-1)[0] || teacherName;
-            ctx.fillText(`👤 ${shortTeacher}`, cx + 140, cy + 104);
+            const maxTeacherLen = 27;
+            const displayTeacher =
+              teacherName.length > maxTeacherLen
+                ? teacherName.slice(0, maxTeacherLen - 1) + "…"
+                : teacherName;
+            ctx.fillText(`👤 ${displayTeacher}`, cx + 12, cy + 124);
           }
 
           cx += itemW + 15;
@@ -247,7 +252,7 @@ export async function renderScheduleToCanvas(
         if (dayClasses.length > 3) {
           ctx.fillStyle = accentColor;
           ctx.font = "bold 15px system-ui, -apple-system, sans-serif";
-          ctx.fillText(`+${dayClasses.length - 3} more`, 965, y + 140);
+          ctx.fillText(`+${dayClasses.length - 3} more`, 965, y + 145);
         }
       }
 
@@ -374,20 +379,24 @@ export async function renderScheduleToCanvas(
 
           // Room tag
           if (roomName) {
-            roundRect(ctx, cx + 18, ry + 42, 85, 24, 6);
+            roundRect(ctx, cx + 18, ry + 38, 85, 22, 6);
             ctx.fillStyle = isDark ? "#1e3a4e" : "#e0f2fe";
             ctx.fill();
             ctx.fillStyle = accentColor;
-            ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
-            ctx.fillText(roomName, cx + 25, ry + 59);
+            ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+            ctx.fillText(roomName, cx + 25, ry + 53);
           }
 
-          // Teacher
+          // Full Teacher Name
           if (teacherName) {
             ctx.fillStyle = textSecondary;
             ctx.font = "12px system-ui, -apple-system, sans-serif";
-            const shortTeacher = teacherName.split(" ").slice(-1)[0] || teacherName;
-            ctx.fillText(`👤 ${shortTeacher}`, cx + 18, ry + 95);
+            const maxTeacherLen = 25;
+            const displayTeacher =
+              teacherName.length > maxTeacherLen
+                ? teacherName.slice(0, maxTeacherLen - 1) + "…"
+                : teacherName;
+            ctx.fillText(`👤 ${displayTeacher}`, cx + 18, ry + 88);
           }
         } else {
           // Free slot
