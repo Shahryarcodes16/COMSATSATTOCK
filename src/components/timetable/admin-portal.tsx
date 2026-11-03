@@ -40,6 +40,8 @@ import {
   saveCampusNotice,
   clearCampusNotice,
   updateAdminPasskey,
+  getStoredAdminPasskey,
+  resetAdminPasskeyWithAuth,
   type CampusNotice,
   type AdminSession,
 } from "@/lib/admin";
@@ -83,6 +85,15 @@ export function AdminPortal() {
   const [newPasskey, setNewPasskey] = useState("");
   const [confirmPasskey, setConfirmPasskey] = useState("");
   const [passkeyFeedback, setPasskeyFeedback] = useState("");
+  const [showCurrentConfiguredPasskey, setShowCurrentConfiguredPasskey] = useState(false);
+
+  // Login screen direct passkey reset state
+  const [isResetPasskeyOpen, setIsResetPasskeyOpen] = useState(false);
+  const [resetCurrentOrMaster, setResetCurrentOrMaster] = useState("");
+  const [resetNewPasskey, setResetNewPasskey] = useState("");
+  const [resetConfirmPasskey, setResetConfirmPasskey] = useState("");
+  const [resetFeedback, setResetFeedback] = useState("");
+  const [resetError, setResetError] = useState("");
 
   useEffect(() => {
     if (currentNotice) {
@@ -143,8 +154,8 @@ export function AdminPortal() {
 
   const handlePasskeyChange = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPasskey.length < 6) {
-      setPasskeyFeedback("Passkey must be at least 6 characters long.");
+    if (newPasskey.length < 4) {
+      setPasskeyFeedback("Passkey must be at least 4 characters long.");
       return;
     }
     if (newPasskey !== confirmPasskey) {
@@ -161,6 +172,42 @@ export function AdminPortal() {
     } else {
       setPasskeyFeedback("Failed to update passkey.");
     }
+  };
+
+  const handleDirectPasskeyReset = (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+    setResetFeedback("");
+
+    if (resetNewPasskey.length < 4) {
+      setResetError("New passkey must be at least 4 characters long.");
+      return;
+    }
+    if (resetNewPasskey !== resetConfirmPasskey) {
+      setResetError("New passkeys do not match.");
+      return;
+    }
+
+    const result = resetAdminPasskeyWithAuth(
+      emailInput,
+      resetCurrentOrMaster,
+      resetNewPasskey,
+    );
+
+    if (!result.success) {
+      setResetError(result.error || "Failed to update passkey.");
+      return;
+    }
+
+    setResetFeedback("✅ Passkey updated successfully! You can now log in with your new passkey.");
+    setPasskeyInput(resetNewPasskey);
+    setResetCurrentOrMaster("");
+    setResetNewPasskey("");
+    setResetConfirmPasskey("");
+    setTimeout(() => {
+      setIsResetPasskeyOpen(false);
+      setResetFeedback("");
+    }, 3000);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,6 +317,88 @@ export function AdminPortal() {
             </button>
           </form>
 
+          {/* Direct Passkey Change / Reset Option on Login Screen */}
+          <div className="admin-login-extras stack">
+            <button
+              type="button"
+              className="btn tap admin-toggle-reset-btn"
+              onClick={() => {
+                setIsResetPasskeyOpen(!isResetPasskeyOpen);
+                setResetError("");
+                setResetFeedback("");
+              }}
+            >
+              <KeyRound size={15} aria-hidden />
+              <span>{isResetPasskeyOpen ? "Hide Passkey Reset" : "🔑 Change / Reset Admin Passkey"}</span>
+            </button>
+
+            {isResetPasskeyOpen && (
+              <form onSubmit={handleDirectPasskeyReset} className="admin-reset-card stack">
+                <div className="admin-reset-card-head">
+                  <KeyRound size={17} color="#087f79" />
+                  <b>Change Your Admin Passkey</b>
+                </div>
+                <p className="fine quiet" style={{ margin: 0 }}>
+                  Enter your current passkey (default: <code>cuiatk@2026</code>) or verification PIN (<code>014</code>) to set a new passkey.
+                </p>
+
+                {resetError && (
+                  <div className="admin-error-banner" role="alert">
+                    <ShieldAlert size={16} />
+                    <span>{resetError}</span>
+                  </div>
+                )}
+                {resetFeedback && (
+                  <div className="admin-feedback-banner">
+                    <CheckCircle2 size={16} />
+                    <span>{resetFeedback}</span>
+                  </div>
+                )}
+
+                <label className="field-label-wrap">
+                  <span className="field-label">Current Passkey or Roll PIN (014)</span>
+                  <input
+                    type="password"
+                    className="input"
+                    required
+                    value={resetCurrentOrMaster}
+                    onChange={(e) => setResetCurrentOrMaster(e.target.value)}
+                    placeholder="cuiatk@2026 or 014"
+                  />
+                </label>
+
+                <label className="field-label-wrap">
+                  <span className="field-label">New Passkey</span>
+                  <input
+                    type="password"
+                    className="input"
+                    required
+                    value={resetNewPasskey}
+                    onChange={(e) => setResetNewPasskey(e.target.value)}
+                    placeholder="Enter new passkey"
+                  />
+                </label>
+
+                <label className="field-label-wrap">
+                  <span className="field-label">Confirm New Passkey</span>
+                  <input
+                    type="password"
+                    className="input"
+                    required
+                    value={resetConfirmPasskey}
+                    onChange={(e) => setResetConfirmPasskey(e.target.value)}
+                    placeholder="Confirm new passkey"
+                  />
+                </label>
+
+                <button type="submit" className="btn solid tap">
+                  <Save size={16} />
+                  <span>Update Passkey</span>
+                </button>
+              </form>
+            )}
+          </div>
+
           <div className="admin-login-foot">
             <button
               type="button"
@@ -306,6 +435,16 @@ export function AdminPortal() {
         <div className="admin-header-actions">
           <button
             type="button"
+            className={`btn tap admin-passkey-quick-btn ${activeTab === "security" ? "solid" : ""}`}
+            onClick={() => setActiveTab("security")}
+            title="Configure or Change Admin Passkey"
+          >
+            <KeyRound size={16} aria-hidden />
+            <span>Passkey Settings</span>
+          </button>
+
+          <button
+            type="button"
             className="btn tap"
             onClick={() => setView("today")}
           >
@@ -332,7 +471,7 @@ export function AdminPortal() {
           onClick={() => setActiveTab("broadcast")}
         >
           <Bell size={16} aria-hidden />
-          <span>📢 Emergency Broadcast Banner</span>
+          <span>📢 Broadcast Banner</span>
           {currentNotice?.enabled && <span className="admin-active-dot" />}
         </button>
 
@@ -342,7 +481,7 @@ export function AdminPortal() {
           onClick={() => setActiveTab("uploader")}
         >
           <Upload size={16} aria-hidden />
-          <span>📤 Timetable Excel/CSV Uploader</span>
+          <span>📤 Upload Timetable</span>
         </button>
 
         <button
@@ -351,7 +490,7 @@ export function AdminPortal() {
           onClick={() => setActiveTab("datesheet")}
         >
           <CalendarDays size={16} aria-hidden />
-          <span>📅 Midterms Date Sheet</span>
+          <span>📅 Datesheet</span>
           {datesheetLive && <span className="admin-active-dot" />}
         </button>
 
@@ -361,7 +500,7 @@ export function AdminPortal() {
           onClick={() => setActiveTab("security")}
         >
           <KeyRound size={16} aria-hidden />
-          <span>🔐 Passkey & Security</span>
+          <span>🔐 Change Passkey</span>
         </button>
       </div>
 
@@ -656,20 +795,37 @@ export function AdminPortal() {
             <div>
               <h2 className="section-title">Security & Master Passkey Settings</h2>
               <p className="quiet">
-                Configure your master security passkey and view access controls.
+                Configure your master security passkey, view current credentials, and control portal access.
               </p>
             </div>
           </div>
 
           <div className="admin-card stack">
             <div className="admin-security-info-row">
-              <UserCheck size={20} color="#087f79" aria-hidden />
+              <UserCheck size={22} color="#087f79" aria-hidden />
               <div>
                 <b>Authorized Super Admin Account:</b>
                 <p className="fine quiet" style={{ margin: 0 }}>
-                  Only <code>{AUTHORIZED_ADMIN_EMAIL}</code> can log in to this portal. All other emails are strictly blocked.
+                  Only <code>{AUTHORIZED_ADMIN_EMAIL}</code> can log in to this portal. All other accounts are strictly blocked.
                 </p>
               </div>
+            </div>
+
+            <div className="admin-current-passkey-row">
+              <div>
+                <span className="fine quiet">Current Configured Passkey:</span>
+                <p style={{ margin: "2px 0 0 0", fontFamily: "monospace", fontSize: "1rem" }}>
+                  {showCurrentConfiguredPasskey ? getStoredAdminPasskey() : "••••••••••••"}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn tap"
+                onClick={() => setShowCurrentConfiguredPasskey(!showCurrentConfiguredPasskey)}
+              >
+                {showCurrentConfiguredPasskey ? <EyeOff size={15} /> : <Eye size={15} />}
+                <span>{showCurrentConfiguredPasskey ? "Hide" : "Reveal Current Passkey"}</span>
+              </button>
             </div>
           </div>
 
@@ -680,17 +836,21 @@ export function AdminPortal() {
             </div>
           )}
 
-          <form onSubmit={handlePasskeyChange} className="admin-card stack" style={{ maxWidth: 520 }}>
-            <h3>Change Master Passkey</h3>
+          <form onSubmit={handlePasskeyChange} className="admin-card stack" style={{ maxWidth: 540 }}>
+            <h3>Update Master Passkey</h3>
+            <p className="fine quiet" style={{ margin: 0 }}>
+              Set a custom passkey that only you know. You will use this new passkey to log into the Admin Portal in the future.
+            </p>
+
             <label className="field-label-wrap">
-              <span className="field-label">New Master Passkey (min 6 characters)</span>
+              <span className="field-label">New Master Passkey (min 4 characters)</span>
               <input
                 type="password"
                 className="input"
                 required
                 value={newPasskey}
                 onChange={(e) => setNewPasskey(e.target.value)}
-                placeholder="Enter new passkey"
+                placeholder="Enter your new secret passkey"
               />
             </label>
 
@@ -702,7 +862,7 @@ export function AdminPortal() {
                 required
                 value={confirmPasskey}
                 onChange={(e) => setConfirmPasskey(e.target.value)}
-                placeholder="Confirm new passkey"
+                placeholder="Re-type new passkey"
               />
             </label>
 
@@ -710,6 +870,20 @@ export function AdminPortal() {
               <button type="submit" className="btn solid tap">
                 <KeyRound size={16} aria-hidden />
                 <span>Save New Passkey</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn tap"
+                onClick={() => {
+                  updateAdminPasskey(DEFAULT_ADMIN_PASSKEY);
+                  setPasskeyFeedback(`Reset to default initial passkey: ${DEFAULT_ADMIN_PASSKEY}`);
+                  setTimeout(() => setPasskeyFeedback(""), 4000);
+                }}
+                title="Reset back to factory default: cuiatk@2026"
+              >
+                <RefreshCw size={15} aria-hidden />
+                <span>Reset to Default ({DEFAULT_ADMIN_PASSKEY})</span>
               </button>
             </div>
           </form>

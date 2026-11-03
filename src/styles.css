@@ -5988,3 +5988,69 @@
   gap: 0.5rem;
   font-size: 0.88rem;
 }
+
+/* Reset / Change Passkey on Login Screen */
+.admin-login-extras {
+  border-top: 1px dashed var(--c-line);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-toggle-reset-btn {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--c-muted);
+}
+
+.admin-toggle-reset-btn:hover {
+  color: var(--c-accent);
+}
+
+.admin-reset-card {
+  background: color-mix(in srgb, var(--c-canvas) 80%, var(--c-paper));
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 1rem;
+  gap: 0.75rem;
+}
+
+.admin-reset-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--c-ink);
+  font-size: 0.95rem;
+}
+
+.admin-current-passkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--c-canvas) 80%, var(--c-paper));
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  flex-wrap: wrap;
+}
+
+.admin-passkey-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--c-accent) 30%, transparent);
+  color: var(--c-accent);
+  font-weight: 600;
+}
+
+.admin-passkey-quick-btn:hover,
+.admin-passkey-quick-btn.solid {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+}

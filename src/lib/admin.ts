@@ -48,13 +48,35 @@ export function getStoredAdminPasskey(): string {
  * Updates the admin passkey
  */
 export function updateAdminPasskey(newPasskey: string): boolean {
-  if (typeof window === "undefined" || !newPasskey || newPasskey.length < 6) return false;
+  if (typeof window === "undefined" || !newPasskey || newPasskey.length < 4) return false;
   try {
     localStorage.setItem(ADMIN_PASSKEY_STORAGE_KEY, newPasskey);
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Validates and resets passkey using current passkey or student roll PIN (014)
+ */
+export function resetAdminPasskeyWithAuth(
+  email: string,
+  currentOrMaster: string,
+  newPasskey: string,
+): { success: boolean; error?: string } {
+  if (!isAuthorizedAdminEmail(email)) {
+    return { success: false, error: `Unauthorized email address. Only ${AUTHORIZED_ADMIN_EMAIL} can perform this action.` };
+  }
+  const current = getStoredAdminPasskey();
+  if (currentOrMaster !== current && currentOrMaster !== DEFAULT_ADMIN_PASSKEY && currentOrMaster !== "014") {
+    return { success: false, error: "Current passkey or student roll PIN (014) is incorrect." };
+  }
+  if (!newPasskey || newPasskey.length < 4) {
+    return { success: false, error: "New passkey must be at least 4 characters long." };
+  }
+  const ok = updateAdminPasskey(newPasskey);
+  return ok ? { success: true } : { success: false, error: "Failed to save new passkey." };
 }
 
 /**
