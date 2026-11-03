@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Calendar,
   CalendarCheck,
+  CalendarDays,
   CalendarPlus,
   Check,
   Clock,
@@ -37,6 +38,7 @@ import {
   type ClassEntry,
 } from "@/lib/schedule";
 import { getFacultyEmail } from "@/lib/faculty";
+import { isDatesheetActive } from "@/lib/datesheet";
 import {
   downloadIcsFile,
   findScheduleClashes,
@@ -136,6 +138,18 @@ export function MyScheduleView() {
 
       {/* Action Toolbar */}
       <div className="my-schedule-actions">
+        {isDatesheetActive() && (
+          <button
+            type="button"
+            className="btn tap datesheet-quick-btn"
+            onClick={() => setView("datesheet")}
+            title="View Midterm Examination Date Sheet"
+          >
+            <CalendarDays size={16} aria-hidden />
+            <span>Midterm Date Sheet</span>
+          </button>
+        )}
+
         <button
           type="button"
           className="btn solid tap"

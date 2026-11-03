@@ -20,6 +20,7 @@ import { NotificationBellButton } from "@/components/timetable/notification-moda
 import { FreeRoomsRadar } from "@/components/timetable/room-radar";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { getFacultyEmail } from "@/lib/faculty";
+import { isDatesheetActive } from "@/lib/datesheet";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
@@ -105,6 +106,30 @@ export function TodayView() {
         </div>
         <span className="term-badge">Timetable · 5 Oct 2026</span>
       </div>
+
+      {isDatesheetActive(now) && (
+        <section className="datesheet-today-banner" aria-label="Midterm Examination Notice">
+          <div className="datesheet-today-banner-content">
+            <span className="datesheet-today-tag">
+              <CalendarDays size={14} aria-hidden />
+              FA26 MIDTERM EXAMINATIONS
+            </span>
+            <h3>Midterm Date Sheet is Live</h3>
+            <p>
+              Examinations run from <b>5 Nov to 12 Nov 2026</b> (4 Nov papers shifted to 12 Nov). View your personalized schedule, exam rooms, timings, and repeater clash detection.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn solid tap datesheet-today-banner-btn"
+            onClick={() => setView("datesheet")}
+          >
+            <span>View Date Sheet</span>
+            <ArrowUpRight size={16} aria-hidden />
+          </button>
+        </section>
+      )}
+
       <section className="campus-overview">
         <div className="overview-copy">
           <span className="campus-badge">

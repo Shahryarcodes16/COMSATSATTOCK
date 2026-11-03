@@ -5,6 +5,7 @@ import {
   RoomsView,
   TodayView,
 } from "@/components/timetable/views";
+import { DatesheetView } from "@/components/timetable/datesheet-view";
 import { MyScheduleView } from "@/components/timetable/my-schedule-view";
 import { DeskProvider, useDesk } from "@/components/timetable/context";
 import { CampusFooter, Dock, Sidebar, Topbar } from "@/components/timetable/chrome";
@@ -49,6 +50,9 @@ function Frame() {
             </div>
             <div hidden={view !== "find"}>
               <FindView />
+            </div>
+            <div hidden={view !== "datesheet"}>
+              <DatesheetView />
             </div>
           </main>
           <CampusFooter />

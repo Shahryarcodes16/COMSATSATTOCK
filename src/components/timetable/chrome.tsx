@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowUpRight,
   CalendarCheck,
+  CalendarDays,
   Clock,
   DoorOpen,
   GraduationCap,
@@ -23,11 +24,12 @@ import {
   DEVELOPER_PHONE_HREF,
 } from "@/lib/campus";
 import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, timeLabel, type ClockInfo } from "@/lib/schedule";
+import { isDatesheetActive } from "@/lib/datesheet";
 import { useDesk, type View } from "@/components/timetable/context";
 import { NotificationBellButton } from "@/components/timetable/notification-modal";
 
-// Desktop sidebar navigates all 6 sections
-const DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
+// Desktop sidebar navigates all sections
+const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
   { id: "custom", label: "My Schedule", icon: CalendarCheck },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
@@ -36,8 +38,7 @@ const DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "find", label: "Search", icon: Search },
 ];
 
-// Mobile dock shows the 5 primary schedule & campus views with clean single-line labels
-// Search is prominently accessible right in the mobile header next to theme toggle
+// Mobile dock shows primary schedule & campus views with clean single-line labels
 const MOBILE_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
   { id: "custom", label: "Schedule", icon: CalendarCheck },
@@ -59,13 +60,23 @@ export function Brand() {
 }
 
 export function Sidebar() {
-  const { view, setView } = useDesk();
+  const { now, view, setView } = useDesk();
+  const datesheetActive = isDatesheetActive(now);
+
+  const desktopNav = datesheetActive
+    ? [
+        ...BASE_DESKTOP_NAV.slice(0, 2),
+        { id: "datesheet" as View, label: "Date Sheet", icon: CalendarDays },
+        ...BASE_DESKTOP_NAV.slice(2),
+      ]
+    : BASE_DESKTOP_NAV;
+
   return (
     <aside className="sidebar">
       <Brand />
       <p className="nav-label">Campus workspace</p>
       <nav className="side-nav" aria-label="Sections">
-        {DESKTOP_NAV.map((item) => {
+        {desktopNav.map((item) => {
           const Icon = item.icon;
           const on = view === item.id;
           return (
@@ -83,6 +94,24 @@ export function Sidebar() {
           );
         })}
       </nav>
+      {datesheetActive && (
+        <div className="datesheet-sidebar-card">
+          <div className="datesheet-sidebar-badge-row">
+            <span className="datesheet-live-dot" />
+            <span className="datesheet-badge-text">FA26 MIDTERMS</span>
+          </div>
+          <p className="datesheet-sidebar-title">Midterm Date Sheet</p>
+          <p className="datesheet-sidebar-desc">Nov 5 – Nov 12 (4 Nov shifted)</p>
+          <button
+            type="button"
+            className={`btn tap datesheet-sidebar-btn ${view === "datesheet" ? "solid" : ""}`}
+            onClick={() => setView("datesheet")}
+          >
+            <CalendarDays size={14} aria-hidden />
+            <span>{view === "datesheet" ? "Viewing Datesheet" : "Open Schedule"}</span>
+          </button>
+        </div>
+      )}
       <div className="side-foot">
         <span className="side-campus">
           <GraduationCap size={18} aria-hidden />
@@ -100,6 +129,7 @@ export function Topbar() {
   const { now, theme, toggleTheme, setView, view } = useDesk();
   const ink = theme === "ink";
   const isSearchActive = view === "find";
+  const datesheetActive = isDatesheetActive(now);
 
   return (
     <header className="topbar">
@@ -110,6 +140,20 @@ export function Topbar() {
         <p className="hello">{greeting(now)}</p>
       </div>
       <div className="topbar-actions">
+        {/* Datesheet quick pill button */}
+        {datesheetActive && (
+          <button
+            type="button"
+            className={`datesheet-topbar-pill tap ${view === "datesheet" ? "on" : ""}`}
+            onClick={() => setView("datesheet")}
+            title="Open Midterm Examination Date Sheet"
+          >
+            <span className="datesheet-pill-dot" />
+            <span className="datesheet-pill-title">Date Sheet</span>
+            <span className="datesheet-pill-badge">Nov 5–12</span>
+          </button>
+        )}
+
         {/* Desktop search button */}
         <button
           type="button"
