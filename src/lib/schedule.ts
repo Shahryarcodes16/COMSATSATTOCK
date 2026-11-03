@@ -10,7 +10,7 @@ const campusPartsFormatter = new Intl.DateTimeFormat("en-GB", {
   hourCycle: "h23",
 });
 
-function campusParts(date: Date) {
+export function campusParts(date: Date) {
   const parts = campusPartsFormatter.formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((item) => item.type === type)?.value ?? "";
@@ -19,6 +19,14 @@ function campusParts(date: Date) {
     hour: Number(part("hour")),
     minute: Number(part("minute")),
   };
+}
+
+export function getCampusMinutes(date: Date | null = new Date()) {
+  const target = date || new Date();
+  const { weekday, hour, minute } = campusParts(target);
+  const minutes = hour * 60 + minute;
+  const dayIndex = weekday >= 1 && weekday <= 5 ? weekday - 1 : null;
+  return { weekday, dayIndex, hour, minute, minutes };
 }
 
 export const batches = raw.b;

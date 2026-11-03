@@ -19,6 +19,7 @@ import {
   teachers,
   forTeacher,
   rangeLabel,
+  getCampusMinutes,
 } from "@/lib/schedule";
 import {
   getTeacherOfficeProfile,
@@ -29,10 +30,12 @@ import { DEPARTMENTS, type Department } from "@/lib/faculty";
 import { useDesk } from "@/components/timetable/context";
 
 export function FacultyOfficeHours() {
-  const { clock, day: selectedDeskDay, open, pinnedTeachers, togglePinTeacher } = useDesk();
+  const { clock, now, day: selectedDeskDay, open, pinnedTeachers, togglePinTeacher } = useDesk();
+  const campusTime = useMemo(() => getCampusMinutes(now), [now]);
+
   const [selectedDay, setSelectedDay] = useState<number>(() => {
-    return clock.dayIndex !== null && clock.dayIndex >= 0 && clock.dayIndex < 5
-      ? clock.dayIndex
+    return campusTime.dayIndex !== null && campusTime.dayIndex >= 0 && campusTime.dayIndex < 5
+      ? campusTime.dayIndex
       : selectedDeskDay;
   });
   const [search, setSearch] = useState("");
@@ -40,25 +43,14 @@ export function FacultyOfficeHours() {
   const [freeNowOnly, setFreeNowOnly] = useState(false);
   const [pinnedOnly, setPinnedOnly] = useState(false);
 
-  // Compute current campus minutes from clock
-  const currentMinutes = useMemo(() => {
-    const [hourStr, minStr] = clock.headline.split(" ")[0]?.split(":") ?? [];
-    const isPM = clock.headline.includes("PM");
-    let h = parseInt(hourStr || "0", 10);
-    const m = parseInt(minStr || "0", 10);
-    if (isPM && h !== 12) h += 12;
-    if (!isPM && h === 12) h = 0;
-    return h * 60 + m;
-  }, [clock.headline]);
-
-  // Compute profiles for all teachers
+  // Compute profiles for all teachers using accurate campus time
   const allProfiles = useMemo(() => {
     const list: TeacherOfficeProfile[] = [];
     for (let id = 0; id < teachers.length; id++) {
-      list.push(getTeacherOfficeProfile(id, clock.dayIndex, currentMinutes));
+      list.push(getTeacherOfficeProfile(id, campusTime.dayIndex, campusTime.minutes));
     }
     return list;
-  }, [clock.dayIndex, currentMinutes]);
+  }, [campusTime.dayIndex, campusTime.minutes]);
 
   // Filter profiles
   const needle = search.trim().toLowerCase();
@@ -121,7 +113,7 @@ export function FacultyOfficeHours() {
         {/* Day Selector */}
         <div className="office-day-selector" role="tablist" aria-label="Select Day">
           {DAYS.map((name, idx) => {
-            const isToday = clock.dayIndex === idx;
+            const isToday = campusTime.dayIndex === idx;
             const isSelected = selectedDay === idx;
             return (
               <button
@@ -211,7 +203,7 @@ export function FacultyOfficeHours() {
           filtered.map((profile) => {
             const dayInfo = profile.days[selectedDay];
             const isPinned = pinnedTeachers.includes(profile.teacherId);
-            const isSelectedDayToday = clock.dayIndex === selectedDay;
+            const isSelectedDayToday = campusTime.dayIndex === selectedDay;
 
             return (
               <div key={profile.teacherId} className="office-teacher-card">

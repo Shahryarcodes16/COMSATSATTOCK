@@ -25,14 +25,14 @@ import {
   markNotifiedToday,
 } from "@/lib/notifications";
 import { useDesk } from "@/components/timetable/context";
-import { SLOTS, batches, forBatch, rooms, subjects, teachers } from "@/lib/schedule";
+import { SLOTS, batches, forBatch, rooms, subjects, teachers, getCampusMinutes } from "@/lib/schedule";
 import { loadCustomSchedule } from "@/lib/my-schedule";
 
 /**
  * Background hook that checks the schedule every 30s and triggers class alerts
  */
 export function useClassNotificationScheduler() {
-  const { clock, pinnedBatch } = useDesk();
+  const { clock, now, pinnedBatch } = useDesk();
 
   useEffect(() => {
     if (!isNotificationSupported()) return;
@@ -41,17 +41,8 @@ export function useClassNotificationScheduler() {
       const settings = getStoredNotificationSettings();
       if (!settings.enabled || Notification.permission !== "granted") return;
 
-      const dayIndex = clock.dayIndex;
-      if (dayIndex === null || dayIndex < 0 || dayIndex > 4) return; // Weekend or unverified
-
-      // Parse current campus hour and minute
-      const [hourStr, minStr] = clock.headline.split(" ")[0]?.split(":") ?? [];
-      const isPM = clock.headline.includes("PM");
-      let h = parseInt(hourStr || "0", 10);
-      const m = parseInt(minStr || "0", 10);
-      if (isPM && h !== 12) h += 12;
-      if (!isPM && h === 12) h = 0;
-      const currentCampusMinutes = h * 60 + m;
+      const { dayIndex, minutes: currentCampusMinutes } = getCampusMinutes(now);
+      if (dayIndex === null || dayIndex < 0 || dayIndex > 4) return; // Weekend or off-campus
 
       // Determine today's classes
       let todayClasses: {
@@ -101,7 +92,7 @@ export function useClassNotificationScheduler() {
     checkAlarms();
     const interval = setInterval(checkAlarms, 30_000);
     return () => clearInterval(interval);
-  }, [clock, pinnedBatch]);
+  }, [clock, now, pinnedBatch]);
 }
 
 /**

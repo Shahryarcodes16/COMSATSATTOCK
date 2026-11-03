@@ -348,7 +348,7 @@ export function RoomsView() {
         </div>
       </div>
 
-      <div className="faculty-view-tabs" role="tablist" aria-label="Rooms view mode">
+      <div className="faculty-view-tabs tabs-2" role="tablist" aria-label="Rooms view mode">
         <button
           type="button"
           role="tab"
@@ -357,7 +357,8 @@ export function RoomsView() {
           onClick={() => setViewMode("radar")}
         >
           <Zap size={16} aria-hidden />
-          <span>⚡ Live Free Rooms Radar</span>
+          <span className="tab-label-full">⚡ Live Free Rooms Radar</span>
+          <span className="tab-label-short">⚡ Radar</span>
         </button>
         <button
           type="button"
@@ -367,7 +368,8 @@ export function RoomsView() {
           onClick={() => setViewMode("browser")}
         >
           <Clock size={16} aria-hidden />
-          <span>All Rooms Schedule Browser</span>
+          <span className="tab-label-full">All Rooms Schedule Browser</span>
+          <span className="tab-label-short">All Rooms</span>
         </button>
       </div>
 
@@ -561,7 +563,7 @@ export function FacultyView() {
         </div>
       </div>
 
-      <div className="faculty-view-tabs" role="tablist" aria-label="Faculty view mode">
+      <div className="faculty-view-tabs tabs-3" role="tablist" aria-label="Faculty view mode">
         <button
           type="button"
           role="tab"
@@ -570,7 +572,8 @@ export function FacultyView() {
           onClick={() => setActiveTab("directory")}
         >
           <Mail size={16} aria-hidden />
-          <span>Faculty Directory & Emails</span>
+          <span className="tab-label-full">Faculty Directory & Emails</span>
+          <span className="tab-label-short">Directory</span>
         </button>
         <button
           type="button"
@@ -580,7 +583,8 @@ export function FacultyView() {
           onClick={() => setActiveTab("office-hours")}
         >
           <Briefcase size={16} aria-hidden />
-          <span>Office Hours & Consultation</span>
+          <span className="tab-label-full">Office Hours & Consultation</span>
+          <span className="tab-label-short">Office Hours</span>
         </button>
         <button
           type="button"
@@ -590,7 +594,8 @@ export function FacultyView() {
           onClick={() => setActiveTab("schedule")}
         >
           <Clock size={16} aria-hidden />
-          <span>Slot Availability</span>
+          <span className="tab-label-full">Slot Availability</span>
+          <span className="tab-label-short">Availability</span>
         </button>
       </div>
 
