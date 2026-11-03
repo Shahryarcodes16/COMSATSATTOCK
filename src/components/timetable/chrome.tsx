@@ -6,6 +6,7 @@ import {
   Clock,
   DoorOpen,
   GraduationCap,
+  Lock,
   Mail,
   Moon,
   Phone,
@@ -120,6 +121,15 @@ export function Sidebar() {
         <p>Timetable from 5 Oct 2026</p>
         <p>{CAMPUS_TIME_LABEL}</p>
         <span className="side-note">A clearer view of campus life.</span>
+        <button
+          type="button"
+          className={`side-admin-link tap ${view === "admin" ? "on" : ""}`}
+          onClick={() => setView("admin")}
+          title="Campus Administrator Control Center"
+        >
+          <Lock size={13} aria-hidden />
+          <span>Admin Portal</span>
+        </button>
       </div>
     </aside>
   );
@@ -202,6 +212,8 @@ export function Topbar() {
 }
 
 export function CampusFooter() {
+  const { view, setView } = useDesk();
+
   return (
     <footer className="campus-footer">
       <div>
@@ -209,6 +221,15 @@ export function CampusFooter() {
         <p className="fine">Attock Campus · {CAMPUS_TIME_LABEL}</p>
       </div>
       <div className="campus-footer-contacts">
+        <button
+          type="button"
+          className={`btn tap campus-footer-admin-btn ${view === "admin" ? "solid" : ""}`}
+          onClick={() => setView("admin")}
+          title="Campus Administrator Control Center"
+        >
+          <Lock size={15} aria-hidden />
+          <span>Admin Portal</span>
+        </button>
         <a
           className="btn tap"
           href={DEVELOPER_EMAIL_HREF}
