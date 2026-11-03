@@ -60,8 +60,8 @@ export function AdminPortal() {
   const { setView, now } = useDesk();
   const [session, setSession] = useState<AdminSession | null>(() => getActiveAdminSession());
 
-  // Login form state
-  const [emailInput, setEmailInput] = useState(AUTHORIZED_ADMIN_EMAIL);
+  // Login form state (starts clean with no pre-filled confidential details)
+  const [emailInput, setEmailInput] = useState("");
   const [passkeyInput, setPasskeyInput] = useState("");
   const [showPasskey, setShowPasskey] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -95,14 +95,6 @@ export function AdminPortal() {
   const [confirmPasskey, setConfirmPasskey] = useState("");
   const [passkeyFeedback, setPasskeyFeedback] = useState("");
   const [showCurrentConfiguredPasskey, setShowCurrentConfiguredPasskey] = useState(false);
-
-  // Login screen direct passkey reset state
-  const [isResetPasskeyOpen, setIsResetPasskeyOpen] = useState(false);
-  const [resetCurrentOrMaster, setResetCurrentOrMaster] = useState("");
-  const [resetNewPasskey, setResetNewPasskey] = useState("");
-  const [resetConfirmPasskey, setResetConfirmPasskey] = useState("");
-  const [resetFeedback, setResetFeedback] = useState("");
-  const [resetError, setResetError] = useState("");
 
   // Synchronize admin configuration and broadcast notices from server on load
   useEffect(() => {
@@ -207,44 +199,6 @@ export function AdminPortal() {
     }
   };
 
-  const handleDirectPasskeyReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetError("");
-    setResetFeedback("");
-
-    if (resetNewPasskey.length < 4) {
-      setResetError("New passkey must be at least 4 characters long.");
-      return;
-    }
-    if (resetNewPasskey !== resetConfirmPasskey) {
-      setResetError("New passkeys do not match.");
-      return;
-    }
-
-    setResetFeedback("Syncing new passkey across devices...");
-    const result = await resetAdminPasskeyWithAuthAsync(
-      emailInput,
-      resetCurrentOrMaster,
-      resetNewPasskey,
-    );
-
-    if (!result.success) {
-      setResetError(result.error || "Failed to update passkey.");
-      setResetFeedback("");
-      return;
-    }
-
-    setResetFeedback("✅ Passkey updated successfully! Synced across all devices (Laptop & Mobile).");
-    setPasskeyInput(resetNewPasskey);
-    setResetCurrentOrMaster("");
-    setResetNewPasskey("");
-    setResetConfirmPasskey("");
-    setTimeout(() => {
-      setIsResetPasskeyOpen(false);
-      setResetFeedback("");
-    }, 3500);
-  };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -270,6 +224,7 @@ export function AdminPortal() {
 
   // -------------------------------------------------------------
   // 1. LOGIN SCREEN (If not authenticated)
+  // Clean, secure, and confidential — no private credentials revealed publicly
   // -------------------------------------------------------------
   if (!session) {
     return (
@@ -281,9 +236,7 @@ export function AdminPortal() {
             </div>
             <h2>Admin Control Center</h2>
             <p className="quiet fine">
-              Strictly restricted to the authorized campus administrator:
-              <br />
-              <b>{AUTHORIZED_ADMIN_EMAIL}</b>
+              Authorized university administrative and scheduling personnel only.
             </p>
           </div>
 
@@ -296,20 +249,16 @@ export function AdminPortal() {
 
           <form onSubmit={handleLogin} className="admin-login-form stack">
             <label className="field-label-wrap">
-              <span className="field-label">Official University Gmail</span>
+              <span className="field-label">Official University Email</span>
               <input
                 type="email"
                 className="input"
                 required
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="fa23-bcs-014@cuiatk.edu.pk"
+                placeholder="Enter university email"
+                autoComplete="username"
               />
-              {!isAuthorizedAdminEmail(emailInput) && emailInput.length > 5 && (
-                <span className="field-hint error">
-                  ⚠️ Only {AUTHORIZED_ADMIN_EMAIL} is authorized to log in.
-                </span>
-              )}
             </label>
 
             <label className="field-label-wrap">
@@ -321,7 +270,8 @@ export function AdminPortal() {
                   required
                   value={passkeyInput}
                   onChange={(e) => setPasskeyInput(e.target.value)}
-                  placeholder="Enter your security passkey"
+                  placeholder="Enter security passkey"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -332,9 +282,6 @@ export function AdminPortal() {
                   {showPasskey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              <span className="field-hint quiet">
-                💡 Enter custom passkey, default <code>cuiatk@2026</code>, or student Roll PIN (<code>{MASTER_STUDENT_ROLL_PIN}</code>)
-              </span>
             </label>
 
             <label className="admin-checkbox-label">
@@ -348,96 +295,9 @@ export function AdminPortal() {
 
             <button type="submit" className="btn solid tap admin-login-submit-btn" disabled={isLoggingIn}>
               {isLoggingIn ? <RefreshCw size={18} className="spin" aria-hidden /> : <ShieldCheck size={18} aria-hidden />}
-              <span>{isLoggingIn ? "Verifying Credentials..." : "Authenticate & Enter Portal"}</span>
+              <span>{isLoggingIn ? "Authenticating..." : "Sign In to Admin Portal"}</span>
             </button>
           </form>
-
-          {/* Direct Passkey Change / Reset Option on Login Screen */}
-          <div className="admin-login-extras stack">
-            <div className="admin-sync-hint-badge" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--muted, #64748b)", background: "rgba(8,127,121,0.07)", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(8,127,121,0.18)" }}>
-              <Cloud size={16} color="#087f79" style={{ flexShrink: 0 }} />
-              <span><b>Cross-Device Cloud Sync:</b> Any passkey or announcement you set on your laptop automatically syncs to your phone.</span>
-            </div>
-
-            <button
-              type="button"
-              className="btn tap admin-toggle-reset-btn"
-              onClick={() => {
-                setIsResetPasskeyOpen(!isResetPasskeyOpen);
-                setResetError("");
-                setResetFeedback("");
-              }}
-            >
-              <KeyRound size={15} aria-hidden />
-              <span>{isResetPasskeyOpen ? "Hide Passkey Reset" : "🔑 Change / Reset Admin Passkey"}</span>
-            </button>
-
-            {isResetPasskeyOpen && (
-              <form onSubmit={handleDirectPasskeyReset} className="admin-reset-card stack">
-                <div className="admin-reset-card-head">
-                  <KeyRound size={17} color="#087f79" />
-                  <b>Change Your Admin Passkey</b>
-                </div>
-                <p className="fine quiet" style={{ margin: 0 }}>
-                  Enter your current passkey (default: <code>cuiatk@2026</code>) or roll verification PIN (<code>{MASTER_STUDENT_ROLL_PIN}</code>) to set a new passkey synced across Laptop and Mobile.
-                </p>
-
-                {resetError && (
-                  <div className="admin-error-banner" role="alert">
-                    <ShieldAlert size={16} />
-                    <span>{resetError}</span>
-                  </div>
-                )}
-                {resetFeedback && (
-                  <div className="admin-feedback-banner">
-                    <CheckCircle2 size={16} />
-                    <span>{resetFeedback}</span>
-                  </div>
-                )}
-
-                <label className="field-label-wrap">
-                  <span className="field-label">Current Passkey or Roll PIN (014)</span>
-                  <input
-                    type="password"
-                    className="input"
-                    required
-                    value={resetCurrentOrMaster}
-                    onChange={(e) => setResetCurrentOrMaster(e.target.value)}
-                    placeholder="cuiatk@2026 or 014"
-                  />
-                </label>
-
-                <label className="field-label-wrap">
-                  <span className="field-label">New Passkey</span>
-                  <input
-                    type="password"
-                    className="input"
-                    required
-                    value={resetNewPasskey}
-                    onChange={(e) => setResetNewPasskey(e.target.value)}
-                    placeholder="Enter new passkey"
-                  />
-                </label>
-
-                <label className="field-label-wrap">
-                  <span className="field-label">Confirm New Passkey</span>
-                  <input
-                    type="password"
-                    className="input"
-                    required
-                    value={resetConfirmPasskey}
-                    onChange={(e) => setResetConfirmPasskey(e.target.value)}
-                    placeholder="Confirm new passkey"
-                  />
-                </label>
-
-                <button type="submit" className="btn solid tap">
-                  <Save size={16} />
-                  <span>Update Passkey</span>
-                </button>
-              </form>
-            )}
-          </div>
 
           <div className="admin-login-foot">
             <button

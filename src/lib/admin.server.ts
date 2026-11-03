@@ -112,7 +112,7 @@ export async function verifyAndSaveAdminPasskey(
   if (!email || email.trim().toLowerCase() !== AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
     return {
       success: false,
-      error: `Access Denied: Only ${AUTHORIZED_ADMIN_EMAIL} is authorized to modify admin settings.`,
+      error: "Access Denied: Unauthorized administrator email or credentials.",
     };
   }
 

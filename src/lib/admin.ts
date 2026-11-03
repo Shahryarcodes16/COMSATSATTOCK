@@ -96,7 +96,7 @@ export function resetAdminPasskeyWithAuth(
   if (!isAuthorizedAdminEmail(email)) {
     return {
       success: false,
-      error: `Unauthorized email address. Only ${AUTHORIZED_ADMIN_EMAIL} can perform this action.`,
+      error: "Unauthorized: only the designated campus administrator can perform this action.",
     };
   }
   const current = getStoredAdminPasskey();
@@ -132,7 +132,7 @@ export async function resetAdminPasskeyWithAuthAsync(
   if (!isAuthorizedAdminEmail(email)) {
     return {
       success: false,
-      error: `Unauthorized email address. Only ${AUTHORIZED_ADMIN_EMAIL} can perform this action.`,
+      error: "Unauthorized: only the designated campus administrator can perform this action.",
     };
   }
   if (!newPasskey || newPasskey.trim().length < 4) {
@@ -176,7 +176,7 @@ export function verifyAdminCredentials(
   if (!isAuthorizedAdminEmail(email)) {
     return {
       success: false,
-      error: `Access Denied: Only the authorized university administrator (${AUTHORIZED_ADMIN_EMAIL}) is permitted to access this portal.`,
+      error: "Access Denied: Invalid administrator credentials or unauthorized email.",
     };
   }
 
@@ -197,7 +197,7 @@ export function verifyAdminCredentials(
 
   return {
     success: false,
-    error: "Invalid Security Passkey. Check your passkey or enter student Roll PIN (014).",
+    error: "Invalid Security Passkey. Please verify and try again.",
   };
 }
 
@@ -236,7 +236,7 @@ export async function verifyAdminCredentialsAsync(
 
   return {
     success: false,
-    error: "Invalid Security Passkey. Please verify or use student Roll PIN (014).",
+    error: "Invalid Security Passkey. Please verify and try again.",
   };
 }
 
