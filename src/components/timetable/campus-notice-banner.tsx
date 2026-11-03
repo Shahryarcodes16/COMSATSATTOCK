@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, AlertTriangle, Info, CheckCircle2, X } from "lucide-react";
-import { getCampusNotice, type CampusNotice } from "@/lib/admin";
+import { getCampusNotice, syncAdminDataFromServer, type CampusNotice } from "@/lib/admin";
 
 export function CampusNoticeBanner() {
   const [notice, setNotice] = useState<CampusNotice | null>(() => getCampusNotice());
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    // Synchronize latest announcement from server so announcements made on laptop
+    // immediately appear on mobile and all campus devices
+    syncAdminDataFromServer().then((cfg) => {
+      if (cfg?.notice) {
+        setNotice(cfg.notice);
+      }
+    });
+
     const handleUpdate = () => {
       setNotice(getCampusNotice());
       setDismissed(false);

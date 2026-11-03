@@ -9,6 +9,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Cloud,
   Download,
   Eye,
   EyeOff,
@@ -22,6 +23,7 @@ import {
   Send,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
   Trash2,
   Upload,
   UserCheck,
@@ -31,17 +33,23 @@ import { useDesk } from "@/components/timetable/context";
 import {
   AUTHORIZED_ADMIN_EMAIL,
   DEFAULT_ADMIN_PASSKEY,
+  MASTER_STUDENT_ROLL_PIN,
   isAuthorizedAdminEmail,
   verifyAdminCredentials,
+  verifyAdminCredentialsAsync,
   getActiveAdminSession,
   setAdminSession,
   clearAdminSession,
   getCampusNotice,
   saveCampusNotice,
+  saveCampusNoticeAsync,
   clearCampusNotice,
+  clearCampusNoticeAsync,
   updateAdminPasskey,
   getStoredAdminPasskey,
   resetAdminPasskeyWithAuth,
+  resetAdminPasskeyWithAuthAsync,
+  syncAdminDataFromServer,
   type CampusNotice,
   type AdminSession,
 } from "@/lib/admin";
@@ -58,6 +66,7 @@ export function AdminPortal() {
   const [showPasskey, setShowPasskey] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Portal tab state
   const [activeTab, setActiveTab] = useState<"broadcast" | "uploader" | "datesheet" | "security">("broadcast");
@@ -95,6 +104,15 @@ export function AdminPortal() {
   const [resetFeedback, setResetFeedback] = useState("");
   const [resetError, setResetError] = useState("");
 
+  // Synchronize admin configuration and broadcast notices from server on load
+  useEffect(() => {
+    syncAdminDataFromServer().then((cfg) => {
+      if (cfg?.notice) {
+        setCurrentNotice(cfg.notice);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     if (currentNotice) {
       setNoticeTitle(currentNotice.title);
@@ -104,19 +122,27 @@ export function AdminPortal() {
     }
   }, [currentNotice]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
+    setIsLoggingIn(true);
 
-    const result = verifyAdminCredentials(emailInput, passkeyInput);
-    if (!result.success) {
-      setLoginError(result.error || "Authentication failed");
-      return;
+    try {
+      const result = await verifyAdminCredentialsAsync(emailInput, passkeyInput);
+      if (!result.success) {
+        setLoginError(result.error || "Authentication failed");
+        setIsLoggingIn(false);
+        return;
+      }
+
+      setAdminSession(emailInput, rememberMe);
+      setSession(getActiveAdminSession());
+      setPasskeyInput("");
+    } catch {
+      setLoginError("Login check failed. Please check network connection.");
+    } finally {
+      setIsLoggingIn(false);
     }
-
-    setAdminSession(emailInput, rememberMe);
-    setSession(getActiveAdminSession());
-    setPasskeyInput("");
   };
 
   const handleLogout = () => {
@@ -124,14 +150,15 @@ export function AdminPortal() {
     setSession(null);
   };
 
-  const handleSaveNotice = (e: React.FormEvent) => {
+  const handleSaveNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeMessage.trim()) {
       setNoticeFeedback("Please enter a notice message.");
       return;
     }
 
-    saveCampusNotice({
+    setNoticeFeedback("Broadcasting announcement across campus & all devices...");
+    await saveCampusNoticeAsync({
       enabled: noticeEnabled,
       title: noticeTitle.trim(),
       message: noticeMessage.trim(),
@@ -139,20 +166,20 @@ export function AdminPortal() {
     });
 
     setCurrentNotice(getCampusNotice());
-    setNoticeFeedback("✅ Announcement published live across campus!");
-    setTimeout(() => setNoticeFeedback(""), 4000);
+    setNoticeFeedback("✅ Announcement published live across campus & synced to all devices!");
+    setTimeout(() => setNoticeFeedback(""), 4500);
   };
 
-  const handleClearNotice = () => {
-    clearCampusNotice();
+  const handleClearNotice = async () => {
+    await clearCampusNoticeAsync();
     setCurrentNotice(null);
     setNoticeTitle("");
     setNoticeMessage("");
-    setNoticeFeedback("Announcement cleared.");
+    setNoticeFeedback("Announcement cleared on all devices.");
     setTimeout(() => setNoticeFeedback(""), 3000);
   };
 
-  const handlePasskeyChange = (e: React.FormEvent) => {
+  const handlePasskeyChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPasskey.length < 4) {
       setPasskeyFeedback("Passkey must be at least 4 characters long.");
@@ -163,18 +190,24 @@ export function AdminPortal() {
       return;
     }
 
-    const success = updateAdminPasskey(newPasskey);
-    if (success) {
-      setPasskeyFeedback("✅ Passkey updated successfully!");
+    setPasskeyFeedback("Updating passkey and syncing to Laptop & Mobile...");
+    const result = await resetAdminPasskeyWithAuthAsync(
+      session?.email || AUTHORIZED_ADMIN_EMAIL,
+      getStoredAdminPasskey(),
+      newPasskey,
+    );
+
+    if (result.success) {
+      setPasskeyFeedback("✅ Passkey updated successfully and synced across Laptop & Mobile!");
       setNewPasskey("");
       setConfirmPasskey("");
-      setTimeout(() => setPasskeyFeedback(""), 4000);
+      setTimeout(() => setPasskeyFeedback(""), 4500);
     } else {
-      setPasskeyFeedback("Failed to update passkey.");
+      setPasskeyFeedback(result.error || "Failed to update passkey.");
     }
   };
 
-  const handleDirectPasskeyReset = (e: React.FormEvent) => {
+  const handleDirectPasskeyReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetError("");
     setResetFeedback("");
@@ -188,7 +221,8 @@ export function AdminPortal() {
       return;
     }
 
-    const result = resetAdminPasskeyWithAuth(
+    setResetFeedback("Syncing new passkey across devices...");
+    const result = await resetAdminPasskeyWithAuthAsync(
       emailInput,
       resetCurrentOrMaster,
       resetNewPasskey,
@@ -196,10 +230,11 @@ export function AdminPortal() {
 
     if (!result.success) {
       setResetError(result.error || "Failed to update passkey.");
+      setResetFeedback("");
       return;
     }
 
-    setResetFeedback("✅ Passkey updated successfully! You can now log in with your new passkey.");
+    setResetFeedback("✅ Passkey updated successfully! Synced across all devices (Laptop & Mobile).");
     setPasskeyInput(resetNewPasskey);
     setResetCurrentOrMaster("");
     setResetNewPasskey("");
@@ -207,7 +242,7 @@ export function AdminPortal() {
     setTimeout(() => {
       setIsResetPasskeyOpen(false);
       setResetFeedback("");
-    }, 3000);
+    }, 3500);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,7 +333,7 @@ export function AdminPortal() {
                 </button>
               </div>
               <span className="field-hint quiet">
-                Default initial passkey: <code>cuiatk@2026</code> (can be changed in settings)
+                💡 Enter custom passkey, default <code>cuiatk@2026</code>, or student Roll PIN (<code>{MASTER_STUDENT_ROLL_PIN}</code>)
               </span>
             </label>
 
@@ -311,14 +346,19 @@ export function AdminPortal() {
               <span>Keep admin session active on this device</span>
             </label>
 
-            <button type="submit" className="btn solid tap admin-login-submit-btn">
-              <ShieldCheck size={18} aria-hidden />
-              <span>Authenticate & Enter Portal</span>
+            <button type="submit" className="btn solid tap admin-login-submit-btn" disabled={isLoggingIn}>
+              {isLoggingIn ? <RefreshCw size={18} className="spin" aria-hidden /> : <ShieldCheck size={18} aria-hidden />}
+              <span>{isLoggingIn ? "Verifying Credentials..." : "Authenticate & Enter Portal"}</span>
             </button>
           </form>
 
           {/* Direct Passkey Change / Reset Option on Login Screen */}
           <div className="admin-login-extras stack">
+            <div className="admin-sync-hint-badge" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "var(--muted, #64748b)", background: "rgba(8,127,121,0.07)", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(8,127,121,0.18)" }}>
+              <Cloud size={16} color="#087f79" style={{ flexShrink: 0 }} />
+              <span><b>Cross-Device Cloud Sync:</b> Any passkey or announcement you set on your laptop automatically syncs to your phone.</span>
+            </div>
+
             <button
               type="button"
               className="btn tap admin-toggle-reset-btn"
@@ -339,7 +379,7 @@ export function AdminPortal() {
                   <b>Change Your Admin Passkey</b>
                 </div>
                 <p className="fine quiet" style={{ margin: 0 }}>
-                  Enter your current passkey (default: <code>cuiatk@2026</code>) or verification PIN (<code>014</code>) to set a new passkey.
+                  Enter your current passkey (default: <code>cuiatk@2026</code>) or roll verification PIN (<code>{MASTER_STUDENT_ROLL_PIN}</code>) to set a new passkey synced across Laptop and Mobile.
                 </p>
 
                 {resetError && (
@@ -875,10 +915,15 @@ export function AdminPortal() {
               <button
                 type="button"
                 className="btn tap"
-                onClick={() => {
-                  updateAdminPasskey(DEFAULT_ADMIN_PASSKEY);
-                  setPasskeyFeedback(`Reset to default initial passkey: ${DEFAULT_ADMIN_PASSKEY}`);
-                  setTimeout(() => setPasskeyFeedback(""), 4000);
+                onClick={async () => {
+                  setPasskeyFeedback("Resetting passkey across all devices...");
+                  await resetAdminPasskeyWithAuthAsync(
+                    session?.email || AUTHORIZED_ADMIN_EMAIL,
+                    getStoredAdminPasskey(),
+                    DEFAULT_ADMIN_PASSKEY,
+                  );
+                  setPasskeyFeedback(`Reset to default initial passkey: ${DEFAULT_ADMIN_PASSKEY} (synced across all devices)`);
+                  setTimeout(() => setPasskeyFeedback(""), 4500);
                 }}
                 title="Reset back to factory default: cuiatk@2026"
               >
