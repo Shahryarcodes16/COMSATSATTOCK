@@ -28,8 +28,10 @@ import {
   loadSavedRepeaterCourseIds,
   saveSavedRepeaterCourseIds,
   isDatesheetActive,
+  downloadDatesheetIcsFile,
   type ExamEntry,
 } from "@/lib/datesheet";
+import { ExportDatesheetImage } from "@/components/timetable/datesheet-image-modal";
 
 export function DatesheetView() {
   const { clock, now } = useDesk();
@@ -54,6 +56,15 @@ export function DatesheetView() {
     const next = repeaterExamIds.filter((id) => id !== examId);
     setRepeaterExamIds(next);
     saveSavedRepeaterCourseIds(next);
+  };
+
+  const handleDownloadIcs = () => {
+    const safeName = selectedClass.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    downloadDatesheetIcsFile(personalExams, `cui-midterms-${safeName}.ics`);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   // Get primary batch exams
@@ -189,14 +200,41 @@ export function DatesheetView() {
             </select>
           </label>
 
-          <button
-            type="button"
-            className="btn tap datesheet-add-repeater-btn"
-            onClick={() => setRepeaterModalOpen(true)}
-          >
-            <Plus size={16} aria-hidden />
-            <span>Add Repeat Courses ({repeaterExams.length})</span>
-          </button>
+          <div className="datesheet-action-buttons">
+            <button
+              type="button"
+              className="btn tap datesheet-add-repeater-btn"
+              onClick={() => setRepeaterModalOpen(true)}
+            >
+              <Plus size={16} aria-hidden />
+              <span>Add Repeat Courses ({repeaterExams.length})</span>
+            </button>
+
+            <ExportDatesheetImage
+              className={selectedClass}
+              exams={personalExams}
+            />
+
+            <button
+              type="button"
+              className="btn tap datesheet-ics-btn"
+              onClick={handleDownloadIcs}
+              title="Add all your exams to Google Calendar / Phone Calendar with 60-min alarms"
+            >
+              <Calendar size={16} aria-hidden />
+              <span>Calendar (.ics)</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn tap datesheet-print-btn"
+              onClick={handlePrint}
+              title="Print Official Examination Slip or Save as PDF"
+            >
+              <Printer size={16} aria-hidden />
+              <span>Print Slip / PDF</span>
+            </button>
+          </div>
         </div>
 
         {/* Date Filter Tabs */}
@@ -360,6 +398,51 @@ export function DatesheetView() {
             );
           })
         )}
+      </div>
+
+      {/* Printable Exam Roll Slip (Visible only in print / PDF mode) */}
+      <div className="datesheet-printable-slip" aria-hidden="true">
+        <div className="print-slip-header">
+          <h2>COMSATS UNIVERSITY ISLAMABAD · ATTOCK CAMPUS</h2>
+          <h3>Midterm Examination Slip — Fall 2026</h3>
+          <p className="print-slip-meta">
+            <b>Class / Batch:</b> {selectedClass} &nbsp;·&nbsp; <b>Total Scheduled Exams:</b> {personalExams.length} &nbsp;·&nbsp; <b>Generated:</b> {new Date().toLocaleDateString("en-GB")}
+          </p>
+          <div className="print-slip-notice">
+            <b>Notice:</b> Examination papers originally on <b>4 November 2026</b> have been officially shifted to <b>12 November 2026</b> with identical timings and room allocations.
+          </div>
+        </div>
+        <table className="print-slip-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Course Code</th>
+              <th>Course Title</th>
+              <th>Hall / Room</th>
+              <th>Instructor</th>
+              <th>Category</th>
+            </tr>
+          </thead>
+          <tbody>
+            {personalExams.map((exam, idx) => (
+              <tr key={exam.id}>
+                <td>{idx + 1}</td>
+                <td>
+                  <b>{exam.date}</b>
+                  {exam.isRescheduled ? " (Shifted from 4 Nov)" : ""}
+                </td>
+                <td>{exam.startTime} – {exam.endTime}</td>
+                <td><b>{exam.courseCode}</b></td>
+                <td>{exam.courseTitle}</td>
+                <td><b>{exam.room}</b></td>
+                <td>{exam.instructor}</td>
+                <td>{exam.className === selectedClass ? "Regular" : `Repeat (${exam.className})`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Repeater Course Selector Modal */}
