@@ -4,6 +4,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import type { StudentSession } from "./student";
+import type { StudentAuthResponse } from "./student.server";
 
 /**
  * Server Function: Student Sign Up
@@ -20,7 +21,7 @@ export const studentSignUpFn = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<{ success: boolean; session?: StudentSession; error?: string }> => {
+    }): Promise<StudentAuthResponse> => {
       const { serverStudentSignUp } = await import("./student.server.ts");
       return serverStudentSignUp(
         data.email,
@@ -39,7 +40,7 @@ export const studentSignInFn = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<{ success: boolean; session?: StudentSession; error?: string }> => {
+    }): Promise<StudentAuthResponse> => {
       const { serverStudentSignIn } = await import("./student.server.ts");
       return serverStudentSignIn(data.email, data.password);
     },

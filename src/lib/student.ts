@@ -227,3 +227,92 @@ export function clearStudentSession(): void {
     console.error("Failed to clear student session", err);
   }
 }
+
+export const STUDENT_ACCOUNTS_VAULT_KEY = "cui_registered_students_vault_v1";
+
+export interface LocalRegisteredStudent {
+  email: string;
+  fullName: string;
+  passwordHash: string;
+  passwordSalt: string;
+  defaultBatch: string | null;
+  registeredAt?: string;
+}
+
+/**
+ * Persists registered student accounts in client storage so they survive logouts
+ * and work reliably even across serverless cold starts.
+ */
+export function saveLocalRegisteredAccount(account: LocalRegisteredStudent): void {
+  if (typeof window === "undefined") return;
+  try {
+    const vault = getLocalRegisteredAccounts();
+    vault[account.email.toLowerCase()] = {
+      ...account,
+      registeredAt: account.registeredAt || new Date().toISOString(),
+    };
+    localStorage.setItem(STUDENT_ACCOUNTS_VAULT_KEY, JSON.stringify(vault));
+  } catch (err) {
+    console.error("Failed to save student account in local vault", err);
+  }
+}
+
+/**
+ * Retrieves all locally registered accounts on this device
+ */
+export function getLocalRegisteredAccounts(): Record<string, LocalRegisteredStudent> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STUDENT_ACCOUNTS_VAULT_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Retrieves a single student account from the local vault
+ */
+export function getLocalRegisteredAccount(email: string): LocalRegisteredStudent | null {
+  const vault = getLocalRegisteredAccounts();
+  return vault[email.trim().toLowerCase()] || null;
+}
+
+/**
+ * Verifies password on client using Web Crypto API PBKDF2/SHA-512
+ * Exactly identical to Node.js crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512')
+ */
+export async function verifyClientPassword(
+  password: string,
+  hash: string,
+  salt: string,
+): Promise<boolean> {
+  if (typeof window === "undefined" || !window.crypto?.subtle) return false;
+  try {
+    const enc = new TextEncoder();
+    const keyMaterial = await window.crypto.subtle.importKey(
+      "raw",
+      enc.encode(password),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"],
+    );
+    const derivedBits = await window.crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: enc.encode(salt),
+        iterations: 10000,
+        hash: "SHA-512",
+      },
+      keyMaterial,
+      512,
+    );
+    const calculated = Array.from(new Uint8Array(derivedBits))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return calculated.toLowerCase() === hash.toLowerCase();
+  } catch {
+    return false;
+  }
+}

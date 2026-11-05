@@ -23,7 +23,11 @@ import {
   isValidUniversityEmail,
   parseUniversityEmail,
   setStudentSession,
+  saveLocalRegisteredAccount,
+  getLocalRegisteredAccount,
+  verifyClientPassword,
   type StudentSession,
+  type StudentProfile,
   type ParsedStudentEmail,
 } from "@/lib/student";
 import { studentSignUpFn, studentSignInFn } from "@/lib/student-server-fn";
@@ -72,7 +76,9 @@ export function StudentGateway({
     setError("");
     setSuccessMsg("");
 
-    if (!isValidUniversityEmail(email)) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isValidUniversityEmail(normalizedEmail)) {
       setError("Please enter a valid university email (e.g. fa23-bcs-014@cuiatk.edu.pk).");
       return;
     }
@@ -85,31 +91,135 @@ export function StudentGateway({
     try {
       const res = await studentSignInFn({
         data: {
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           password,
         },
       });
 
-      if (!res.success || !res.session) {
-        setError(res.error || "Authentication failed. Please verify credentials.");
-        setLoading(false);
+      if (res.success && res.session) {
+        setStudentSession(res.session, rememberMe);
+        if (res.credentialSync) {
+          saveLocalRegisteredAccount(res.credentialSync);
+        }
+        if (res.session.profile.defaultBatch) {
+          const batchIdx = batches.indexOf(res.session.profile.defaultBatch);
+          if (batchIdx !== -1) {
+            pinBatch(batchIdx);
+            setBatchId(batchIdx);
+          }
+        }
+
+        setSuccessMsg(`Welcome back, ${res.session.profile.fullName}! Unlocking campus workspace...`);
+        setTimeout(() => {
+          onAuthenticated(res.session!);
+        }, 900);
         return;
       }
 
-      setStudentSession(res.session, rememberMe);
-      if (res.session.profile.defaultBatch) {
-        const batchIdx = batches.indexOf(res.session.profile.defaultBatch);
-        if (batchIdx !== -1) {
-          pinBatch(batchIdx);
-          setBatchId(batchIdx);
+      // Check device local registry vault (recovers accounts across serverless cold starts)
+      const localAccount = getLocalRegisteredAccount(normalizedEmail);
+      if (localAccount) {
+        const matches = await verifyClientPassword(
+          password,
+          localAccount.passwordHash,
+          localAccount.passwordSalt,
+        );
+
+        if (matches) {
+          const parsed = parseUniversityEmail(localAccount.email);
+          const profile: StudentProfile = {
+            id: `stu-${Date.now()}`,
+            email: localAccount.email,
+            fullName: localAccount.fullName,
+            session: parsed?.session || "FA",
+            year: parsed?.year || "23",
+            programCode: parsed?.programCode || "bcs",
+            rollNumber: parsed?.rollNumber || "014",
+            regNo: parsed?.regNo || localAccount.email.split("@")[0].toUpperCase(),
+            programTitle: parsed?.program.name || "BS Computer Science",
+            department: parsed?.program.department || "COMSATS Attock",
+            defaultBatch: localAccount.defaultBatch,
+            createdAt: localAccount.registeredAt || new Date().toISOString(),
+          };
+
+          const session: StudentSession = {
+            profile,
+            token: `cui-stu-local-${Date.now()}`,
+            signedInAt: new Date().toISOString(),
+          };
+
+          setStudentSession(session, rememberMe);
+
+          // Silently re-seed serverless instance in the background
+          studentSignUpFn({
+            data: {
+              email: localAccount.email,
+              fullName: localAccount.fullName,
+              password,
+              defaultBatch: localAccount.defaultBatch || undefined,
+            },
+          }).catch(() => {});
+
+          if (profile.defaultBatch) {
+            const batchIdx = batches.indexOf(profile.defaultBatch);
+            if (batchIdx !== -1) {
+              pinBatch(batchIdx);
+              setBatchId(batchIdx);
+            }
+          }
+
+          setSuccessMsg(`Welcome back, ${profile.fullName}! Unlocking campus workspace...`);
+          setTimeout(() => {
+            onAuthenticated(session);
+          }, 900);
+          return;
+        } else {
+          setError("Incorrect password for this student account. Please verify and try again.");
+          setLoading(false);
+          return;
         }
       }
 
-      setSuccessMsg(`Welcome back, ${res.session.profile.fullName}! Unlocking campus workspace...`);
-      setTimeout(() => {
-        onAuthenticated(res.session!);
-      }, 1000);
+      setError(res.error || "Authentication failed. Please verify credentials.");
+      setLoading(false);
     } catch {
+      // Offline fallback: check local vault
+      const localAccount = getLocalRegisteredAccount(normalizedEmail);
+      if (localAccount) {
+        const matches = await verifyClientPassword(
+          password,
+          localAccount.passwordHash,
+          localAccount.passwordSalt,
+        );
+        if (matches) {
+          const parsed = parseUniversityEmail(localAccount.email);
+          const profile: StudentProfile = {
+            id: `stu-${Date.now()}`,
+            email: localAccount.email,
+            fullName: localAccount.fullName,
+            session: parsed?.session || "FA",
+            year: parsed?.year || "23",
+            programCode: parsed?.programCode || "bcs",
+            rollNumber: parsed?.rollNumber || "014",
+            regNo: parsed?.regNo || localAccount.email.split("@")[0].toUpperCase(),
+            programTitle: parsed?.program.name || "BS Computer Science",
+            department: parsed?.program.department || "COMSATS Attock",
+            defaultBatch: localAccount.defaultBatch,
+            createdAt: localAccount.registeredAt || new Date().toISOString(),
+          };
+          const session: StudentSession = {
+            profile,
+            token: `cui-stu-offline-${Date.now()}`,
+            signedInAt: new Date().toISOString(),
+          };
+          setStudentSession(session, rememberMe);
+          setSuccessMsg(`Welcome back, ${profile.fullName}!`);
+          setTimeout(() => {
+            onAuthenticated(session);
+          }, 800);
+          return;
+        }
+      }
       setError("Unable to connect to authentication server. Please check your network.");
     } finally {
       setLoading(false);
@@ -121,11 +231,13 @@ export function StudentGateway({
     setError("");
     setSuccessMsg("");
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     if (!fullName.trim() || fullName.trim().length < 2) {
       setError("Please enter your full name (minimum 2 characters).");
       return;
     }
-    if (!isValidUniversityEmail(email)) {
+    if (!isValidUniversityEmail(normalizedEmail)) {
       setError("Please enter your official university email (e.g. fa23-bcs-014@cuiatk.edu.pk).");
       return;
     }
@@ -142,7 +254,7 @@ export function StudentGateway({
     try {
       const res = await studentSignUpFn({
         data: {
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           fullName: fullName.trim(),
           password,
           defaultBatch: selectedBatch || undefined,
@@ -156,6 +268,10 @@ export function StudentGateway({
       }
 
       setStudentSession(res.session, rememberMe);
+      if (res.credentialSync) {
+        saveLocalRegisteredAccount(res.credentialSync);
+      }
+
       if (selectedBatch) {
         const batchIdx = batches.indexOf(selectedBatch);
         if (batchIdx !== -1) {
@@ -167,7 +283,7 @@ export function StudentGateway({
       setSuccessMsg("Account created successfully! Welcome to CUI Attock Timetable.");
       setTimeout(() => {
         onAuthenticated(res.session!);
-      }, 1200);
+      }, 1000);
     } catch {
       setError("Unable to register account. Please check your network connection.");
     } finally {
@@ -242,9 +358,34 @@ export function StudentGateway({
 
           {/* Feedback Banners */}
           {error && (
-            <div className="admin-error-banner" role="alert" style={{ margin: "1rem 1.5rem 0" }}>
-              <AlertCircle size={16} />
-              <span>{error}</span>
+            <div className="admin-error-banner" role="alert" style={{ margin: "1rem 1.5rem 0", display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+              {mode === "signin" && error.includes("No student account found") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signup");
+                    setError("");
+                  }}
+                  className="link-btn"
+                  style={{
+                    color: "var(--c-accent)",
+                    fontWeight: 700,
+                    fontSize: "0.82rem",
+                    textAlign: "left",
+                    textDecoration: "underline",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  Click here to create your account now →
+                </button>
+              )}
             </div>
           )}
           {successMsg && (
