@@ -28,6 +28,7 @@ import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, timeLabel, type ClockInfo
 import { isDatesheetActive } from "@/lib/datesheet";
 import { useDesk, type View } from "@/components/timetable/context";
 import { NotificationBellButton } from "@/components/timetable/notification-modal";
+import { StudentAuthButton } from "@/components/timetable/student-auth-modal";
 
 // Desktop sidebar navigates all sections
 const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
@@ -121,15 +122,18 @@ export function Sidebar() {
         <p>Timetable from 5 Oct 2026</p>
         <p>{CAMPUS_TIME_LABEL}</p>
         <span className="side-note">A clearer view of campus life.</span>
-        <button
-          type="button"
-          className={`side-admin-link tap ${view === "admin" ? "on" : ""}`}
-          onClick={() => setView("admin")}
-          title="Campus Administrator Control Center"
-        >
-          <Lock size={13} aria-hidden />
-          <span>Admin Portal</span>
-        </button>
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+          <StudentAuthButton showLabel={true} />
+          <button
+            type="button"
+            className={`side-admin-link tap ${view === "admin" ? "on" : ""}`}
+            onClick={() => setView("admin")}
+            title="Campus Administrator Control Center"
+          >
+            <Lock size={13} aria-hidden />
+            <span>Admin Portal</span>
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -186,6 +190,9 @@ export function Topbar() {
         >
           <Search size={18} strokeWidth={1.8} aria-hidden />
         </button>
+
+        {/* Student Account / Sign In */}
+        <StudentAuthButton />
 
         {/* Class Reminders */}
         <NotificationBellButton />

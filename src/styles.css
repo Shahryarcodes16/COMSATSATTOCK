@@ -6054,3 +6054,58 @@
   background: var(--c-accent);
   color: var(--c-on-accent);
 }
+
+/* ==========================================================================
+   Student Authentication & Profile Styles
+   ========================================================================== */
+
+.student-topbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--c-line);
+  background: var(--c-paper);
+  color: var(--c-ink);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.student-topbar-pill:hover {
+  background: color-mix(in srgb, var(--c-accent) 10%, var(--c-paper));
+  border-color: var(--c-accent);
+}
+
+.student-topbar-pill.logged-in {
+  background: color-mix(in srgb, var(--c-accent) 12%, var(--c-paper));
+  border-color: rgba(8, 127, 121, 0.4);
+  color: var(--c-accent);
+}
+
+.student-pill-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-accent);
+}
+
+.student-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .student-topbar-pill .student-pill-label {
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
