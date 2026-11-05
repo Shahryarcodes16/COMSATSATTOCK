@@ -16,7 +16,6 @@ import { DetailSheet } from "@/components/timetable/sheet";
 import { useClassNotificationScheduler } from "@/components/timetable/notification-modal";
 import { StudentGateway } from "@/components/timetable/student-gateway";
 import { getActiveStudentSession, type StudentSession } from "@/lib/student";
-import { getActiveAdminSession } from "@/lib/admin";
 
 export function Desk() {
   return (
@@ -29,18 +28,19 @@ export function Desk() {
 function Frame() {
   const { view, detail } = useDesk();
   const [studentSession, setStudentSession] = useState<StudentSession | null>(() => getActiveStudentSession());
-  const [adminSession, setAdminSession] = useState(() => getActiveAdminSession());
 
   useEffect(() => {
+    // Keep student session strictly in sync with client storage & broadcast updates
+    setStudentSession(getActiveStudentSession());
+
     const handleStudentSession = (e: Event) => {
       const customEvent = e as CustomEvent<StudentSession | null>;
-      setStudentSession(customEvent.detail || getActiveStudentSession());
+      setStudentSession(customEvent.detail ?? getActiveStudentSession());
     };
 
     window.addEventListener("cui:student-session-update", handleStudentSession);
     window.addEventListener("storage", () => {
       setStudentSession(getActiveStudentSession());
-      setAdminSession(getActiveAdminSession());
     });
     return () => {
       window.removeEventListener("cui:student-session-update", handleStudentSession);
@@ -49,20 +49,21 @@ function Frame() {
 
   useClassNotificationScheduler();
 
-  // Authentication Gate: Students must first create an account or sign in before app features are unlocked
-  const isAuthenticated = Boolean(studentSession || adminSession);
+  // If the user navigated to the Admin Portal, display the admin interface
+  if (view === "admin") {
+    return (
+      <div className="app">
+        <main id="main">
+          <AdminPortal />
+        </main>
+      </div>
+    );
+  }
 
-  if (!isAuthenticated) {
-    if (view === "admin") {
-      return (
-        <div className="app">
-          <main id="main">
-            <AdminPortal />
-          </main>
-        </div>
-      );
-    }
-
+  // Strict Authentication Gate: Students MUST first create an account or sign in.
+  // Unless authenticated with a valid student session, ALL timetable views, schedules,
+  // batches, rooms, and faculty remain locked.
+  if (!studentSession) {
     return (
       <div className="app">
         <StudentGateway onAuthenticated={(session) => setStudentSession(session)} />
@@ -101,9 +102,6 @@ function Frame() {
             </div>
             <div hidden={view !== "datesheet"}>
               <DatesheetView />
-            </div>
-            <div hidden={view !== "admin"}>
-              <AdminPortal />
             </div>
           </main>
           <CampusFooter />
