@@ -47,6 +47,58 @@ export const studentSignInFn = createServerFn({ method: "POST" })
   );
 
 /**
+ * Server Function: Request Email Verification Code
+ * Dispatches 6-digit OTP code to student's @cuiatk.edu.pk Gmail
+ */
+export const studentRequestVerificationCodeFn = createServerFn({ method: "POST" })
+  .validator(
+    (data: {
+      email: string;
+      fullName: string;
+      defaultBatch?: string;
+      originUrl?: string;
+    }) => data,
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      success: boolean;
+      message?: string;
+      devPreviewCode?: string;
+      error?: string;
+    }> => {
+      const { serverRequestStudentVerificationCode } = await import("./student.server.ts");
+      return serverRequestStudentVerificationCode(
+        data.email,
+        data.fullName,
+        data.defaultBatch,
+        data.originUrl,
+      );
+    },
+  );
+
+/**
+ * Server Function: Verify 6-Digit Code and Create Student Account
+ */
+export const studentVerifyAndSignUpFn = createServerFn({ method: "POST" })
+  .validator(
+    (data: {
+      email: string;
+      code: string;
+      password: string;
+    }) => data,
+  )
+  .handler(
+    async ({
+      data,
+    }): Promise<StudentAuthResponse> => {
+      const { serverVerifyCodeAndSignUp } = await import("./student.server.ts");
+      return serverVerifyCodeAndSignUp(data.email, data.code, data.password);
+    },
+  );
+
+/**
  * Server Function: Update Default Class Batch
  */
 export const studentUpdateBatchFn = createServerFn({ method: "POST" })

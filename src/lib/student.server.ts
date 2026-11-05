@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getSql } from "@/lib/db";
+import { sendStudentVerificationEmail } from "./email.server";
 import {
   isValidUniversityEmail,
   parseUniversityEmail,
@@ -34,6 +35,50 @@ const serverStudentMemoryStore = new Map<string, StudentRecord>();
 
 // Disk backup for serverless environments (survives container warm restarts on /tmp)
 const DISK_BACKUP_PATH = path.join(os.tmpdir(), "cui_students_db_v1.json");
+
+// In-memory & disk storage for active email verification challenges
+interface VerificationChallenge {
+  email: string;
+  fullName: string;
+  code: string;
+  defaultBatch?: string;
+  expiresAt: number;
+  attempts: number;
+}
+const verificationChallenges = new Map<string, VerificationChallenge>();
+const CHALLENGES_DISK_PATH = path.join(os.tmpdir(), "cui_email_challenges_v1.json");
+
+function readChallengesDisk(): Record<string, VerificationChallenge> {
+  try {
+    if (fs.existsSync(CHALLENGES_DISK_PATH)) {
+      const data = fs.readFileSync(CHALLENGES_DISK_PATH, "utf8");
+      return JSON.parse(data);
+    }
+  } catch {
+    // Ignore
+  }
+  return {};
+}
+
+function writeChallengeDisk(challenge: VerificationChallenge): void {
+  try {
+    const existing = readChallengesDisk();
+    existing[challenge.email.toLowerCase()] = challenge;
+    fs.writeFileSync(CHALLENGES_DISK_PATH, JSON.stringify(existing, null, 2), "utf8");
+  } catch {
+    // Ignore
+  }
+}
+
+function removeChallengeDisk(email: string): void {
+  try {
+    const existing = readChallengesDisk();
+    delete existing[email.toLowerCase()];
+    fs.writeFileSync(CHALLENGES_DISK_PATH, JSON.stringify(existing, null, 2), "utf8");
+  } catch {
+    // Ignore
+  }
+}
 
 function readDiskBackup(): Record<string, StudentRecord> {
   try {
@@ -463,4 +508,178 @@ export async function serverStudentUpdateBatch(
     success: true,
     session: createStudentSession(student),
   };
+}
+
+/**
+ * Requests an official 6-digit email verification code sent to the student's @cuiatk.edu.pk Gmail
+ */
+export async function serverRequestStudentVerificationCode(
+  email: string,
+  fullName: string,
+  defaultBatch?: string,
+  originUrl?: string,
+): Promise<{ success: boolean; message?: string; devPreviewCode?: string; error?: string }> {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  const trimmedName = (fullName || "").trim();
+
+  // 1. Strict regex validation for official university email
+  if (!isValidUniversityEmail(normalizedEmail)) {
+    return {
+      success: false,
+      error:
+        "Please provide a valid official COMSATS Attock student email (e.g. fa23-bcs-014@cuiatk.edu.pk).",
+    };
+  }
+
+  // 2. Validate student name
+  if (trimmedName.length < 2) {
+    return {
+      success: false,
+      error: "Please enter your full student name (at least 2 characters).",
+    };
+  }
+
+  // 3. Ensure student does not already exist
+  const existing = await findStudentByEmail(normalizedEmail);
+  if (existing) {
+    return {
+      success: false,
+      error: "An account with this university email already exists. Please sign in.",
+    };
+  }
+
+  // 4. Generate a cryptographically secure 6-digit numeric verification code
+  const code = Math.floor(100000 + crypto.randomInt(900000)).toString();
+
+  // 5. Store challenge with 10 minute expiry
+  const challenge: VerificationChallenge = {
+    email: normalizedEmail,
+    fullName: trimmedName,
+    code,
+    defaultBatch: defaultBatch || undefined,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    attempts: 0,
+  };
+
+  verificationChallenges.set(normalizedEmail, challenge);
+  writeChallengeDisk(challenge);
+
+  // 6. Build magic link if origin provided
+  const magicLink = originUrl
+    ? `${originUrl.replace(/\/$/, "")}/?verify_email=${encodeURIComponent(normalizedEmail)}&code=${code}`
+    : undefined;
+
+  // 7. Dispatch email
+  const emailRes = await sendStudentVerificationEmail({
+    toEmail: normalizedEmail,
+    studentName: trimmedName,
+    verificationCode: code,
+    magicLink,
+  });
+
+  if (!emailRes.sent && emailRes.error) {
+    return {
+      success: false,
+      error: emailRes.error,
+    };
+  }
+
+  return {
+    success: true,
+    message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your official university Gmail inbox.`,
+    devPreviewCode: emailRes.devMode ? code : undefined,
+  };
+}
+
+/**
+ * Validates the 6-digit code sent to the student's Gmail and creates their verified account
+ */
+export async function serverVerifyCodeAndSignUp(
+  email: string,
+  code: string,
+  password: string,
+): Promise<StudentAuthResponse> {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  const trimmedCode = (code || "").trim();
+
+  // 1. Validate inputs
+  if (!isValidUniversityEmail(normalizedEmail)) {
+    return {
+      success: false,
+      error: "Invalid official university email address.",
+    };
+  }
+
+  if (!trimmedCode || trimmedCode.length !== 6) {
+    return {
+      success: false,
+      error: "Please enter the complete 6-digit verification code.",
+    };
+  }
+
+  if (!password || password.length < 6) {
+    return {
+      success: false,
+      error: "Password must be at least 6 characters long.",
+    };
+  }
+
+  // 2. Fetch active verification challenge
+  let challenge = verificationChallenges.get(normalizedEmail);
+  if (!challenge) {
+    const disk = readChallengesDisk();
+    if (disk && disk[normalizedEmail]) {
+      challenge = disk[normalizedEmail];
+      verificationChallenges.set(normalizedEmail, challenge);
+    }
+  }
+
+  if (!challenge) {
+    return {
+      success: false,
+      error: "No active verification code found for this email. Please request a new code.",
+    };
+  }
+
+  if (Date.now() > challenge.expiresAt) {
+    verificationChallenges.delete(normalizedEmail);
+    removeChallengeDisk(normalizedEmail);
+    return {
+      success: false,
+      error: "Verification code has expired. Please request a new code.",
+    };
+  }
+
+  if (challenge.attempts >= 5) {
+    verificationChallenges.delete(normalizedEmail);
+    removeChallengeDisk(normalizedEmail);
+    return {
+      success: false,
+      error: "Too many incorrect verification attempts. Please request a new code.",
+    };
+  }
+
+  // 3. Compare code
+  if (challenge.code !== trimmedCode) {
+    challenge.attempts += 1;
+    writeChallengeDisk(challenge);
+    return {
+      success: false,
+      error: "Incorrect 6-digit verification code. Please check your Gmail and try again.",
+    };
+  }
+
+  // 4. Code verified successfully! Register student account
+  const result = await serverStudentSignUp(
+    normalizedEmail,
+    challenge.fullName,
+    password,
+    challenge.defaultBatch,
+  );
+
+  // Clean up challenge
+  verificationChallenges.delete(normalizedEmail);
+  removeChallengeDisk(normalizedEmail);
+
+  return result;
 }

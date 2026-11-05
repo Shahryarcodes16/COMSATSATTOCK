@@ -30,7 +30,12 @@ import {
   type StudentProfile,
   type ParsedStudentEmail,
 } from "@/lib/student";
-import { studentSignUpFn, studentSignInFn } from "@/lib/student-server-fn";
+import {
+  studentSignUpFn,
+  studentSignInFn,
+  studentRequestVerificationCodeFn,
+  studentVerifyAndSignUpFn,
+} from "@/lib/student-server-fn";
 import { useDesk } from "@/components/timetable/context";
 import { batches } from "@/lib/schedule";
 
@@ -42,6 +47,12 @@ export function StudentGateway({
   const { setView, pinBatch, setBatchId } = useDesk();
   // Default to signup as requested: "first student create a signup then all features shown"
   const [mode, setMode] = useState<"signup" | "signin">("signup");
+
+  // Signup Stages: "details" -> "verify"
+  const [signupStage, setSignupStage] = useState<"details" | "verify">("details");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [devPreviewCode, setDevPreviewCode] = useState<string | null>(null);
 
   // Form State
   const [email, setEmail] = useState("");
@@ -64,6 +75,30 @@ export function StudentGateway({
   const programBatches = parsedEmail
     ? batches.filter((b) => b.toLowerCase().includes(parsedEmail.program.batchPrefix.toLowerCase()))
     : [];
+
+  // Magic Link auto-detection from URL: ?verify_email=...&code=...
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const verifyEmail = params.get("verify_email");
+    const code = params.get("code");
+    if (verifyEmail && isValidUniversityEmail(verifyEmail)) {
+      setEmail(verifyEmail);
+      setMode("signup");
+      setSignupStage("verify");
+      if (code) {
+        setVerificationCode(code);
+        setSuccessMsg("Magic Link Verified: Please set your secure password to complete your account.");
+      }
+    }
+  }, []);
+
+  // 60-second resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (parsedEmail && programBatches.length > 0 && !selectedBatch) {
@@ -226,7 +261,7 @@ export function StudentGateway({
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleRequestVerificationCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
@@ -241,6 +276,50 @@ export function StudentGateway({
       setError("Please enter your official university email (e.g. fa23-bcs-014@cuiatk.edu.pk).");
       return;
     }
+
+    setLoading(true);
+    try {
+      const originUrl = typeof window !== "undefined" ? window.location.origin : undefined;
+      const res = await studentRequestVerificationCodeFn({
+        data: {
+          email: normalizedEmail,
+          fullName: fullName.trim(),
+          defaultBatch: selectedBatch || undefined,
+          originUrl,
+        },
+      });
+
+      if (!res.success) {
+        setError(res.error || "Failed to dispatch verification code.");
+        setLoading(false);
+        return;
+      }
+
+      setSignupStage("verify");
+      setResendCooldown(60);
+      if (res.devPreviewCode) {
+        setDevPreviewCode(res.devPreviewCode);
+      }
+      setSuccessMsg(res.message || `Verification code sent to ${normalizedEmail}!`);
+    } catch {
+      setError("Unable to dispatch verification code. Please check your network connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const trimmedCode = verificationCode.trim();
+
+    if (!trimmedCode || trimmedCode.length !== 6) {
+      setError("Please enter the complete 6-digit verification code from your Gmail.");
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
@@ -252,17 +331,16 @@ export function StudentGateway({
 
     setLoading(true);
     try {
-      const res = await studentSignUpFn({
+      const res = await studentVerifyAndSignUpFn({
         data: {
           email: normalizedEmail,
-          fullName: fullName.trim(),
+          code: trimmedCode,
           password,
-          defaultBatch: selectedBatch || undefined,
         },
       });
 
       if (!res.success || !res.session) {
-        setError(res.error || "Failed to create account.");
+        setError(res.error || "Verification failed. Please check the code.");
         setLoading(false);
         return;
       }
@@ -280,12 +358,12 @@ export function StudentGateway({
         }
       }
 
-      setSuccessMsg("Account created successfully! Welcome to CUI Attock Timetable.");
+      setSuccessMsg("Email verified! Your student account has been created successfully.");
       setTimeout(() => {
         onAuthenticated(res.session!);
       }, 1000);
     } catch {
-      setError("Unable to register account. Please check your network connection.");
+      setError("Unable to verify code. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -395,11 +473,18 @@ export function StudentGateway({
             </div>
           )}
 
-          {/* SIGN UP FORM */}
-          {mode === "signup" && (
-            <form onSubmit={handleSignUp} className="student-gateway-form stack">
+          {/* SIGN UP FORM: 2-STAGE SECURE EMAIL VERIFICATION */}
+          {mode === "signup" && signupStage === "details" && (
+            <form onSubmit={handleRequestVerificationCode} className="student-gateway-form stack">
+              <div style={{ background: "color-mix(in srgb, var(--c-accent) 6%, transparent)", padding: "0.75rem 1rem", borderRadius: "0.75rem", border: "1px solid color-mix(in srgb, var(--c-accent) 20%, transparent)", fontSize: "0.82rem", color: "var(--c-ink)", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <ShieldCheck size={18} color="var(--c-accent)" style={{ flexShrink: 0 }} />
+                <span>
+                  To keep campus data private, a <strong>6-digit verification code</strong> or magic link will be sent to your official university Gmail.
+                </span>
+              </div>
+
               <label className="field-label-wrap">
-                <span className="field-label">Full Name</span>
+                <span className="field-label">Student Full Name</span>
                 <div style={{ position: "relative" }}>
                   <input
                     type="text"
@@ -464,8 +549,94 @@ export function StudentGateway({
                 </label>
               )}
 
+              <button
+                type="submit"
+                className="btn solid tap student-gateway-submit"
+                disabled={loading || !isValidUniversityEmail(email)}
+              >
+                {loading ? <RefreshCw size={18} className="spin" /> : <Mail size={18} />}
+                <span>{loading ? "Sending Code to Gmail..." : "Send Verification Code to University Gmail →"}</span>
+              </button>
+
+              <p className="fine quiet" style={{ textAlign: "center", marginTop: 8 }}>
+                Already registered?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signin")}
+                  className="link-btn"
+                  style={{ color: "#087f79", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Sign in here
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* STAGE 2: VERIFY 6-DIGIT CODE & SET PASSWORD */}
+          {mode === "signup" && signupStage === "verify" && (
+            <form onSubmit={handleVerifyAndCreateAccount} className="student-gateway-form stack">
+              <div style={{ background: "color-mix(in srgb, var(--c-accent) 8%, var(--c-paper))", padding: "0.85rem 1rem", borderRadius: "0.85rem", border: "1px solid var(--c-accent)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-accent)" }}>
+                    Email Verification Code Sent
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSignupStage("details");
+                      setError("");
+                    }}
+                    style={{ background: "none", border: "none", color: "var(--muted, #64748b)", fontSize: "0.78rem", cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Change Email
+                  </button>
+                </div>
+                <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--c-ink)" }}>
+                  {email}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "var(--muted, #64748b)", marginTop: 4 }}>
+                  Please check your university Gmail inbox (and spam folder) for the 6-digit code.
+                </div>
+              </div>
+
+              {devPreviewCode && (
+                <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", padding: "0.6rem 0.85rem", borderRadius: "0.6rem", fontSize: "0.8rem", color: "#92400e", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>💡 Preview Code: <strong>{devPreviewCode}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setVerificationCode(devPreviewCode)}
+                    style={{ background: "#d97706", color: "#fff", border: "none", borderRadius: "4px", padding: "2px 8px", fontSize: "0.75rem", cursor: "pointer", fontWeight: 700 }}
+                  >
+                    Auto-Fill
+                  </button>
+                </div>
+              )}
+
               <label className="field-label-wrap">
-                <span className="field-label">Create Password (min 6 characters)</span>
+                <span className="field-label">6-Digit Verification Code</span>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    className="input"
+                    required
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="• • • • • •"
+                    style={{
+                      textAlign: "center",
+                      letterSpacing: "0.35em",
+                      fontSize: "1.4rem",
+                      fontWeight: 800,
+                      fontFamily: "monospace",
+                      color: "var(--c-accent)",
+                    }}
+                  />
+                </div>
+              </label>
+
+              <label className="field-label-wrap">
+                <span className="field-label">Choose Account Password (min 6 characters)</span>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -473,7 +644,7 @@ export function StudentGateway({
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Choose a secure password"
+                    placeholder="Create your secure password"
                     style={{ paddingLeft: "2.3rem", paddingRight: "2.3rem" }}
                   />
                   <Lock size={16} style={{ position: "absolute", left: 12, top: 13, color: "var(--muted, #64748b)" }} />
@@ -507,23 +678,40 @@ export function StudentGateway({
               <button
                 type="submit"
                 className="btn solid tap student-gateway-submit"
-                disabled={loading || !isValidUniversityEmail(email)}
+                disabled={loading || verificationCode.trim().length !== 6 || password.length < 6}
               >
-                {loading ? <RefreshCw size={18} className="spin" /> : <ArrowRight size={18} />}
-                <span>{loading ? "Creating Account..." : "Create Account & Unlock Timetable"}</span>
+                {loading ? <RefreshCw size={18} className="spin" /> : <Sparkles size={18} />}
+                <span>{loading ? "Verifying & Unlocking..." : "Verify Code & Unlock Campus Workspace"}</span>
               </button>
 
-              <p className="fine quiet" style={{ textAlign: "center", marginTop: 8 }}>
-                Already registered?{" "}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, fontSize: "0.8rem" }}>
                 <button
                   type="button"
-                  onClick={() => setMode("signin")}
-                  className="link-btn"
-                  style={{ color: "#087f79", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                  onClick={handleRequestVerificationCode}
+                  disabled={resendCooldown > 0 || loading}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: resendCooldown > 0 ? "var(--muted, #64748b)" : "var(--c-accent)",
+                    cursor: resendCooldown > 0 ? "default" : "pointer",
+                    fontWeight: 600,
+                    textDecoration: resendCooldown > 0 ? "none" : "underline",
+                  }}
                 >
-                  Sign in here
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend Verification Code"}
                 </button>
-              </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupStage("details");
+                    setError("");
+                  }}
+                  style={{ background: "none", border: "none", color: "var(--muted, #64748b)", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  ← Back to Details
+                </button>
+              </div>
             </form>
           )}
 
