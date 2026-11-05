@@ -6109,3 +6109,179 @@
     text-overflow: ellipsis;
   }
 }
+
+/* ==========================================================================
+   Student Gateway Authentication Screen
+   ========================================================================== */
+
+.student-gateway-screen {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--c-accent) 8%, var(--c-canvas)), var(--c-canvas));
+}
+
+.student-gateway-container {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.student-gateway-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+}
+
+.student-gateway-crest {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
+}
+
+.student-gateway-titles h1 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--c-ink);
+}
+
+.student-gateway-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--c-accent);
+  display: block;
+}
+
+.student-gateway-desc {
+  margin: 0 auto;
+  max-width: 460px;
+  font-size: 0.88rem;
+  color: var(--muted, #64748b);
+  line-height: 1.45;
+}
+
+.student-gateway-perks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.perk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: color-mix(in srgb, var(--c-paper) 75%, transparent);
+  border: 1px solid var(--c-line);
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--c-ink);
+  backdrop-filter: blur(8px);
+}
+
+.student-gateway-card {
+  width: 100%;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.student-gateway-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--c-line);
+  background: color-mix(in srgb, var(--c-canvas) 50%, var(--c-paper));
+}
+
+.gateway-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.gateway-tab-btn.active {
+  color: var(--c-accent);
+  background: var(--c-paper);
+  border-bottom-color: var(--c-accent);
+}
+
+.student-gateway-form {
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+.student-identity-preview {
+  background: color-mix(in srgb, var(--c-accent) 8%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent);
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--c-ink);
+}
+
+.student-gateway-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.student-gateway-footer {
+  padding: 0.85rem 1.5rem;
+  border-top: 1px solid var(--c-line);
+  background: color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper));
+  display: flex;
+  justify-content: center;
+}
+
+.gateway-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.gateway-admin-btn:hover {
+  color: var(--c-accent);
+}
