@@ -1,5 +1,5 @@
 import raw from "@/data/timetable.json";
-import { getArrangedMakeupClasses, toClassEntry } from "./makeup-classes";
+import { getActiveArrangedMakeupClasses, getArrangedMakeupClasses, toClassEntry } from "./makeup-classes";
 import { getFacultyEmail } from "@/lib/faculty";
 import { CAMPUS_TIME_ZONE } from "@/lib/campus";
 
@@ -255,13 +255,13 @@ for (const entry of entries) {
 }
 
 export function getAllEntries(): ClassEntry[] {
-  const makeup = getArrangedMakeupClasses().map(toClassEntry);
+  const makeup = getActiveArrangedMakeupClasses().map(toClassEntry);
   return makeup.length > 0 ? [...entries, ...makeup] : entries;
 }
 
 export function at(day: number, slot: number): ClassEntry[] {
   const base = byCell.get(`${day}|${slot}`) ?? [];
-  const makeup = getArrangedMakeupClasses()
+  const makeup = getActiveArrangedMakeupClasses()
     .filter((m) => m.day === day && m.slot === slot)
     .map(toClassEntry);
   return makeup.length > 0 ? [...base, ...makeup] : base;
@@ -269,7 +269,7 @@ export function at(day: number, slot: number): ClassEntry[] {
 
 export function forBatch(id: number): ClassEntry[] {
   const base = byBatch[id] ?? [];
-  const makeup = getArrangedMakeupClasses()
+  const makeup = getActiveArrangedMakeupClasses()
     .filter((m) => m.batch === id)
     .map(toClassEntry);
   return makeup.length > 0 ? [...base, ...makeup] : base;
@@ -277,7 +277,7 @@ export function forBatch(id: number): ClassEntry[] {
 
 export function forTeacher(id: number): ClassEntry[] {
   const base = byTeacher[id] ?? [];
-  const makeup = getArrangedMakeupClasses()
+  const makeup = getActiveArrangedMakeupClasses()
     .filter((m) => m.teacher === id)
     .map(toClassEntry);
   return makeup.length > 0 ? [...base, ...makeup] : base;
@@ -285,7 +285,7 @@ export function forTeacher(id: number): ClassEntry[] {
 
 export function forRoom(id: number): ClassEntry[] {
   const base = byRoom[id] ?? [];
-  const makeup = getArrangedMakeupClasses()
+  const makeup = getActiveArrangedMakeupClasses()
     .filter((m) => m.room === id)
     .map(toClassEntry);
   return makeup.length > 0 ? [...base, ...makeup] : base;
@@ -293,7 +293,7 @@ export function forRoom(id: number): ClassEntry[] {
 
 export function forSubject(id: number): ClassEntry[] {
   const base = bySubject[id] ?? [];
-  const makeup = getArrangedMakeupClasses()
+  const makeup = getActiveArrangedMakeupClasses()
     .filter((m) => m.subject === id)
     .map(toClassEntry);
   return makeup.length > 0 ? [...base, ...makeup] : base;

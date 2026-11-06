@@ -56,6 +56,8 @@ import {
   getArrangedMakeupClasses,
   addMakeupClass,
   removeMakeupClass,
+  isMakeupActive,
+  computeMakeupTargetAndExpiry,
   type MakeupClassRecord,
 } from "@/lib/makeup-classes";
 import { facultyUpdateLeadTimeFn } from "@/lib/faculty-server-fn";
@@ -264,6 +266,7 @@ export function FacultyWorkspaceView() {
     if (!bookingModalState || !facultySession || teacherId === null) return;
     const { slot, room } = bookingModalState;
     const subjId = bookingSubjectId || candidateSubjects[0] || 0;
+    const slotDef = SLOTS[slot.slot];
 
     addMakeupClass({
       day: slot.day,
@@ -276,20 +279,22 @@ export function FacultyWorkspaceView() {
       createdByEmail: facultySession.profile.email,
     });
 
-    const msg = `🎉 Makeup class successfully arranged in ${room.name}! Room ${room.name} and your status are now automatically occupied for ${DAYS[slot.day]} ${SLOTS[slot.slot].label}.`;
+    const msg = `🎉 Makeup class successfully arranged in ${room.name}! Room ${room.name} and your status are now automatically OCCUPIED until ${slotDef.end}. After ${slotDef.end}, the system will automatically change the status of ${room.name} and your schedule back to FREE. You can also cancel and release the room anytime.`;
     setBookingSuccessNotice(msg);
     setBookingModalState(null);
     setBookingNote("");
     setSelectedSlotDetails(null);
 
-    // Auto-clear success banner after 8 seconds
-    setTimeout(() => setBookingSuccessNotice(null), 8000);
+    // Auto-clear success banner after 10 seconds
+    setTimeout(() => setBookingSuccessNotice(null), 10000);
   };
 
-  // Cancel an arranged makeup class
+  // Cancel an arranged makeup class anytime, releasing room & teacher immediately
   const handleCancelMakeup = (id: string, roomName: string) => {
-    if (window.confirm(`Are you sure you want to cancel this makeup class in ${roomName}? This will automatically release ${roomName} and free your schedule.`)) {
+    if (window.confirm(`Release ${roomName} now? This will cancel the makeup class and immediately restore both ${roomName} and your schedule back to FREE.`)) {
       removeMakeupClass(id);
+      setBookingSuccessNotice(`✅ ${roomName} and your schedule have been released and are now FREE.`);
+      setTimeout(() => setBookingSuccessNotice(null), 6000);
     }
   };
 
@@ -827,10 +832,10 @@ export function FacultyWorkspaceView() {
               <div className="active-makeups-head">
                 <div className="active-makeups-title">
                   <Sparkles size={18} color="#10b981" />
-                  <strong>Your Active Makeup Classes ({teacherMakeupClasses.length})</strong>
+                  <strong>Your Arranged Makeup Classes ({teacherMakeupClasses.length})</strong>
                 </div>
                 <span className="active-makeups-note">
-                  Rooms & your timetable status are automatically occupied for these reserved slots.
+                  Active reservations automatically occupy the room & teacher. Once the lecture ends (e.g. at 10:00 for L1), the system automatically releases the venue back to FREE. You can also click &quot;Cancel / Release Room&quot; anytime.
                 </span>
               </div>
 
@@ -841,16 +846,34 @@ export function FacultyWorkspaceView() {
                   const roomName = rooms[m.room];
                   const batchName = batches[m.batch];
                   const subjectName = subjects[m.subject];
+                  const isActive = isMakeupActive(m, now || new Date());
                   const noticeText = generateNoticeText(m.day, m.slot, roomName, m.batch, subjectName);
                   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(noticeText)}`;
 
                   return (
-                    <div key={m.id} className="active-makeup-card">
+                    <div
+                      key={m.id}
+                      className={`active-makeup-card ${isActive ? "active-session" : "completed-session"}`}
+                    >
                       <div className="active-makeup-info">
+                        <div className="active-makeup-header-row">
+                          {isActive ? (
+                            <span className="makeup-live-pill active">
+                              <span className="status-dot-pulse green" />
+                              <span>Occupied · Auto-releases at {slotInfo.end}</span>
+                            </span>
+                          ) : (
+                            <span className="makeup-live-pill completed">
+                              <span className="status-dot-pulse gray" />
+                              <span>Completed · Room & Teacher Released (Free)</span>
+                            </span>
+                          )}
+                        </div>
+
                         <div className="active-makeup-time">
                           <Clock size={13} />
                           <span>
-                            {dayName} • {slotInfo.label} ({slotInfo.start} - {slotInfo.end})
+                            {m.targetDateLabel || dayName} • {slotInfo.label} ({slotInfo.start} - {slotInfo.end})
                           </span>
                         </div>
                         <h4 className="active-makeup-subject">{subjectName}</h4>
@@ -890,15 +913,27 @@ export function FacultyWorkspaceView() {
                           <Share2 size={12} />
                           <span>WhatsApp</span>
                         </a>
-                        <button
-                          type="button"
-                          className="btn secondary sm tap cancel-makeup-action"
-                          onClick={() => handleCancelMakeup(m.id, roomName)}
-                          title="Cancel makeup class and release the room back to free"
-                        >
-                          <Trash2 size={12} />
-                          <span>Release Room</span>
-                        </button>
+                        {isActive ? (
+                          <button
+                            type="button"
+                            className="btn secondary sm tap cancel-makeup-action"
+                            onClick={() => handleCancelMakeup(m.id, roomName)}
+                            title="Cancel makeup class anytime to immediately release the room and teacher"
+                          >
+                            <Trash2 size={12} />
+                            <span>Cancel / Release Room</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn secondary sm tap"
+                            onClick={() => removeMakeupClass(m.id)}
+                            title="Dismiss from history"
+                          >
+                            <Trash2 size={12} />
+                            <span>Dismiss</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1337,6 +1372,18 @@ export function FacultyWorkspaceView() {
                       {SLOTS[bookingModalState.slot.slot].start} - {SLOTS[bookingModalState.slot.slot].end})
                     </strong>
                   </div>
+                  <div className="booking-detail-row">
+                    <span className="detail-label">Scheduled Date:</span>
+                    <strong>
+                      {computeMakeupTargetAndExpiry(bookingModalState.slot.day, bookingModalState.slot.slot, now || new Date()).targetDateLabel}
+                    </strong>
+                  </div>
+                  <div className="booking-detail-row">
+                    <span className="detail-label">Auto-Release:</span>
+                    <strong style={{ color: "#10b981" }}>
+                      Automatically reverts to FREE at {SLOTS[bookingModalState.slot.slot].end}
+                    </strong>
+                  </div>
                 </div>
 
                 {/* Subject Selector */}
@@ -1368,8 +1415,9 @@ export function FacultyWorkspaceView() {
                 </label>
 
                 <p className="booking-warning-note">
-                  ℹ️ <strong>Automatic Status Update:</strong> Confirming this reservation will immediately update the status of
-                  <strong> {bookingModalState.room.name}</strong> and <strong>{teacherName}</strong> to occupied during this slot across the entire campus timetable.
+                  ℹ️ <strong>Automatic Status System:</strong> Confirming this reservation immediately changes the status of
+                  <strong> {bookingModalState.room.name}</strong> and <strong>{teacherName}</strong> to occupied across the campus timetable.
+                  Once this lecture ends at <strong>{SLOTS[bookingModalState.slot.slot].end}</strong>, the system will <strong>automatically restore both the room and your status back to FREE</strong>! You can also click <em>&quot;Cancel / Release Room&quot;</em> anytime to free it early.
                 </p>
 
                 <div className="booking-modal-actions">

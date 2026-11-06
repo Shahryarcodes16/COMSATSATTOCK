@@ -7829,6 +7829,72 @@ select optgroup {
   transition: all 0.15s ease;
 }
 
+.active-makeup-card.completed-session {
+  border-color: var(--c-line);
+  opacity: 0.78;
+  background: color-mix(in srgb, var(--c-canvas) 85%, var(--c-line));
+}
+
+.active-makeup-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.makeup-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.69rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}
+
+.makeup-live-pill.active {
+  background: color-mix(in srgb, #10b981 16%, var(--c-canvas));
+  color: #059669;
+  border: 1px solid color-mix(in srgb, #10b981 30%, transparent);
+}
+
+.makeup-live-pill.completed {
+  background: color-mix(in srgb, var(--c-muted) 12%, var(--c-canvas));
+  color: var(--c-muted);
+  border: 1px solid var(--c-line);
+}
+
+.status-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot-pulse.green {
+  background: #10b981;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #10b981 30%, transparent);
+  animation: pulse-ring 2s infinite ease-out;
+}
+
+.status-dot-pulse.gray {
+  background: var(--c-muted);
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, #10b981 60%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, #10b981 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, #10b981 0%, transparent);
+  }
+}
+
 .active-makeup-info {
   display: flex;
   flex-direction: column;

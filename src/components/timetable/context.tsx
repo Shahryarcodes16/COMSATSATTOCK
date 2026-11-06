@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { batches, readClock, teachers, type ClockInfo } from "@/lib/schedule";
+import { pruneAndSyncMakeupClasses } from "@/lib/makeup-classes";
 
 export type View =
   | "today"
@@ -172,6 +173,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
     const tick = () => {
       const date = new Date();
       setNow(date);
+      pruneAndSyncMakeupClasses(date);
       window.clearTimeout(timer);
       timer = window.setTimeout(tick, 60000 - (date.getSeconds() * 1000 + date.getMilliseconds()));
     };
