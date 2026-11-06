@@ -301,7 +301,31 @@ export function CampusFooter() {
 
 export function Dock() {
   const { view, setView } = useDesk();
-  const index = MOBILE_NAV.findIndex((item) => item.id === view);
+  const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setFacultyActive(!!getActiveFacultySession());
+    };
+    window.addEventListener("cui:faculty-session-update", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:faculty-session-update", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  const navItems = facultyActive
+    ? [
+        { id: "today" as View, label: "Today", icon: Clock },
+        { id: "faculty-desk" as View, label: "Teaching", icon: CalendarCheck },
+        { id: "rooms" as View, label: "Rooms", icon: DoorOpen },
+        { id: "faculty" as View, label: "Faculty", icon: GraduationCap },
+        { id: "batches" as View, label: "Batches", icon: Users },
+      ]
+    : MOBILE_NAV;
+
+  const index = navItems.findIndex((item) => item.id === view);
 
   return (
     <nav
@@ -310,7 +334,7 @@ export function Dock() {
       style={
         {
           "--i": Math.max(0, index),
-          "--n": MOBILE_NAV.length,
+          "--n": navItems.length,
         } as CSSProperties
       }
     >
@@ -319,7 +343,7 @@ export function Dock() {
         style={{ opacity: index === -1 ? 0 : 1 }}
         aria-hidden
       />
-      {MOBILE_NAV.map((item) => {
+      {navItems.map((item) => {
         const Icon = item.icon;
         const on = view === item.id;
         return (

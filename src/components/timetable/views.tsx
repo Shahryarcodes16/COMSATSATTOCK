@@ -20,6 +20,7 @@ import { NotificationBellButton } from "@/components/timetable/notification-moda
 import { FreeRoomsRadar } from "@/components/timetable/room-radar";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { getFacultyEmail } from "@/lib/faculty";
+import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
@@ -49,6 +50,7 @@ import {
   roomGroup,
   rooms,
   searchCatalog,
+  subjects,
   summarize,
   teachers,
   teachingLoad,
@@ -89,6 +91,33 @@ export function TodayView() {
     open,
     setView,
   } = useDesk();
+
+  const [facultySession, setFacultySession] = useState<FacultySession | null>(
+    () => getActiveFacultySession(),
+  );
+
+  useEffect(() => {
+    const handleUpdate = () => setFacultySession(getActiveFacultySession());
+    window.addEventListener("cui:faculty-session-update", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:faculty-session-update", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  const teacherId = facultySession?.profile?.teacherId ?? null;
+  const teacherClasses = useMemo(() => {
+    if (teacherId === null) return [];
+    return forTeacher(teacherId);
+  }, [teacherId]);
+
+  const teacherTodayClasses = useMemo(() => {
+    return teacherClasses
+      .filter((c) => c.day === day)
+      .sort((a, b) => a.slot - b.slot);
+  }, [teacherClasses, day]);
+
   const cell = at(day, slot);
   const busyRooms = new Set(cell.map((entry) => entry.room).filter((id) => id >= 0));
   const busyTeachers = new Set(cell.map((entry) => entry.teacher).filter((id) => id >= 0));
@@ -221,6 +250,80 @@ export function TodayView() {
         </div>
       </section>
       <div className="today-layout">
+        {teacherId !== null && (
+          <section className="panel faculty-today-banner-panel stack">
+            <div className="panel-head">
+              <div>
+                <p className="eyebrow">Faculty Workspace</p>
+                <h2>My Teaching Today</h2>
+              </div>
+              <button
+                type="button"
+                className="btn solid tap"
+                onClick={() => setView("faculty-desk")}
+              >
+                <span>Teaching Desk</span>
+                <ArrowUpRight size={15} aria-hidden />
+              </button>
+            </div>
+
+            <div className="faculty-today-quick-summary">
+              <div className="faculty-quick-info">
+                <strong>{facultySession?.profile?.timetableName || facultySession?.profile?.fullName}</strong>
+                <span>{facultySession?.profile?.department}</span>
+              </div>
+              <span className="faculty-today-count-badge">
+                {teacherTodayClasses.length} lecture{teacherTodayClasses.length === 1 ? "" : "s"} on {DAYS[day]}
+              </span>
+            </div>
+
+            {teacherTodayClasses.length === 0 ? (
+              <p className="quiet" style={{ margin: "0.5rem 0" }}>
+                No lectures scheduled for {DAYS[day]}. Have a productive day!
+              </p>
+            ) : (
+              <div className="faculty-today-quick-list">
+                {teacherTodayClasses.map((c, idx) => {
+                  const slotInfo = SLOTS[c.slot];
+                  const isLive = currentLecture && clock.liveSlot === c.slot;
+                  return (
+                    <div
+                      key={`teacher-today-${idx}`}
+                      className={`faculty-quick-class-item ${isLive ? "live" : ""}`}
+                    >
+                      <div className="quick-class-time">
+                        <b>{slotInfo.label}</b>
+                        <span>{slotInfo.start} - {slotInfo.end}</span>
+                        {isLive && <span className="flag now">Live Now</span>}
+                      </div>
+                      <div className="quick-class-body">
+                        <strong>{subjects[c.subject]}</strong>
+                        <div className="quick-class-meta">
+                          <button
+                            type="button"
+                            className="chip sm tap"
+                            onClick={() => open({ type: "batch", id: c.batch })}
+                          >
+                            <Users size={11} />
+                            <span>{batches[c.batch]}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="chip sm tap"
+                            onClick={() => open({ type: "room", id: c.room })}
+                          >
+                            <DoorOpen size={11} />
+                            <span>{rooms[c.room]}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
         <section className="panel my-batch-panel">
           <div className="panel-head">
             <div>
