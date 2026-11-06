@@ -3,4 +3,6 @@ node_modules/
 .tanstack/
 .output/
 dist/
+.env
+.env.*
 .env*.local

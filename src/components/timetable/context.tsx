@@ -10,7 +10,16 @@ import {
 } from "react";
 import { batches, readClock, teachers, type ClockInfo } from "@/lib/schedule";
 
-export type View = "today" | "custom" | "batches" | "rooms" | "faculty" | "find" | "datesheet" | "admin";
+export type View =
+  | "today"
+  | "custom"
+  | "batches"
+  | "rooms"
+  | "faculty"
+  | "find"
+  | "datesheet"
+  | "admin"
+  | "faculty-desk";
 export type ThemeName = "paper" | "ink";
 
 export type Detail =
@@ -29,7 +38,17 @@ type Prefs = {
   pinnedTeachers: number[];
 };
 
-const VIEWS: View[] = ["today", "custom", "batches", "rooms", "faculty", "find", "datesheet", "admin"];
+const VIEWS: View[] = [
+  "today",
+  "custom",
+  "batches",
+  "rooms",
+  "faculty",
+  "find",
+  "datesheet",
+  "admin",
+  "faculty-desk",
+];
 
 const defaultBatch = Math.max(
   0,

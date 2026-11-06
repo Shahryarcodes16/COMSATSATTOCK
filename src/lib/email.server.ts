@@ -11,15 +11,21 @@ interface SendVerificationEmailOptions {
   magicLink?: string;
 }
 
+const DEFAULT_SMTP_USER = process.env.SMTP_USER || "cuiattockcampus@gmail.com";
+const DEFAULT_SMTP_PASS = process.env.SMTP_PASS || "";
+
 /**
  * Creates nodemailer transport based on environment configuration.
- * Defaults to Gmail SMTP (smtp.gmail.com:465) using SSL.
+ * Defaults to Gmail SMTP (smtp.gmail.com:465) using SSL with the dedicated campus account.
  */
 function getEmailTransporter() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = parseInt(process.env.SMTP_PORT || "465", 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const rawUser = process.env.SMTP_USER || DEFAULT_SMTP_USER;
+  const rawPass = process.env.SMTP_PASS || DEFAULT_SMTP_PASS;
+
+  const user = rawUser?.trim();
+  const pass = rawPass?.replace(/\s+/g, "").trim();
 
   if (!user || !pass) {
     return null;
@@ -46,8 +52,9 @@ export async function sendStudentVerificationEmail({
   magicLink,
 }: SendVerificationEmailOptions): Promise<{ sent: boolean; devMode?: boolean; error?: string }> {
   const transporter = getEmailTransporter();
+  const senderEmail = process.env.SMTP_USER || DEFAULT_SMTP_USER;
   const fromAddress =
-    process.env.SMTP_FROM || `"CUI Attock Timetable" <${process.env.SMTP_USER || "portal@cuiatk.edu.pk"}>`;
+    process.env.SMTP_FROM || `"COMSATS Attock Timetable" <${senderEmail}>`;
 
   const htmlBody = `
     <!DOCTYPE html>

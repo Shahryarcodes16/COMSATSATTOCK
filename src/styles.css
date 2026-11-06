@@ -6239,6 +6239,90 @@
   gap: 1rem;
 }
 
+.student-gateway-form .input,
+.student-gateway-form select,
+.student-gateway-form input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: #162d3b;
+  background-color: #ffffff;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 0.65rem 0.9rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+:root[data-theme="ink"] .student-gateway-form .input,
+:root[data-theme="ink"] .student-gateway-form select,
+:root[data-theme="ink"] .student-gateway-form input {
+  color: #edf5f9;
+  background-color: #172b38;
+  border-color: #2a414f;
+}
+
+.student-gateway-form .input:focus,
+.student-gateway-form select:focus,
+.student-gateway-form input:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-accent) 25%, transparent);
+}
+
+.faculty-directory-select,
+.student-gateway-form select,
+.select-batch-dropdown {
+  cursor: pointer;
+  appearance: auto;
+  color: #162d3b !important;
+  background-color: #ffffff !important;
+  font-weight: 500;
+}
+
+:root[data-theme="ink"] .faculty-directory-select,
+:root[data-theme="ink"] .student-gateway-form select,
+:root[data-theme="ink"] .select-batch-dropdown {
+  color: #edf5f9 !important;
+  background-color: #172b38 !important;
+}
+
+/* Explicit option and optgroup styling to eliminate white-on-white text */
+.faculty-directory-select option,
+.student-gateway-form select option,
+.select-batch-dropdown option,
+select option {
+  color: #162d3b !important;
+  background-color: #ffffff !important;
+  font-size: 0.92rem;
+  padding: 6px 10px;
+}
+
+:root[data-theme="ink"] .faculty-directory-select option,
+:root[data-theme="ink"] .student-gateway-form select option,
+:root[data-theme="ink"] .select-batch-dropdown option,
+:root[data-theme="ink"] select option {
+  color: #edf5f9 !important;
+  background-color: #172b38 !important;
+}
+
+.faculty-directory-select optgroup,
+.student-gateway-form select optgroup,
+.select-batch-dropdown optgroup,
+select optgroup {
+  color: #087f79 !important;
+  background-color: #f1f5f9 !important;
+  font-weight: 700;
+  padding: 6px 8px;
+}
+
+:root[data-theme="ink"] .faculty-directory-select optgroup,
+:root[data-theme="ink"] .student-gateway-form select optgroup,
+:root[data-theme="ink"] .select-batch-dropdown optgroup,
+:root[data-theme="ink"] select optgroup {
+  color: #76d6cd !important;
+  background-color: #0f212d !important;
+}
+
 .student-identity-preview {
   background: color-mix(in srgb, var(--c-accent) 8%, var(--c-paper));
   border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent);
@@ -6284,4 +6368,375 @@
 
 .gateway-admin-btn:hover {
   color: var(--c-accent);
+}
+
+/* Gateway Role Switcher */
+.gateway-role-switcher {
+  display: flex;
+  background: color-mix(in srgb, var(--c-canvas) 80%, var(--c-paper));
+  padding: 0.35rem;
+  border-radius: 9999px;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--c-line);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
+}
+
+.role-switcher-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.role-switcher-btn:hover {
+  color: var(--c-ink);
+}
+
+.role-switcher-btn.active {
+  background: var(--c-paper);
+  color: var(--c-accent);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.12);
+  font-weight: 700;
+}
+
+/* Faculty Topbar Pill */
+.faculty-topbar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.75rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--c-accent) 12%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
+  color: var(--c-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.faculty-topbar-pill:hover,
+.faculty-topbar-pill.on {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+}
+
+.faculty-pill-badge {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+}
+
+.faculty-topbar-pill.on .faculty-pill-badge,
+.faculty-topbar-pill:hover .faculty-pill-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* Faculty Workspace */
+.faculty-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.faculty-hero-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c-hero) 95%, black), var(--c-hero));
+  color: var(--c-hero-text);
+  border-radius: var(--r-lg);
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.25);
+}
+
+.faculty-hero-titles h2 {
+  margin: 0.25rem 0 0.4rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.faculty-dept-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #76d6cd;
+}
+
+.faculty-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.faculty-lead-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.faculty-lead-pill:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.faculty-workspace-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: color-mix(in srgb, var(--c-canvas) 80%, var(--c-paper));
+  padding: 0.35rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-line);
+}
+
+.faculty-tab-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  border-radius: calc(var(--r-md) - 0.25rem);
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.faculty-tab-pill.active {
+  background: var(--c-paper);
+  color: var(--c-accent);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
+/* Smart Makeup Matcher Matrix */
+.matcher-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.matcher-picker-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--c-paper);
+  padding: 1rem 1.25rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-line);
+}
+
+.matcher-matrix-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(5, 1fr);
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.matrix-slot-header {
+  padding: 0.6rem 0.4rem;
+  background: color-mix(in srgb, var(--c-canvas) 70%, var(--c-paper));
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--c-muted);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.matrix-day-header {
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--c-canvas) 85%, var(--c-paper));
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--c-ink);
+}
+
+.matrix-cell {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 80px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.matrix-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+}
+
+.matrix-cell.free-match {
+  background: color-mix(in srgb, #10b981 12%, var(--c-paper));
+  border-color: #10b981;
+}
+
+.matrix-cell.free-match:hover {
+  background: color-mix(in srgb, #10b981 20%, var(--c-paper));
+  border-color: #059669;
+}
+
+.matrix-cell.busy {
+  background: color-mix(in srgb, var(--c-canvas) 45%, var(--c-paper));
+  opacity: 0.65;
+}
+
+.matrix-cell-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.matrix-cell.free-match .matrix-cell-badge {
+  background: #10b981;
+  color: #fff;
+}
+
+.matrix-cell.busy .matrix-cell-badge {
+  background: var(--c-line);
+  color: var(--c-muted);
+}
+
+.free-venues-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+/* Slot Discovery Drawer */
+.slot-discovery-drawer {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: 1.5rem;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid var(--c-line);
+  padding-bottom: 1rem;
+}
+
+.free-venues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.venue-card {
+  padding: 0.85rem 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--c-line);
+  background: var(--c-canvas);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.venue-card.lt {
+  border-left: 4px solid #3b82f6;
+}
+
+.venue-card.lab {
+  border-left: 4px solid #8b5cf6;
+}
+
+.venue-card.room {
+  border-left: 4px solid #10b981;
+}
+
+.venue-card-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.venue-card-type {
+  font-size: 0.72rem;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.copy-announcement-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #25d366;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-announcement-btn:hover {
+  background: #128c7e;
+  transform: translateY(-1px);
 }

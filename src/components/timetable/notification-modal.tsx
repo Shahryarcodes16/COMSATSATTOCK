@@ -25,8 +25,9 @@ import {
   markNotifiedToday,
 } from "@/lib/notifications";
 import { useDesk } from "@/components/timetable/context";
-import { SLOTS, batches, forBatch, rooms, subjects, teachers, getCampusMinutes } from "@/lib/schedule";
+import { SLOTS, batches, forBatch, rooms, subjects, teachers, getCampusMinutes, entries } from "@/lib/schedule";
 import { loadCustomSchedule } from "@/lib/my-schedule";
+import { getActiveFacultySession } from "@/lib/faculty-auth";
 
 /**
  * Background hook that checks the schedule every 30s and triggers class alerts
@@ -38,11 +39,47 @@ export function useClassNotificationScheduler() {
     if (!isNotificationSupported()) return;
 
     const checkAlarms = () => {
-      const settings = getStoredNotificationSettings();
-      if (!settings.enabled || Notification.permission !== "granted") return;
-
       const { dayIndex, minutes: currentCampusMinutes } = getCampusMinutes(now);
       if (dayIndex === null || dayIndex < 0 || dayIndex > 4) return; // Weekend or off-campus
+
+      // 1. Check Faculty Notifications if logged in as a faculty member
+      const faculty = getActiveFacultySession();
+      if (faculty?.profile?.teacherId !== null && faculty?.profile?.teacherId !== undefined) {
+        const leadMins = faculty.profile.notificationLeadMins || 10;
+        const facultyClasses = entries.filter(
+          (e) => e.teacher === faculty.profile.teacherId && e.day === dayIndex,
+        );
+
+        for (const cls of facultyClasses) {
+          const slotDef = SLOTS[cls.slot];
+          if (!slotDef) continue;
+
+          const alertMinutes = slotDef.from - leadMins;
+          const key = `faculty_${faculty.profile.teacherId}_${cls.batch}_${cls.slot}_${cls.subject}`;
+
+          if (
+            currentCampusMinutes >= alertMinutes &&
+            currentCampusMinutes < alertMinutes + 3 &&
+            !hasNotifiedToday(key)
+          ) {
+            const subName = subjects[cls.subject] || "Lecture";
+            const roomName = cls.room >= 0 ? rooms[cls.room] : "Campus";
+            const batchName = cls.batch >= 0 ? batches[cls.batch] : "Class";
+
+            markNotifiedToday(key);
+
+            sendSystemNotification(`🔔 Next Class in ${leadMins} mins: ${subName}`, {
+              body: `📍 ${roomName} with ${batchName} (${slotDef.start} – ${slotDef.end})`,
+              playChime: true,
+              tag: key,
+            });
+          }
+        }
+      }
+
+      // 2. Student & Custom Schedule Notifications
+      const settings = getStoredNotificationSettings();
+      if (!settings.enabled || Notification.permission !== "granted") return;
 
       // Determine today's classes
       let todayClasses: {

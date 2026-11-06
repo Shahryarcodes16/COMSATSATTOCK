@@ -15,7 +15,9 @@ import { CampusFooter, Dock, Sidebar, Topbar } from "@/components/timetable/chro
 import { DetailSheet } from "@/components/timetable/sheet";
 import { useClassNotificationScheduler } from "@/components/timetable/notification-modal";
 import { StudentGateway } from "@/components/timetable/student-gateway";
+import { FacultyWorkspaceView } from "@/components/timetable/faculty-workspace-view";
 import { getActiveStudentSession, type StudentSession } from "@/lib/student";
+import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 
 export function Desk() {
   return (
@@ -28,22 +30,32 @@ export function Desk() {
 function Frame() {
   const { view, detail } = useDesk();
   const [studentSession, setStudentSession] = useState<StudentSession | null>(() => getActiveStudentSession());
+  const [facultySession, setFacultySession] = useState<FacultySession | null>(() => getActiveFacultySession());
 
   useEffect(() => {
-    // Keep student session strictly in sync with client storage & broadcast updates
+    // Keep sessions strictly in sync with client storage & broadcast updates
     setStudentSession(getActiveStudentSession());
+    setFacultySession(getActiveFacultySession());
 
     const handleStudentSession = (e: Event) => {
       const customEvent = e as CustomEvent<StudentSession | null>;
       setStudentSession(customEvent.detail ?? getActiveStudentSession());
     };
 
+    const handleFacultySession = (e: Event) => {
+      const customEvent = e as CustomEvent<FacultySession | null>;
+      setFacultySession(customEvent.detail ?? getActiveFacultySession());
+    };
+
     window.addEventListener("cui:student-session-update", handleStudentSession);
+    window.addEventListener("cui:faculty-session-update", handleFacultySession);
     window.addEventListener("storage", () => {
       setStudentSession(getActiveStudentSession());
+      setFacultySession(getActiveFacultySession());
     });
     return () => {
       window.removeEventListener("cui:student-session-update", handleStudentSession);
+      window.removeEventListener("cui:faculty-session-update", handleFacultySession);
     };
   }, []);
 
@@ -60,13 +72,16 @@ function Frame() {
     );
   }
 
-  // Strict Authentication Gate: Students MUST first create an account or sign in.
-  // Unless authenticated with a valid student session, ALL timetable views, schedules,
-  // batches, rooms, and faculty remain locked.
-  if (!studentSession) {
+  // Strict Authentication Gate: User MUST be signed in as either a Student or Faculty member.
+  const isAuthenticated = Boolean(studentSession || facultySession);
+
+  if (!isAuthenticated) {
     return (
       <div className="app">
-        <StudentGateway onAuthenticated={(session) => setStudentSession(session)} />
+        <StudentGateway
+          onAuthenticated={(session) => setStudentSession(session)}
+          onFacultyAuthenticated={(session) => setFacultySession(session)}
+        />
       </div>
     );
   }
@@ -102,6 +117,9 @@ function Frame() {
             </div>
             <div hidden={view !== "datesheet"}>
               <DatesheetView />
+            </div>
+            <div hidden={view !== "faculty-desk"}>
+              <FacultyWorkspaceView />
             </div>
           </main>
           <CampusFooter />

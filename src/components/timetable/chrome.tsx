@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import {
   ArrowUpRight,
   CalendarCheck,
@@ -29,6 +29,8 @@ import { isDatesheetActive } from "@/lib/datesheet";
 import { useDesk, type View } from "@/components/timetable/context";
 import { NotificationBellButton } from "@/components/timetable/notification-modal";
 import { StudentAuthButton } from "@/components/timetable/student-auth-modal";
+import { FacultyAuthButton } from "@/components/timetable/faculty-auth-modal";
+import { getActiveFacultySession } from "@/lib/faculty-auth";
 
 // Desktop sidebar navigates all sections
 const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
@@ -64,14 +66,34 @@ export function Brand() {
 export function Sidebar() {
   const { now, view, setView } = useDesk();
   const datesheetActive = isDatesheetActive(now);
+  const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
 
-  const desktopNav = datesheetActive
+  useEffect(() => {
+    const handleUpdate = () => {
+      setFacultyActive(!!getActiveFacultySession());
+    };
+    window.addEventListener("cui:faculty-session-update", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:faculty-session-update", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  let desktopNav = datesheetActive
     ? [
         ...BASE_DESKTOP_NAV.slice(0, 2),
         { id: "datesheet" as View, label: "Date Sheet", icon: CalendarDays },
         ...BASE_DESKTOP_NAV.slice(2),
       ]
     : BASE_DESKTOP_NAV;
+
+  if (facultyActive) {
+    desktopNav = [
+      { id: "faculty-desk" as View, label: "Teaching Desk", icon: GraduationCap },
+      ...desktopNav,
+    ];
+  }
 
   return (
     <aside className="sidebar">
@@ -193,6 +215,9 @@ export function Topbar() {
 
         {/* Student Account / Sign In */}
         <StudentAuthButton />
+
+        {/* Faculty Account / Teaching Desk */}
+        <FacultyAuthButton />
 
         {/* Class Reminders */}
         <NotificationBellButton />
