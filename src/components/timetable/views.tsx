@@ -325,15 +325,15 @@ export function TodayView() {
           </section>
         )}
         <section className="panel my-batch-panel">
-          <div className="panel-head">
+          <div className="panel-head my-batch-panel-head">
             <div>
               <p className="eyebrow">Your schedule</p>
               <h2>My batch</h2>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <div className="my-batch-header-actions">
               <NotificationBellButton showLabel={true} />
               {pinnedBatch !== null ? (
-                <button type="button" className="btn tap" onClick={() => pinBatch(null)}>
+                <button type="button" className="btn tap change-batch-btn" onClick={() => pinBatch(null)}>
                   Change batch
                 </button>
               ) : null}

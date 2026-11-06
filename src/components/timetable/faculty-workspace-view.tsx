@@ -80,6 +80,9 @@ export function FacultyWorkspaceView() {
   // Timetable view mode: "grid" (table) | "agenda" (cards) | "courses" (summary)
   const [tableMode, setTableMode] = useState<"grid" | "agenda" | "courses">("grid");
 
+  // Day Agenda Filter: "all" or specific day index (0..4)
+  const [agendaDayFilter, setAgendaDayFilter] = useState<"all" | number>("all");
+
   // Makeup Matcher view mode on mobile: "matrix" | "cards"
   const [matcherViewMode, setMatcherViewMode] = useState<"matrix" | "cards">("matrix");
 
@@ -684,32 +687,126 @@ export function FacultyWorkspaceView() {
           {/* View 2: Day-by-Day Agenda List */}
           {tableMode === "agenda" && (
             <div className="teacher-classes-list stack">
+              {/* Responsive Day Filter Tabs Bar */}
+              <div className="agenda-day-filter-bar" role="tablist" aria-label="Filter Agenda by Day">
+                <button
+                  type="button"
+                  className={`agenda-filter-btn ${agendaDayFilter === "all" ? "active" : ""}`}
+                  onClick={() => setAgendaDayFilter("all")}
+                >
+                  <span>All Days</span>
+                  <span className="agenda-count-chip">{teacherClasses.length}</span>
+                </button>
+                {DAYS.map((dayName, dayIdx) => {
+                  const count = teacherClasses.filter((c) => c.day === dayIdx).length;
+                  const isToday = clock.dayIndex === dayIdx;
+                  return (
+                    <button
+                      key={dayName}
+                      type="button"
+                      className={`agenda-filter-btn ${agendaDayFilter === dayIdx ? "active" : ""} ${isToday ? "today-highlight" : ""}`}
+                      onClick={() => setAgendaDayFilter(dayIdx)}
+                    >
+                      <span>{DAY_SHORT[dayIdx]}</span>
+                      {isToday && <span className="today-badge-dot" title="Today" />}
+                      <span className="agenda-count-chip">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Day Groups List */}
               {DAYS.map((dayName, dayIdx) => {
-                const dayClasses = teacherClasses.filter((c) => c.day === dayIdx);
-                if (dayClasses.length === 0) return null;
+                if (agendaDayFilter !== "all" && agendaDayFilter !== dayIdx) return null;
+                const dayClasses = teacherClasses
+                  .filter((c) => c.day === dayIdx)
+                  .sort((a, b) => a.slot - b.slot);
+                const isToday = clock.dayIndex === dayIdx;
+
+                if (dayClasses.length === 0) {
+                  if (agendaDayFilter === dayIdx) {
+                    return (
+                      <div key={dayName} className="agenda-empty-card">
+                        <Calendar size={28} color="var(--c-muted)" />
+                        <h4>No classes scheduled for {dayName}</h4>
+                        <p className="quiet">
+                          No teaching sessions or makeup classes are scheduled for this day.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }
+
+                const totalCreditHours = (dayClasses.length * 1.5).toFixed(1);
 
                 return (
-                  <div key={dayName} className="teacher-day-group">
+                  <div key={dayName} className={`teacher-day-group ${isToday ? "current-day-group" : ""}`}>
                     <div className="teacher-day-header">
-                      <h4>{dayName}</h4>
-                      <span className="day-count-badge">{dayClasses.length} Classes</span>
+                      <div className="day-title-wrap">
+                        <h4>{dayName}</h4>
+                        {isToday && (
+                          <span className="today-pill">
+                            <span className="status-dot-pulse green" />
+                            <span>Today</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="day-meta-summary">
+                        <span className="day-count-badge">
+                          {dayClasses.length} {dayClasses.length === 1 ? "Class" : "Classes"}
+                        </span>
+                        <span className="day-hours-badge">{totalCreditHours} hrs</span>
+                      </div>
                     </div>
 
                     <div className="classes-cards-grid">
                       {dayClasses.map((c, idx) => {
                         const slot = SLOTS[c.slot];
+                        const isLab = /lab/i.test(subjects[c.subject]);
+                        const isMakeup = Boolean(c.isMakeup);
+                        const isLive = clock.dayIndex === c.day && clock.liveSlot === c.slot;
+
                         return (
-                          <div key={`${dayIdx}-${c.slot}-${idx}`} className={`teacher-class-card ${c.isMakeup ? "makeup-card-highlight" : ""}`}>
-                            <div className="class-time-badge">
-                              <Clock size={13} />
-                              <span>
-                                {slot.label}: {slot.start} - {slot.end}
-                              </span>
-                              {c.isMakeup && (
-                                <span className="lecture-status-badge makeup-pill" style={{ marginLeft: "auto" }}>
-                                  ⭐ Makeup
+                          <div
+                            key={`${dayIdx}-${c.slot}-${idx}`}
+                            className={`teacher-class-card ${
+                              isMakeup
+                                ? "makeup-card-highlight"
+                                : isLab
+                                ? "lab-card-highlight"
+                                : "lecture-card-highlight"
+                            } ${isLive ? "live-card" : ""}`}
+                          >
+                            <div className="class-card-top">
+                              <div className="class-time-badge">
+                                <Clock size={13} />
+                                <span>
+                                  {slot.label} • {slot.start} – {slot.end}
                                 </span>
-                              )}
+                              </div>
+                              <div className="class-status-pills">
+                                {isLive && (
+                                  <span className="agenda-pill live">
+                                    <span className="status-dot-pulse green" />
+                                    <span>Live Now</span>
+                                  </span>
+                                )}
+                                {isMakeup && (
+                                  <span className="agenda-pill makeup">
+                                    ⭐ Makeup
+                                  </span>
+                                )}
+                                {isLab ? (
+                                  <span className="agenda-pill lab">
+                                    🧪 Lab
+                                  </span>
+                                ) : (
+                                  <span className="agenda-pill regular">
+                                    📚 Lecture
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             <h4 className="class-subject-title">{subjects[c.subject]}</h4>
@@ -719,6 +816,7 @@ export function FacultyWorkspaceView() {
                                 type="button"
                                 className="class-meta-pill batch tap"
                                 onClick={() => open({ type: "batch", id: c.batch })}
+                                title={`View ${batches[c.batch]} schedule`}
                               >
                                 <Users size={12} />
                                 <span>{batches[c.batch]}</span>
@@ -728,11 +826,18 @@ export function FacultyWorkspaceView() {
                                 type="button"
                                 className="class-meta-pill room tap"
                                 onClick={() => open({ type: "room", id: c.room })}
+                                title={`View ${rooms[c.room]} overview`}
                               >
-                                <MapPin size={12} />
+                                <DoorOpen size={12} />
                                 <span>{rooms[c.room]}</span>
                               </button>
                             </div>
+
+                            {c.makeupNote && (
+                              <div className="agenda-note-box">
+                                <span>Note: {c.makeupNote}</span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

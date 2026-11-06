@@ -154,17 +154,21 @@ export function NotificationBellButton({
     <>
       <button
         type="button"
-        className={`icon-btn tap ${enabled ? "notif-active-bell" : ""} ${className}`}
+        className={
+          showLabel
+            ? `notif-bell-pill btn tap ${enabled ? "notif-active-bell" : ""} ${className}`
+            : `icon-btn tap ${enabled ? "notif-active-bell" : ""} ${className}`
+        }
         aria-label="Class Reminder Notifications"
         title={enabled ? "Class reminders are active" : "Enable class reminders"}
         onClick={() => setModalOpen(true)}
       >
         {enabled ? (
-          <BellRing size={18} strokeWidth={2} aria-hidden />
+          <BellRing size={16} strokeWidth={2} aria-hidden />
         ) : (
-          <Bell size={18} strokeWidth={1.8} aria-hidden />
+          <Bell size={16} strokeWidth={1.8} aria-hidden />
         )}
-        {showLabel ? <span>Reminders</span> : null}
+        {showLabel ? <span className="notif-bell-label">Reminders</span> : null}
         {enabled ? <span className="notif-badge-dot" aria-hidden /> : null}
       </button>
 
