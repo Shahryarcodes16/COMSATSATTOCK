@@ -2796,6 +2796,16 @@
   min-width: 0;
   text-align: center;
   white-space: nowrap;
+  overflow: hidden;
+}
+
+.faculty-view-tabs .tab-btn span {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .faculty-view-tabs .tab-btn svg {
@@ -2807,7 +2817,7 @@
 }
 
 .tab-label-full {
-  display: inline;
+  display: inline-block;
 }
 
 .faculty-view-tabs .tab-btn:hover {
@@ -2833,28 +2843,30 @@
   .faculty-view-tabs .tab-btn {
     padding: 0.55rem 0.25rem;
     font-size: 0.78rem;
-    gap: 0.3rem;
+    gap: 0.25rem;
+    min-width: 0;
   }
   .tab-label-full {
-    display: none;
+    display: none !important;
   }
   .tab-label-short {
-    display: inline;
+    display: inline-block !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 380px) {
   .faculty-view-tabs .tab-btn {
     padding: 0.45rem 0.15rem;
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     gap: 0.2rem;
   }
   .faculty-view-tabs .tab-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
 }
 

@@ -221,7 +221,7 @@ export function MyScheduleView() {
       {/* Main Tabs */}
       {schedule.length > 0 ? (
         <>
-          <div className="faculty-view-tabs" role="tablist" aria-label="Schedule views">
+          <div className="faculty-view-tabs tabs-3" role="tablist" aria-label="Schedule views">
             <button
               type="button"
               role="tab"
@@ -230,7 +230,8 @@ export function MyScheduleView() {
               onClick={() => setViewTab("week")}
             >
               <Calendar size={16} aria-hidden />
-              <span>Weekly Grid ({schedule.length} slots)</span>
+              <span className="tab-label-full">Weekly Grid ({schedule.length} slots)</span>
+              <span className="tab-label-short">Week ({schedule.length})</span>
             </button>
             <button
               type="button"
@@ -240,7 +241,8 @@ export function MyScheduleView() {
               onClick={() => setViewTab("today")}
             >
               <Clock size={16} aria-hidden />
-              <span>Today ({todayClasses.length} lectures)</span>
+              <span className="tab-label-full">Today ({todayClasses.length} lectures)</span>
+              <span className="tab-label-short">Today ({todayClasses.length})</span>
             </button>
             <button
               type="button"
@@ -250,7 +252,8 @@ export function MyScheduleView() {
               onClick={() => setViewTab("courses")}
             >
               <List size={16} aria-hidden />
-              <span>My Courses ({uniqueSubjects.size})</span>
+              <span className="tab-label-full">My Courses ({uniqueSubjects.size})</span>
+              <span className="tab-label-short">Courses ({uniqueSubjects.size})</span>
             </button>
           </div>
 
