@@ -52,9 +52,9 @@ export function WeekGrid({ list, focusDay, liveDay, liveSlot, caption, onDayChan
       const live = liveDay === cellDay && liveSlot === slot;
       const lab = /lab/i.test(subjects[entry.subject]);
       return (
-        <article key={key} className={`mini${live ? " live" : ""}${lab ? " lab" : ""}`}>
+        <article key={key} className={`mini${live ? " live" : ""}${lab ? " lab" : ""}${entry.isMakeup ? " makeup-class" : ""}`}>
           <div className="mini-label">
-            <span>{entry.repeater ? "Repeater" : lab ? "Lab" : "Lecture"}</span>
+            <span>{entry.isMakeup ? "⭐ Makeup Class" : entry.repeater ? "Repeater" : lab ? "Lab" : "Lecture"}</span>
             {live ? <span className="flag now">Now</span> : null}
           </div>
           <strong>{subjects[entry.subject]}</strong>

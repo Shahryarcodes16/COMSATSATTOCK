@@ -7758,6 +7758,279 @@ select optgroup {
   gap: 0.35rem;
 }
 
+/* Booking & Makeup Status Styles */
+.booking-success-banner {
+  background: color-mix(in srgb, #10b981 12%, var(--c-paper));
+  border: 1px solid #10b981;
+  border-radius: var(--r-md);
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-ink);
+  box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.15);
+}
+
+.success-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.active-makeups-banner {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.active-makeups-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.active-makeups-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--c-ink);
+  font-size: 0.95rem;
+}
+
+.active-makeups-note {
+  font-size: 0.74rem;
+  color: var(--c-muted);
+}
+
+.active-makeups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 0.85rem;
+}
+
+.active-makeup-card {
+  background: var(--c-canvas);
+  border: 1.5px solid color-mix(in srgb, #10b981 35%, var(--c-line));
+  border-radius: var(--r-md);
+  padding: 0.95rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.active-makeup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.active-makeup-time {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+
+.active-makeup-subject {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.active-makeup-badges {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.active-makeup-memo {
+  margin: 0.15rem 0 0;
+  font-size: 0.74rem;
+  color: var(--c-muted);
+  font-style: italic;
+}
+
+.active-makeup-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-top: 1px solid var(--c-line);
+  padding-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.whatsapp-share-pill.sm {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.cancel-makeup-action {
+  margin-left: auto;
+  color: #ef4444 !important;
+  border-color: color-mix(in srgb, #ef4444 30%, transparent) !important;
+}
+
+.cancel-makeup-action:hover {
+  background: color-mix(in srgb, #ef4444 10%, transparent) !important;
+}
+
+.book-makeup-btn {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.book-makeup-btn:hover {
+  background: #059669 !important;
+}
+
+.makeup-card-highlight {
+  border-left: 4px solid #10b981 !important;
+}
+
+.lecture-status-badge.makeup-pill {
+  background: color-mix(in srgb, #10b981 18%, var(--c-paper));
+  color: #059669;
+  border: 1px solid color-mix(in srgb, #10b981 35%, transparent);
+}
+
+.makeup-note-text {
+  font-size: 0.72rem;
+  color: var(--c-muted);
+  font-style: italic;
+}
+
+.cancel-makeup-btn {
+  width: 100%;
+  color: #ef4444 !important;
+  border-color: color-mix(in srgb, #ef4444 25%, transparent) !important;
+  font-size: 0.74rem !important;
+}
+
+/* Booking Modal Dialog */
+.booking-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.booking-modal-card {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: 1.5rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.4);
+}
+
+.booking-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--c-line);
+  padding-bottom: 0.85rem;
+}
+
+.booking-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.booking-modal-title h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.booking-modal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--c-canvas);
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-line);
+  font-size: 0.82rem;
+}
+
+.booking-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.booking-detail-row .detail-label {
+  color: var(--c-muted);
+}
+
+.booking-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.booking-warning-note {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--c-muted);
+  background: color-mix(in srgb, var(--c-accent) 8%, var(--c-paper));
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid var(--c-accent);
+}
+
+.booking-modal-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  border-top: 1px solid var(--c-line);
+  padding-top: 1rem;
+}
+
+.confirm-booking-btn {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* WeekGrid Table Makeup Class Indicator */
+article.mini.makeup-class {
+  border-left: 3px solid #10b981 !important;
+  background: color-mix(in srgb, #10b981 8%, var(--c-paper)) !important;
+}
+
+article.mini.makeup-class .mini-label > span:first-child {
+  color: #059669 !important;
+  font-weight: 800 !important;
+}
+
 /* Responsive Breakpoints for Faculty Features */
 @media (max-width: 768px) {
   .faculty-tab-pill .tab-label-full {

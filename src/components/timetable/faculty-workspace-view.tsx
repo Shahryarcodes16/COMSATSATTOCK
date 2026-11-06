@@ -3,6 +3,7 @@ import {
   BookOpen,
   Calendar,
   CalendarDays,
+  CalendarPlus,
   Check,
   CheckCircle2,
   Clock,
@@ -17,7 +18,9 @@ import {
   Share2,
   Sparkles,
   Table,
+  Trash2,
   Users,
+  X,
   XCircle,
   Bell,
   ChevronRight,
@@ -46,12 +49,19 @@ import {
   computeScheduleOverlap,
   getTeacherClasses,
   getBatchesForTeacher,
+  type FreeRoomInfo,
   type SlotComparisonResult,
 } from "@/lib/schedule-matcher";
+import {
+  getArrangedMakeupClasses,
+  addMakeupClass,
+  removeMakeupClass,
+  type MakeupClassRecord,
+} from "@/lib/makeup-classes";
 import { facultyUpdateLeadTimeFn } from "@/lib/faculty-server-fn";
 
 export function FacultyWorkspaceView() {
-  const { open, now, clock } = useDesk();
+  const { open, now, clock, makeupRevision } = useDesk();
   const [facultySession, setFacultySession] = useState<FacultySession | null>(
     () => getActiveFacultySession(),
   );
@@ -88,6 +98,15 @@ export function FacultyWorkspaceView() {
   const [leadMins, setLeadMins] = useState(facultySession?.profile?.notificationLeadMins || 10);
   const [updatingLead, setUpdatingLead] = useState(false);
 
+  // Booking Modal State for arranging a makeup class
+  const [bookingModalState, setBookingModalState] = useState<{
+    slot: SlotComparisonResult;
+    room: FreeRoomInfo;
+  } | null>(null);
+  const [bookingSubjectId, setBookingSubjectId] = useState<number>(0);
+  const [bookingNote, setBookingNote] = useState("");
+  const [bookingSuccessNotice, setBookingSuccessNotice] = useState<string | null>(null);
+
   // Sync session changes from storage
   useEffect(() => {
     const handleUpdate = () => {
@@ -111,11 +130,19 @@ export function FacultyWorkspaceView() {
     facultySession?.profile?.fullName ||
     "Faculty Member";
 
-  // Teacher classes
+  // Teacher classes (recomputed when teacherId or makeupRevision changes)
   const teacherClasses = useMemo(() => {
     if (teacherId === null) return [];
-    return getTeacherClasses(teacherId);
-  }, [teacherId]);
+    return forTeacher(teacherId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherId, makeupRevision]);
+
+  // Makeup classes arranged by this teacher
+  const teacherMakeupClasses = useMemo(() => {
+    if (teacherId === null) return [];
+    return getArrangedMakeupClasses().filter((m) => m.teacher === teacherId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherId, makeupRevision]);
 
   // Classes for the selected day in Today's tab
   const todayDayClasses = useMemo(() => {
@@ -147,13 +174,26 @@ export function FacultyWorkspaceView() {
   const taughtBatchIds = useMemo(() => {
     if (teacherId === null) return [];
     return getBatchesForTeacher(teacherId);
-  }, [teacherId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherId, makeupRevision]);
 
-  // Compute Schedule Matcher Overlap
+  // Candidate subjects for arranging a makeup class with the selected batch
+  const candidateSubjects = useMemo(() => {
+    if (teacherId === null) return [];
+    const forThisBatch = teacherClasses
+      .filter((c) => c.batch === selectedBatchId)
+      .map((c) => c.subject);
+    const set = new Set(forThisBatch);
+    if (set.size > 0) return Array.from(set);
+    return Array.from(new Set(teacherClasses.map((c) => c.subject)));
+  }, [teacherId, teacherClasses, selectedBatchId]);
+
+  // Compute Schedule Matcher Overlap (recomputes dynamically on makeup updates)
   const comparison = useMemo(() => {
     if (teacherId === null) return null;
     return computeScheduleOverlap(teacherId, selectedBatchId);
-  }, [teacherId, selectedBatchId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherId, selectedBatchId, makeupRevision]);
 
   // Flat list of mutual free slots for mobile card view
   const allMutualFreeSlots = useMemo(() => {
@@ -192,13 +232,20 @@ export function FacultyWorkspaceView() {
     }
   };
 
-  const generateNoticeText = (slot: SlotComparisonResult, roomName: string) => {
-    const dayName = DAYS[slot.day];
-    const slotInfo = SLOTS[slot.slot];
+  const generateNoticeText = (
+    dayIdx: number,
+    slotIdx: number,
+    roomName: string,
+    batchId: number,
+    subjectName?: string,
+  ) => {
+    const dayName = DAYS[dayIdx];
+    const slotInfo = SLOTS[slotIdx];
     return (
       `📢 *CUI Attock Extra/Makeup Class Announcement*\n\n` +
       `• *Teacher:* ${teacherName}\n` +
-      `• *Class:* ${batches[selectedBatchId]}\n` +
+      (subjectName ? `• *Course:* ${subjectName}\n` : "") +
+      `• *Class:* ${batches[batchId]}\n` +
       `• *Day & Time:* ${dayName}, ${slotInfo.start} - ${slotInfo.end} (${slotInfo.label})\n` +
       `• *Venue:* ${roomName}\n\n` +
       `Please ensure timely attendance.`
@@ -206,10 +253,44 @@ export function FacultyWorkspaceView() {
   };
 
   const handleCopyNotice = (slot: SlotComparisonResult, roomName: string) => {
-    const text = generateNoticeText(slot, roomName);
+    const text = generateNoticeText(slot.day, slot.slot, roomName, selectedBatchId);
     navigator.clipboard.writeText(text);
     setCopiedNotice(true);
     setTimeout(() => setCopiedNotice(false), 2500);
+  };
+
+  // Confirm and arrange makeup class
+  const handleConfirmBooking = () => {
+    if (!bookingModalState || !facultySession || teacherId === null) return;
+    const { slot, room } = bookingModalState;
+    const subjId = bookingSubjectId || candidateSubjects[0] || 0;
+
+    addMakeupClass({
+      day: slot.day,
+      slot: slot.slot,
+      batch: selectedBatchId,
+      room: room.id,
+      teacher: teacherId,
+      subject: subjId,
+      note: bookingNote.trim() || undefined,
+      createdByEmail: facultySession.profile.email,
+    });
+
+    const msg = `🎉 Makeup class successfully arranged in ${room.name}! Room ${room.name} and your status are now automatically occupied for ${DAYS[slot.day]} ${SLOTS[slot.slot].label}.`;
+    setBookingSuccessNotice(msg);
+    setBookingModalState(null);
+    setBookingNote("");
+    setSelectedSlotDetails(null);
+
+    // Auto-clear success banner after 8 seconds
+    setTimeout(() => setBookingSuccessNotice(null), 8000);
+  };
+
+  // Cancel an arranged makeup class
+  const handleCancelMakeup = (id: string, roomName: string) => {
+    if (window.confirm(`Are you sure you want to cancel this makeup class in ${roomName}? This will automatically release ${roomName} and free your schedule.`)) {
+      removeMakeupClass(id);
+    }
   };
 
   // If no faculty member is logged in, show helpful guidance
@@ -249,6 +330,7 @@ export function FacultyWorkspaceView() {
             </div>
             <p className="faculty-sub">
               Official Faculty Account • {teacherClasses.length} Scheduled Classes/Week
+              {teacherMakeupClasses.length > 0 && ` (${teacherMakeupClasses.length} Makeup Classes Active)`}
             </p>
           </div>
         </div>
@@ -279,6 +361,23 @@ export function FacultyWorkspaceView() {
           </div>
         </div>
       </section>
+
+      {/* Booking Success Toast Banner */}
+      {bookingSuccessNotice && (
+        <div className="booking-success-banner">
+          <div className="success-banner-content">
+            <CheckCircle2 size={20} color="#10b981" />
+            <span>{bookingSuccessNotice}</span>
+          </div>
+          <button
+            type="button"
+            className="btn secondary sm tap"
+            onClick={() => setBookingSuccessNotice(null)}
+          >
+            ✕ Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Primary Workspace Navigation Tabs */}
       <div className="faculty-workspace-tabs" role="tablist">
@@ -421,7 +520,7 @@ export function FacultyWorkspaceView() {
                 return (
                   <div
                     key={`${selectedDay}-${c.slot}-${idx}`}
-                    className={`faculty-lecture-card ${isLive ? "live-card" : ""} ${isPast ? "past-card" : ""}`}
+                    className={`faculty-lecture-card ${isLive ? "live-card" : ""} ${isPast ? "past-card" : ""} ${c.isMakeup ? "makeup-card-highlight" : ""}`}
                   >
                     {/* Header: Slot time and live tag */}
                     <div className="lecture-card-header">
@@ -431,28 +530,36 @@ export function FacultyWorkspaceView() {
                           {slot.label} • {slot.start} - {slot.end}
                         </span>
                       </div>
-                      {isLive && (
-                        <span className="lecture-status-badge live">
-                          <span className="live-dot" />
-                          LIVE NOW
-                        </span>
-                      )}
-                      {isUpcoming && (
-                        <span className="lecture-status-badge upcoming">
-                          Upcoming Next
-                        </span>
-                      )}
-                      {isPast && (
-                        <span className="lecture-status-badge completed">
-                          Completed
-                        </span>
-                      )}
+                      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                        {c.isMakeup && (
+                          <span className="lecture-status-badge makeup-pill">
+                            ⭐ Makeup Class
+                          </span>
+                        )}
+                        {isLive && (
+                          <span className="lecture-status-badge live">
+                            <span className="live-dot" />
+                            LIVE NOW
+                          </span>
+                        )}
+                        {isUpcoming && (
+                          <span className="lecture-status-badge upcoming">
+                            Upcoming Next
+                          </span>
+                        )}
+                        {isPast && (
+                          <span className="lecture-status-badge completed">
+                            Completed
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Course Title */}
                     <div className="lecture-title-row">
                       <h4>{subjects[c.subject]}</h4>
                       {isLab && <span className="lab-tag-pill">🧪 Lab Session</span>}
+                      {c.makeupNote && <span className="makeup-note-text">Note: {c.makeupNote}</span>}
                     </div>
 
                     {/* Meta Pills: Section & Venue */}
@@ -478,20 +585,32 @@ export function FacultyWorkspaceView() {
                       </button>
                     </div>
 
-                    {/* Quick Makeup Action */}
+                    {/* Actions */}
                     <div className="lecture-card-footer">
-                      <button
-                        type="button"
-                        className="btn secondary sm tap makeup-link-btn"
-                        onClick={() => {
-                          setSelectedBatchId(c.batch);
-                          setActiveTab("makeup");
-                        }}
-                        title={`Find free mutual slots & rooms for ${batches[c.batch]}`}
-                      >
-                        <Sparkles size={13} />
-                        <span>Find Replacement / Makeup Slot</span>
-                      </button>
+                      {c.isMakeup && c.makeupId ? (
+                        <button
+                          type="button"
+                          className="btn secondary sm tap cancel-makeup-btn"
+                          onClick={() => handleCancelMakeup(c.makeupId!, rooms[c.room])}
+                          title="Cancel this makeup class and release the room"
+                        >
+                          <Trash2 size={13} />
+                          <span>Cancel & Release Room</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn secondary sm tap makeup-link-btn"
+                          onClick={() => {
+                            setSelectedBatchId(c.batch);
+                            setActiveTab("makeup");
+                          }}
+                          title={`Find free mutual slots & rooms for ${batches[c.batch]}`}
+                        >
+                          <Sparkles size={13} />
+                          <span>Find Replacement / Makeup Slot</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -575,12 +694,17 @@ export function FacultyWorkspaceView() {
                       {dayClasses.map((c, idx) => {
                         const slot = SLOTS[c.slot];
                         return (
-                          <div key={`${dayIdx}-${c.slot}-${idx}`} className="teacher-class-card">
+                          <div key={`${dayIdx}-${c.slot}-${idx}`} className={`teacher-class-card ${c.isMakeup ? "makeup-card-highlight" : ""}`}>
                             <div className="class-time-badge">
                               <Clock size={13} />
                               <span>
                                 {slot.label}: {slot.start} - {slot.end}
                               </span>
+                              {c.isMakeup && (
+                                <span className="lecture-status-badge makeup-pill" style={{ marginLeft: "auto" }}>
+                                  ⭐ Makeup
+                                </span>
+                              )}
                             </div>
 
                             <h4 className="class-subject-title">{subjects[c.subject]}</h4>
@@ -697,6 +821,92 @@ export function FacultyWorkspaceView() {
           ========================================================================= */}
       {activeTab === "makeup" && (
         <section className="makeup-matcher-section stack">
+          {/* Active Scheduled Makeup Classes Management Banner */}
+          {teacherMakeupClasses.length > 0 && (
+            <div className="active-makeups-banner stack">
+              <div className="active-makeups-head">
+                <div className="active-makeups-title">
+                  <Sparkles size={18} color="#10b981" />
+                  <strong>Your Active Makeup Classes ({teacherMakeupClasses.length})</strong>
+                </div>
+                <span className="active-makeups-note">
+                  Rooms & your timetable status are automatically occupied for these reserved slots.
+                </span>
+              </div>
+
+              <div className="active-makeups-grid">
+                {teacherMakeupClasses.map((m) => {
+                  const dayName = DAYS[m.day];
+                  const slotInfo = SLOTS[m.slot];
+                  const roomName = rooms[m.room];
+                  const batchName = batches[m.batch];
+                  const subjectName = subjects[m.subject];
+                  const noticeText = generateNoticeText(m.day, m.slot, roomName, m.batch, subjectName);
+                  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(noticeText)}`;
+
+                  return (
+                    <div key={m.id} className="active-makeup-card">
+                      <div className="active-makeup-info">
+                        <div className="active-makeup-time">
+                          <Clock size={13} />
+                          <span>
+                            {dayName} • {slotInfo.label} ({slotInfo.start} - {slotInfo.end})
+                          </span>
+                        </div>
+                        <h4 className="active-makeup-subject">{subjectName}</h4>
+                        <div className="active-makeup-badges">
+                          <span className="chip sm">
+                            <Users size={11} />
+                            <span>{batchName}</span>
+                          </span>
+                          <span className="chip sm">
+                            <DoorOpen size={11} />
+                            <span>{roomName}</span>
+                          </span>
+                        </div>
+                        {m.note && <p className="active-makeup-memo">Note: {m.note}</p>}
+                      </div>
+
+                      <div className="active-makeup-actions">
+                        <button
+                          type="button"
+                          className="btn secondary sm tap copy-btn"
+                          onClick={() => {
+                            navigator.clipboard.writeText(noticeText);
+                            alert("Class notice copied to clipboard!");
+                          }}
+                          title="Copy notice text"
+                        >
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </button>
+                        <a
+                          href={whatsappUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="whatsapp-share-pill sm"
+                          title="Share to WhatsApp class group"
+                        >
+                          <Share2 size={12} />
+                          <span>WhatsApp</span>
+                        </a>
+                        <button
+                          type="button"
+                          className="btn secondary sm tap cancel-makeup-action"
+                          onClick={() => handleCancelMakeup(m.id, roomName)}
+                          title="Cancel makeup class and release the room back to free"
+                        >
+                          <Trash2 size={12} />
+                          <span>Release Room</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Responsive Batch Selector Bar */}
           <div className="batch-matcher-bar">
             <div className="matcher-bar-label">
@@ -945,7 +1155,7 @@ export function FacultyWorkspaceView() {
                           }}
                         >
                           <Sparkles size={13} />
-                          <span>{isSelected ? "Inspecting Venues" : "View Free Venues & Announce"}</span>
+                          <span>{isSelected ? "Inspecting Venues" : "View Free Venues & Book"}</span>
                         </button>
                       </div>
                     );
@@ -968,7 +1178,7 @@ export function FacultyWorkspaceView() {
                     </h3>
                     <p>
                       {selectedSlotDetails.isBothFree
-                        ? `🎉 Both you and ${batches[selectedBatchId]} are free! Pick any vacant lab or lecture hall below to schedule your class.`
+                        ? `🎉 Both you and ${batches[selectedBatchId]} are free! Pick any vacant lab or lecture hall below to arrange your makeup class.`
                         : `One or both parties are occupied in this slot.`}
                     </p>
                   </div>
@@ -1028,7 +1238,7 @@ export function FacultyWorkspaceView() {
                         return true;
                       })
                       .map((r) => {
-                        const noticeText = generateNoticeText(selectedSlotDetails, r.name);
+                        const noticeText = generateNoticeText(selectedSlotDetails.day, selectedSlotDetails.slot, r.name, selectedBatchId);
                         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(noticeText)}`;
 
                         return (
@@ -1042,6 +1252,23 @@ export function FacultyWorkspaceView() {
                             </div>
 
                             <div className="venue-actions-row">
+                              {/* Primary Action: Book / Arrange Class in this room */}
+                              <button
+                                type="button"
+                                className="btn solid sm tap book-makeup-btn"
+                                onClick={() => {
+                                  setBookingModalState({
+                                    slot: selectedSlotDetails,
+                                    room: r,
+                                  });
+                                  setBookingSubjectId(candidateSubjects[0] ?? 0);
+                                }}
+                                title={`Arrange makeup class in ${r.name}`}
+                              >
+                                <CalendarPlus size={13} />
+                                <span>Book Makeup Class</span>
+                              </button>
+
                               <button
                                 type="button"
                                 className="btn secondary sm tap copy-venue-btn"
@@ -1049,7 +1276,7 @@ export function FacultyWorkspaceView() {
                                 title="Copy formatted text notice to clipboard"
                               >
                                 {copiedNotice ? <Check size={13} /> : <Copy size={13} />}
-                                <span>{copiedNotice ? "Copied!" : "Copy Notice"}</span>
+                                <span>{copiedNotice ? "Copied!" : "Copy"}</span>
                               </button>
 
                               <a
@@ -1069,6 +1296,100 @@ export function FacultyWorkspaceView() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Booking Confirmation Dialog Modal */}
+          {bookingModalState && (
+            <div className="booking-modal-backdrop">
+              <div className="booking-modal-card stack">
+                <div className="booking-modal-head">
+                  <div className="booking-modal-title">
+                    <CalendarPlus size={20} color="#10b981" />
+                    <h3>Confirm Makeup Class Reservation</h3>
+                  </div>
+                  <button
+                    type="button"
+                    className="close-drawer-btn"
+                    onClick={() => setBookingModalState(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="booking-modal-details">
+                  <div className="booking-detail-row">
+                    <span className="detail-label">Teacher:</span>
+                    <strong>{teacherName}</strong>
+                  </div>
+                  <div className="booking-detail-row">
+                    <span className="detail-label">Target Batch:</span>
+                    <strong>{batches[selectedBatchId]}</strong>
+                  </div>
+                  <div className="booking-detail-row">
+                    <span className="detail-label">Venue:</span>
+                    <strong>{bookingModalState.room.name} ({bookingModalState.room.group})</strong>
+                  </div>
+                  <div className="booking-detail-row">
+                    <span className="detail-label">Day & Time:</span>
+                    <strong>
+                      {DAYS[bookingModalState.slot.day]} • {SLOTS[bookingModalState.slot.slot].label} (
+                      {SLOTS[bookingModalState.slot.slot].start} - {SLOTS[bookingModalState.slot.slot].end})
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Subject Selector */}
+                <label className="booking-field-label">
+                  <span>Select Course / Subject:</span>
+                  <select
+                    className="input select"
+                    value={bookingSubjectId}
+                    onChange={(e) => setBookingSubjectId(Number(e.target.value))}
+                  >
+                    {candidateSubjects.map((sId) => (
+                      <option key={sId} value={sId}>
+                        {subjects[sId]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Optional Note */}
+                <label className="booking-field-label">
+                  <span>Optional Announcement Note:</span>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. Midterm revision, Lab 04 practical makeup..."
+                    value={bookingNote}
+                    onChange={(e) => setBookingNote(e.target.value)}
+                  />
+                </label>
+
+                <p className="booking-warning-note">
+                  ℹ️ <strong>Automatic Status Update:</strong> Confirming this reservation will immediately update the status of
+                  <strong> {bookingModalState.room.name}</strong> and <strong>{teacherName}</strong> to occupied during this slot across the entire campus timetable.
+                </p>
+
+                <div className="booking-modal-actions">
+                  <button
+                    type="button"
+                    className="btn solid tap confirm-booking-btn"
+                    onClick={handleConfirmBooking}
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>Confirm & Update Timetable</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn secondary tap"
+                    onClick={() => setBookingModalState(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </section>

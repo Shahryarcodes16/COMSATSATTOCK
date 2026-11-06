@@ -10,6 +10,8 @@ import {
   batches,
   subjects,
   roomGroup,
+  forTeacher,
+  getAllEntries,
   type ClassEntry,
   type RoomGroup,
 } from "./schedule";
@@ -62,9 +64,9 @@ export function computeScheduleOverlap(
   const teacherName = teachers[teacherId] || `Teacher #${teacherId}`;
   const batchName = batches[batchId] || `Batch #${batchId}`;
 
-  // Index entries by day and slot for rapid matching
+  // Index entries by day and slot for rapid matching (including dynamic makeup classes)
   const entriesByCell = new Map<string, ClassEntry[]>();
-  for (const entry of entries) {
+  for (const entry of getAllEntries()) {
     const key = `${entry.day}-${entry.slot}`;
     const list = entriesByCell.get(key) || [];
     list.push(entry);
@@ -160,10 +162,10 @@ export function computeScheduleOverlap(
 }
 
 /**
- * Finds all classes taught by a specific teacher
+ * Finds all classes taught by a specific teacher (including active makeup classes)
  */
 export function getTeacherClasses(teacherId: number): ClassEntry[] {
-  return entries.filter((e) => e.teacher === teacherId);
+  return forTeacher(teacherId);
 }
 
 /**
@@ -171,10 +173,8 @@ export function getTeacherClasses(teacherId: number): ClassEntry[] {
  */
 export function getBatchesForTeacher(teacherId: number): number[] {
   const set = new Set<number>();
-  for (const entry of entries) {
-    if (entry.teacher === teacherId) {
-      set.add(entry.batch);
-    }
+  for (const entry of forTeacher(teacherId)) {
+    set.add(entry.batch);
   }
   return Array.from(set).sort((a, b) => a - b);
 }

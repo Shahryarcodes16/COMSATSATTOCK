@@ -108,6 +108,7 @@ type DeskApi = {
   pinBatch: (id: number | null) => void;
   pinnedTeachers: number[];
   togglePinTeacher: (id: number) => void;
+  makeupRevision: number;
   detail: Detail | null;
   open: (detail: Detail) => void;
   close: () => void;
@@ -137,6 +138,17 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   const [now, setNow] = useState<Date | null>(null);
   const [pick, setPick] = useState<{ day: number; slot: number } | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [makeupRevision, setMakeupRevision] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setMakeupRevision((v) => v + 1);
+    window.addEventListener("cui:makeup-classes-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:makeup-classes-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     let saved = DEFAULTS;
@@ -307,6 +319,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       pinBatch,
       pinnedTeachers: prefs.pinnedTeachers,
       togglePinTeacher,
+      makeupRevision,
       detail,
       open,
       close,
@@ -320,6 +333,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       slot,
       pick,
       detail,
+      makeupRevision,
       setTheme,
       toggleTheme,
       setView,
