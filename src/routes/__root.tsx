@@ -4,7 +4,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 import { APP_NAME } from "@/lib/campus";
 
-const THEME_BOOT = `try{var p=JSON.parse(localStorage.getItem("cui-attock-desk-v1")||"{}");if(p.theme==="ink")document.documentElement.dataset.theme="ink";}catch(e){}`;
+const THEME_BOOT = `try{var p=JSON.parse(localStorage.getItem("cui-attock-desk-v1")||"{}");if(p.theme==="ink"||p.theme==="midnight")document.documentElement.dataset.theme=p.theme;}catch(e){}`;
 
 export const Route = createRootRoute({
   head: () => ({

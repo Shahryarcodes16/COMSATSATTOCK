@@ -20,7 +20,7 @@ export type View =
   | "datesheet"
   | "admin"
   | "faculty-desk";
-export type ThemeName = "paper" | "ink";
+export type ThemeName = "paper" | "ink" | "midnight";
 
 export type Detail =
   | { type: "room"; id: number }
@@ -74,7 +74,12 @@ function sanitize(value: unknown): Prefs {
     ? raw.pinnedTeachers.filter((id) => inRange(id, teachers.length)).slice(0, 8)
     : [];
   return {
-    theme: raw.theme === "ink" ? "ink" : "paper",
+    theme:
+      raw.theme === "midnight"
+        ? "midnight"
+        : raw.theme === "ink"
+          ? "ink"
+          : "paper",
     view: VIEWS.includes(raw.view as View) ? (raw.view as View) : "today",
     batchId: inRange(raw.batchId, batches.length) ? raw.batchId : defaultBatch,
     pinnedBatch: inRange(raw.pinnedBatch, batches.length) ? raw.pinnedBatch : null,
@@ -87,6 +92,7 @@ type DeskApi = {
   now: Date | null;
   clock: ClockInfo;
   theme: ThemeName;
+  setTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
   view: View;
   setView: (view: View) => void;
@@ -177,8 +183,11 @@ export function DeskProvider({ children }: { children: ReactNode }) {
     } catch {
       /* Keep working without persistent storage. */
     }
-    if (prefs.theme === "ink") document.documentElement.dataset.theme = "ink";
-    else delete document.documentElement.dataset.theme;
+    if (prefs.theme === "ink" || prefs.theme === "midnight") {
+      document.documentElement.dataset.theme = prefs.theme;
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
   }, [prefs, ready]);
 
   const historyReady = useRef(false);
@@ -225,8 +234,16 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   const toggleTheme = useCallback(() => {
     setPrefs((current) => ({
       ...current,
-      theme: current.theme === "ink" ? "paper" : "ink",
+      theme:
+        current.theme === "paper"
+          ? "ink"
+          : current.theme === "ink"
+            ? "midnight"
+            : "paper",
     }));
+  }, []);
+  const setTheme = useCallback((theme: ThemeName) => {
+    setPrefs((current) => ({ ...current, theme }));
   }, []);
   const setView = useCallback((view: View) => {
     setPrefs((current) => ({ ...current, view }));
@@ -274,6 +291,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       now,
       clock,
       theme: prefs.theme,
+      setTheme,
       toggleTheme,
       view: prefs.view,
       setView,
@@ -302,6 +320,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       slot,
       pick,
       detail,
+      setTheme,
       toggleTheme,
       setView,
       setDay,

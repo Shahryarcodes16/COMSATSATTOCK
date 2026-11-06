@@ -11,6 +11,7 @@ import {
   Moon,
   Phone,
   Search,
+  Sparkles,
   Sun,
   Users,
 } from "lucide-react";
@@ -163,7 +164,6 @@ export function Sidebar() {
 
 export function Topbar() {
   const { now, theme, toggleTheme, setView, view } = useDesk();
-  const ink = theme === "ink";
   const isSearchActive = view === "find";
   const datesheetActive = isDatesheetActive(now);
 
@@ -222,19 +222,35 @@ export function Topbar() {
         {/* Class Reminders */}
         <NotificationBellButton />
 
-        {/* Theme toggle */}
+        {/* Theme toggle: Paper (Light) -> Ink (Slate Dark) -> Midnight (OLED Pitch Black) */}
         <button
           type="button"
           className="icon-btn tap"
-          aria-label={ink ? "Use the paper theme" : "Use the ink theme"}
+          aria-label={
+            theme === "paper"
+              ? "Current theme: Paper (Light). Click to switch to Ink (Slate Dark)."
+              : theme === "ink"
+                ? "Current theme: Ink (Slate Dark). Click to switch to Midnight (Pitch Black OLED)."
+                : "Current theme: Midnight (Pitch Black OLED). Click to switch to Paper (Light)."
+          }
+          title={
+            theme === "paper"
+              ? "Theme: Paper (Light) — Click for Slate Ink"
+              : theme === "ink"
+                ? "Theme: Ink (Slate Dark) — Click for Modern Midnight Black"
+                : "Theme: Midnight (Pitch Black OLED) — Click for Paper Light"
+          }
           onClick={toggleTheme}
         >
           <span className="icon-swap">
-            <span className={ink ? "off" : ""}>
+            <span className={theme === "paper" ? "" : "off"}>
+              <Sun size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className={theme === "ink" ? "" : "off"}>
               <Moon size={18} strokeWidth={1.75} aria-hidden />
             </span>
-            <span className={ink ? "" : "off"}>
-              <Sun size={18} strokeWidth={1.75} aria-hidden />
+            <span className={theme === "midnight" ? "" : "off"}>
+              <Sparkles size={18} strokeWidth={1.75} aria-hidden />
             </span>
           </span>
         </button>

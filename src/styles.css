@@ -40,6 +40,29 @@
   color-scheme: dark;
 }
 
+:root[data-theme="midnight"] {
+  --c-canvas: #000000;
+  --c-paper: #090a0f;
+  --c-ink: #f8fafc;
+  --c-muted: #94a3b8;
+  --c-line: #1c232f;
+  --c-accent: #00e5a3;
+  --c-on-accent: #002517;
+  --c-brass: #00e5a3;
+  --c-brass-soft: #062b20;
+  --c-nav: #050608;
+  --c-nav-text: #f8fafc;
+  --c-nav-muted: #94a3b8;
+  --c-nav-line: #1c232f;
+  --c-hero: #05070a;
+  --c-hero-text: #ffffff;
+  --c-hero-muted: #94a3b8;
+  --shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 48px -24px rgba(0, 0, 0, 0.95);
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-canvas: var(--c-canvas);
   --color-paper: var(--c-paper);
@@ -389,6 +412,9 @@
   }
   :root[data-theme="ink"] .select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23b3a89c' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  }
+  :root[data-theme="midnight"] .select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
   }
 
   .hero {
@@ -1437,7 +1463,8 @@
 
 @media print {
   :root,
-  :root[data-theme="ink"] {
+  :root[data-theme="ink"],
+  :root[data-theme="midnight"] {
     color-scheme: light !important;
     --c-brass: #234b36;
   }
@@ -1454,7 +1481,8 @@
     margin: 10mm;
   }
   :root,
-  :root[data-theme="ink"] {
+  :root[data-theme="ink"],
+  :root[data-theme="midnight"] {
     --c-canvas: #fff;
     --c-paper: #fff;
     --c-ink: #000;
@@ -6274,6 +6302,14 @@
   border-color: #2a414f;
 }
 
+:root[data-theme="midnight"] .student-gateway-form .input,
+:root[data-theme="midnight"] .student-gateway-form select,
+:root[data-theme="midnight"] .student-gateway-form input {
+  color: #f8fafc;
+  background-color: #0b0d13;
+  border-color: #222934;
+}
+
 .student-gateway-form .input:focus,
 .student-gateway-form select:focus,
 .student-gateway-form input:focus {
@@ -6298,6 +6334,14 @@
   background-color: #172b38 !important;
 }
 
+:root[data-theme="midnight"] .faculty-directory-select,
+:root[data-theme="midnight"] .student-gateway-form select,
+:root[data-theme="midnight"] .select-batch-dropdown {
+  color: #f8fafc !important;
+  background-color: #0b0d13 !important;
+  border-color: #222934;
+}
+
 /* Explicit option and optgroup styling to eliminate white-on-white text */
 .faculty-directory-select option,
 .student-gateway-form select option,
@@ -6317,6 +6361,14 @@ select option {
   background-color: #172b38 !important;
 }
 
+:root[data-theme="midnight"] .faculty-directory-select option,
+:root[data-theme="midnight"] .student-gateway-form select option,
+:root[data-theme="midnight"] .select-batch-dropdown option,
+:root[data-theme="midnight"] select option {
+  color: #f8fafc !important;
+  background-color: #0b0d13 !important;
+}
+
 .faculty-directory-select optgroup,
 .student-gateway-form select optgroup,
 .select-batch-dropdown optgroup,
@@ -6333,6 +6385,14 @@ select optgroup {
 :root[data-theme="ink"] select optgroup {
   color: #76d6cd !important;
   background-color: #0f212d !important;
+}
+
+:root[data-theme="midnight"] .faculty-directory-select optgroup,
+:root[data-theme="midnight"] .student-gateway-form select optgroup,
+:root[data-theme="midnight"] .select-batch-dropdown optgroup,
+:root[data-theme="midnight"] select optgroup {
+  color: #00e5a3 !important;
+  background-color: #050608 !important;
 }
 
 .student-identity-preview {
