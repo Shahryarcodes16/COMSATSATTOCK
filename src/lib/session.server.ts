@@ -20,12 +20,13 @@ export interface SessionPayload {
 
 // Secret key for HMAC-SHA256 signing
 function getSessionSecret(): Uint8Array {
-  const secret =
-    process.env.SESSION_SECRET ||
-    process.env.BETTER_AUTH_SECRET ||
-    process.env.ADMIN_PASSKEY_HASH ||
-    "cui_attock_campus_secure_jwt_session_secret_key_2026_at_least_32_bytes";
-  return new TextEncoder().encode(secret);
+  const secret = process.env.SESSION_SECRET || process.env.BETTER_AUTH_SECRET;
+  if (!secret || secret.trim().length < 32) {
+    throw new Error(
+      "CRITICAL: SESSION_SECRET environment variable is missing or shorter than 32 characters. Configure SESSION_SECRET in your Vercel / server environment variables before issuing or validating sessions.",
+    );
+  }
+  return new TextEncoder().encode(secret.trim());
 }
 
 /**
