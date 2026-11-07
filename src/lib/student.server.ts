@@ -8,6 +8,8 @@ import os from "node:os";
 import path from "node:path";
 import { getSql } from "@/lib/db";
 import { sendStudentVerificationEmail } from "./email.server";
+import { createAndSetSessionCookie, clearSessionCookie } from "./session.server";
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
 import {
   isValidUniversityEmail,
   parseUniversityEmail,
@@ -131,25 +133,54 @@ async function ensureStudentTableExists(): Promise<void> {
   }
 }
 
+const PBKDF2_ITERATIONS = 210000;
+const LEGACY_PBKDF2_ITERATIONS = 10000;
+
 /**
- * Securely hashes a plain-text password using PBKDF2 with SHA-512
+ * Securely hashes a plain-text password using PBKDF2 with SHA-512 (210,000 iterations)
  */
-function hashPassword(password: string, existingSalt?: string): { hash: string; salt: string } {
+function hashPassword(
+  password: string,
+  existingSalt?: string,
+  iterations = PBKDF2_ITERATIONS,
+): { hash: string; salt: string } {
   const salt = existingSalt || crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
   return { hash, salt };
 }
 
 /**
- * Validates a password against its hash using timing-safe comparison
+ * Validates a password against its hash using timing-safe comparison.
+ * Checks against modern 210,000 iterations first, with backward compatibility for legacy 10,000 hashes.
  */
-function verifyPassword(password: string, hash: string, salt: string): boolean {
+function verifyPassword(
+  password: string,
+  hash: string,
+  salt: string,
+): { valid: boolean; legacy: boolean } {
   try {
-    const calculated = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
-    return crypto.timingSafeEqual(Buffer.from(calculated, "hex"), Buffer.from(hash, "hex"));
+    const calculated210k = crypto
+      .pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 64, "sha512")
+      .toString("hex");
+    if (crypto.timingSafeEqual(Buffer.from(calculated210k, "hex"), Buffer.from(hash, "hex"))) {
+      return { valid: true, legacy: false };
+    }
   } catch {
-    return false;
+    // Continue to legacy check
   }
+
+  try {
+    const calculated10k = crypto
+      .pbkdf2Sync(password, salt, LEGACY_PBKDF2_ITERATIONS, 64, "sha512")
+      .toString("hex");
+    if (crypto.timingSafeEqual(Buffer.from(calculated10k, "hex"), Buffer.from(hash, "hex"))) {
+      return { valid: true, legacy: true };
+    }
+  } catch {
+    // Verification failed
+  }
+
+  return { valid: false, legacy: false };
 }
 
 /**
@@ -365,16 +396,17 @@ export async function serverStudentSignUp(
     console.warn("[student.server] DB insert failed, using memory/disk cache:", err);
   }
 
+  // Issue secure signed httpOnly session cookie
+  await createAndSetSessionCookie({
+    sub: record.email,
+    role: "student",
+    name: record.fullName,
+    batch: record.defaultBatch || undefined,
+  });
+
   return {
     success: true,
     session: createStudentSession(record),
-    credentialSync: {
-      email: record.email,
-      fullName: record.fullName,
-      passwordHash: record.passwordHash,
-      passwordSalt: record.passwordSalt,
-      defaultBatch: record.defaultBatch,
-    },
   };
 }
 
@@ -403,54 +435,57 @@ export async function serverStudentSignIn(
     };
   }
 
-  // 2. Lookup student
-  let student = await findStudentByEmail(normalizedEmail);
-  if (!student) {
-    // Resilience: designated admin/developer student email auto-heal on cold starts
-    if (normalizedEmail === "fa23-bcs-014@cuiatk.edu.pk") {
-      const trimmed = password.trim();
-      if (trimmed === "cuiatk@2026" || trimmed === "014" || trimmed.length >= 6) {
-        const autoReg = await serverStudentSignUp(
-          normalizedEmail,
-          "Shahryar",
-          password,
-          "BS(CS)-V",
-        );
-        if (autoReg.success && autoReg.session) {
-          return autoReg;
-        }
-      }
-    }
-
+  // 2. Check rate limit
+  const rateLimit = await checkLoginRateLimit(normalizedEmail);
+  if (!rateLimit.allowed) {
     return {
       success: false,
-      error: "No student account found for this email. Please create an account first.",
+      error: rateLimit.error || "Account temporarily locked due to too many failed attempts. Please try again later.",
     };
   }
 
-  // 3. Verify password hash
-  const isMatch = verifyPassword(password, student.passwordHash, student.passwordSalt);
-  if (!isMatch) {
-    // If this is the master admin email, allow login with the master passkey as fallback
-    if (
-      normalizedEmail === "fa23-bcs-014@cuiatk.edu.pk" &&
-      (password.trim() === "014" || password.trim() === "cuiatk@2026")
-    ) {
-      // Re-hash with current password
-      const rehash = hashPassword(password);
-      student.passwordHash = rehash.hash;
-      student.passwordSalt = rehash.salt;
-      serverStudentMemoryStore.set(normalizedEmail, student);
-      writeDiskBackup(student);
-    } else {
-      return {
-        success: false,
-        error: "Incorrect password. Please check your credentials and try again.",
-      };
+  // 3. Lookup student
+  const student = await findStudentByEmail(normalizedEmail);
+  if (!student) {
+    await recordFailedLogin(normalizedEmail);
+    return {
+      success: false,
+      error: "Invalid email or password.",
+    };
+  }
+
+  // 4. Verify password hash using 210,000 iterations (with 10k legacy check)
+  const check = verifyPassword(password, student.passwordHash, student.passwordSalt);
+  if (!check.valid) {
+    await recordFailedLogin(normalizedEmail);
+    return {
+      success: false,
+      error: "Invalid email or password.",
+    };
+  }
+
+  // 5. Successful login: reset rate limit counter
+  await resetLoginRateLimit(normalizedEmail);
+
+  // 6. Transparent re-hash if legacy 10,000 iterations
+  if (check.legacy) {
+    const upgraded = hashPassword(password);
+    student.passwordHash = upgraded.hash;
+    student.passwordSalt = upgraded.salt;
+    serverStudentMemoryStore.set(normalizedEmail, student);
+    writeDiskBackup(student);
+    try {
+      const sql = await getSql();
+      await sql.query(
+        "UPDATE cui_students SET password_hash = $1, password_salt = $2, updated_at = now() WHERE LOWER(email) = LOWER($3)",
+        [student.passwordHash, student.passwordSalt, normalizedEmail],
+      );
+    } catch {
+      // Non-blocking
     }
   }
 
-  // 4. Update last login time
+  // 7. Update last login time
   student.lastLoginAt = new Date().toISOString();
   serverStudentMemoryStore.set(normalizedEmail, student);
   writeDiskBackup(student);
@@ -465,16 +500,17 @@ export async function serverStudentSignIn(
     // Non-blocking
   }
 
+  // 8. Issue signed httpOnly session cookie
+  await createAndSetSessionCookie({
+    sub: student.email,
+    role: "student",
+    name: student.fullName,
+    batch: student.defaultBatch || undefined,
+  });
+
   return {
     success: true,
     session: createStudentSession(student),
-    credentialSync: {
-      email: student.email,
-      fullName: student.fullName,
-      passwordHash: student.passwordHash,
-      passwordSalt: student.passwordSalt,
-      defaultBatch: student.defaultBatch,
-    },
   };
 }
 
@@ -493,6 +529,7 @@ export async function serverStudentUpdateBatch(
 
   student.defaultBatch = defaultBatch;
   serverStudentMemoryStore.set(normalizedEmail, student);
+  writeDiskBackup(student);
 
   try {
     const sql = await getSql();
@@ -503,6 +540,14 @@ export async function serverStudentUpdateBatch(
   } catch (err) {
     console.warn("Failed to persist updated batch:", err);
   }
+
+  // Update session cookie with new defaultBatch
+  await createAndSetSessionCookie({
+    sub: student.email,
+    role: "student",
+    name: student.fullName,
+    batch: defaultBatch,
+  });
 
   return {
     success: true,
@@ -584,10 +629,13 @@ export async function serverRequestStudentVerificationCode(
     };
   }
 
+  const isProduction =
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
   return {
     success: true,
     message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your official university Gmail inbox.`,
-    devPreviewCode: emailRes.devMode ? code : undefined,
+    devPreviewCode: !isProduction && emailRes.devMode ? code : undefined,
   };
 }
 

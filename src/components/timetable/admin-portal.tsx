@@ -32,10 +32,7 @@ import {
 import { useDesk } from "@/components/timetable/context";
 import {
   AUTHORIZED_ADMIN_EMAIL,
-  DEFAULT_ADMIN_PASSKEY,
-  MASTER_STUDENT_ROLL_PIN,
   isAuthorizedAdminEmail,
-  verifyAdminCredentials,
   verifyAdminCredentialsAsync,
   getActiveAdminSession,
   setAdminSession,
@@ -45,9 +42,6 @@ import {
   saveCampusNoticeAsync,
   clearCampusNotice,
   clearCampusNoticeAsync,
-  updateAdminPasskey,
-  getStoredAdminPasskey,
-  resetAdminPasskeyWithAuth,
   resetAdminPasskeyWithAuthAsync,
   syncAdminDataFromServer,
   type CampusNotice,
@@ -91,10 +85,10 @@ export function AdminPortal() {
   const [isProcessingFile, setIsProcessingFile] = useState(false);
 
   // Security passkey change state
+  const [currentPasskeyInput, setCurrentPasskeyInput] = useState("");
   const [newPasskey, setNewPasskey] = useState("");
   const [confirmPasskey, setConfirmPasskey] = useState("");
   const [passkeyFeedback, setPasskeyFeedback] = useState("");
-  const [showCurrentConfiguredPasskey, setShowCurrentConfiguredPasskey] = useState(false);
 
   // Synchronize admin configuration and broadcast notices from server on load
   useEffect(() => {
@@ -173,8 +167,12 @@ export function AdminPortal() {
 
   const handlePasskeyChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPasskey.length < 4) {
-      setPasskeyFeedback("Passkey must be at least 4 characters long.");
+    if (!currentPasskeyInput.trim()) {
+      setPasskeyFeedback("Please enter your current master passkey.");
+      return;
+    }
+    if (newPasskey.length < 8) {
+      setPasskeyFeedback("New passkey must be at least 8 characters long for adequate security.");
       return;
     }
     if (newPasskey !== confirmPasskey) {
@@ -182,20 +180,20 @@ export function AdminPortal() {
       return;
     }
 
-    setPasskeyFeedback("Updating passkey and syncing to Laptop & Mobile...");
+    setPasskeyFeedback("Verifying current passkey and updating on server...");
     const result = await resetAdminPasskeyWithAuthAsync(
-      session?.email || AUTHORIZED_ADMIN_EMAIL,
-      getStoredAdminPasskey(),
-      newPasskey,
+      currentPasskeyInput.trim(),
+      newPasskey.trim(),
     );
 
     if (result.success) {
-      setPasskeyFeedback("✅ Passkey updated successfully and synced across Laptop & Mobile!");
+      setPasskeyFeedback("✅ Master passkey updated successfully and secured with PBKDF2 (210k iterations)!");
+      setCurrentPasskeyInput("");
       setNewPasskey("");
       setConfirmPasskey("");
-      setTimeout(() => setPasskeyFeedback(""), 4500);
+      setTimeout(() => setPasskeyFeedback(""), 5000);
     } else {
-      setPasskeyFeedback(result.error || "Failed to update passkey.");
+      setPasskeyFeedback(`❌ ${result.error || "Failed to update passkey."}`);
     }
   };
 
@@ -706,26 +704,19 @@ export function AdminPortal() {
               <div>
                 <b>Authorized Super Admin Account:</b>
                 <p className="fine quiet" style={{ margin: 0 }}>
-                  Only <code>{AUTHORIZED_ADMIN_EMAIL}</code> can log in to this portal. All other accounts are strictly blocked.
+                  Only authorized admin accounts can log in to this portal. All other accounts are strictly blocked.
                 </p>
               </div>
             </div>
 
-            <div className="admin-current-passkey-row">
+            <div className="admin-security-info-row" style={{ marginTop: 8 }}>
+              <ShieldCheck size={22} color="#087f79" aria-hidden />
               <div>
-                <span className="fine quiet">Current Configured Passkey:</span>
-                <p style={{ margin: "2px 0 0 0", fontFamily: "monospace", fontSize: "1rem" }}>
-                  {showCurrentConfiguredPasskey ? getStoredAdminPasskey() : "••••••••••••"}
+                <b>Zero-Exposure Passkey & Hardened PBKDF2:</b>
+                <p className="fine quiet" style={{ margin: 0 }}>
+                  Admin passkeys are strictly verified on the server using 210,000 iterations of PBKDF2 (SHA-512) and never sent to or exposed in the browser.
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn tap"
-                onClick={() => setShowCurrentConfiguredPasskey(!showCurrentConfiguredPasskey)}
-              >
-                {showCurrentConfiguredPasskey ? <EyeOff size={15} /> : <Eye size={15} />}
-                <span>{showCurrentConfiguredPasskey ? "Hide" : "Reveal Current Passkey"}</span>
-              </button>
             </div>
           </div>
 
@@ -739,15 +730,28 @@ export function AdminPortal() {
           <form onSubmit={handlePasskeyChange} className="admin-card stack" style={{ maxWidth: 540 }}>
             <h3>Update Master Passkey</h3>
             <p className="fine quiet" style={{ margin: 0 }}>
-              Set a custom passkey that only you know. You will use this new passkey to log into the Admin Portal in the future.
+              Set a strong custom passkey that only you know. You will use this new passkey to log into the Admin Portal in the future.
             </p>
 
             <label className="field-label-wrap">
-              <span className="field-label">New Master Passkey (min 4 characters)</span>
+              <span className="field-label">Current Master Passkey</span>
               <input
                 type="password"
                 className="input"
                 required
+                value={currentPasskeyInput}
+                onChange={(e) => setCurrentPasskeyInput(e.target.value)}
+                placeholder="Enter current master passkey"
+              />
+            </label>
+
+            <label className="field-label-wrap">
+              <span className="field-label">New Master Passkey (min 8 characters)</span>
+              <input
+                type="password"
+                className="input"
+                required
+                minLength={8}
                 value={newPasskey}
                 onChange={(e) => setNewPasskey(e.target.value)}
                 placeholder="Enter your new secret passkey"
@@ -760,6 +764,7 @@ export function AdminPortal() {
                 type="password"
                 className="input"
                 required
+                minLength={8}
                 value={confirmPasskey}
                 onChange={(e) => setConfirmPasskey(e.target.value)}
                 placeholder="Re-type new passkey"
@@ -770,25 +775,6 @@ export function AdminPortal() {
               <button type="submit" className="btn solid tap">
                 <KeyRound size={16} aria-hidden />
                 <span>Save New Passkey</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn tap"
-                onClick={async () => {
-                  setPasskeyFeedback("Resetting passkey across all devices...");
-                  await resetAdminPasskeyWithAuthAsync(
-                    session?.email || AUTHORIZED_ADMIN_EMAIL,
-                    getStoredAdminPasskey(),
-                    DEFAULT_ADMIN_PASSKEY,
-                  );
-                  setPasskeyFeedback(`Reset to default initial passkey: ${DEFAULT_ADMIN_PASSKEY} (synced across all devices)`);
-                  setTimeout(() => setPasskeyFeedback(""), 4500);
-                }}
-                title="Reset back to factory default: cuiatk@2026"
-              >
-                <RefreshCw size={15} aria-hidden />
-                <span>Reset to Default ({DEFAULT_ADMIN_PASSKEY})</span>
               </button>
             </div>
           </form>

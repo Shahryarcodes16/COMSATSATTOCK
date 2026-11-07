@@ -9,6 +9,8 @@ import os from "node:os";
 import path from "node:path";
 import { getSql } from "@/lib/db";
 import { sendStudentVerificationEmail } from "./email.server";
+import { createAndSetSessionCookie, clearSessionCookie } from "./session.server";
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
 import {
   isFacultyEmail,
   matchFacultyByEmail,
@@ -133,19 +135,47 @@ async function ensureFacultyTableExists(): Promise<void> {
   }
 }
 
-function hashPassword(password: string, existingSalt?: string): { hash: string; salt: string } {
+const PBKDF2_ITERATIONS = 210000;
+const LEGACY_PBKDF2_ITERATIONS = 10000;
+
+function hashPassword(
+  password: string,
+  existingSalt?: string,
+  iterations = PBKDF2_ITERATIONS,
+): { hash: string; salt: string } {
   const salt = existingSalt || crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
   return { hash, salt };
 }
 
-function verifyPassword(password: string, hash: string, salt: string): boolean {
+function verifyPassword(
+  password: string,
+  hash: string,
+  salt: string,
+): { valid: boolean; legacy: boolean } {
   try {
-    const calculated = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
-    return crypto.timingSafeEqual(Buffer.from(calculated, "hex"), Buffer.from(hash, "hex"));
+    const calculated210k = crypto
+      .pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 64, "sha512")
+      .toString("hex");
+    if (crypto.timingSafeEqual(Buffer.from(calculated210k, "hex"), Buffer.from(hash, "hex"))) {
+      return { valid: true, legacy: false };
+    }
   } catch {
-    return false;
+    // Continue to legacy check
   }
+
+  try {
+    const calculated10k = crypto
+      .pbkdf2Sync(password, salt, LEGACY_PBKDF2_ITERATIONS, 64, "sha512")
+      .toString("hex");
+    if (crypto.timingSafeEqual(Buffer.from(calculated10k, "hex"), Buffer.from(hash, "hex"))) {
+      return { valid: true, legacy: true };
+    }
+  } catch {
+    // Verification failed
+  }
+
+  return { valid: false, legacy: false };
 }
 
 function toFacultyProfile(record: FacultyRecord): FacultyProfile {
@@ -320,10 +350,13 @@ export async function serverRequestFacultyVerificationCode(
     };
   }
 
+  const isProduction =
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
   return {
     success: true,
     message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your official faculty Gmail.`,
-    devPreviewCode: emailRes.devMode ? code : undefined,
+    devPreviewCode: !isProduction && emailRes.devMode ? code : undefined,
   };
 }
 
@@ -454,19 +487,17 @@ export async function serverVerifyFacultyCodeAndSignUp(
     console.warn("[faculty.server] DB insert notice (using memory/disk):", err);
   }
 
+  // Issue secure signed httpOnly session cookie
+  await createAndSetSessionCookie({
+    sub: record.email,
+    role: "faculty",
+    name: record.fullName,
+    teacherId: record.teacherId,
+  });
+
   return {
     success: true,
     session: createFacultySession(record),
-    credentialSync: {
-      email: record.email,
-      fullName: record.fullName,
-      teacherId: record.teacherId,
-      timetableName: record.timetableName,
-      department: record.department,
-      passwordHash: record.passwordHash,
-      passwordSalt: record.passwordSalt,
-      notificationLeadMins: record.notificationLeadMins,
-    },
   };
 }
 
@@ -490,20 +521,52 @@ export async function serverFacultySignIn(
     return { success: false, error: "Please enter your password." };
   }
 
-  const faculty = await findFacultyByEmail(normalizedEmail);
-  if (!faculty) {
+  // Check rate limit
+  const rateLimit = await checkLoginRateLimit(normalizedEmail);
+  if (!rateLimit.allowed) {
     return {
       success: false,
-      error: "No faculty account found for this email. Please create your faculty account first.",
+      error: rateLimit.error || "Account temporarily locked due to too many failed attempts. Please try again later.",
     };
   }
 
-  const isMatch = verifyPassword(password, faculty.passwordHash, faculty.passwordSalt);
-  if (!isMatch) {
+  const faculty = await findFacultyByEmail(normalizedEmail);
+  if (!faculty) {
+    await recordFailedLogin(normalizedEmail);
     return {
       success: false,
-      error: "Incorrect password. Please verify and try again.",
+      error: "Invalid email or password.",
     };
+  }
+
+  const check = verifyPassword(password, faculty.passwordHash, faculty.passwordSalt);
+  if (!check.valid) {
+    await recordFailedLogin(normalizedEmail);
+    return {
+      success: false,
+      error: "Invalid email or password.",
+    };
+  }
+
+  // Reset rate limiting on successful login
+  await resetLoginRateLimit(normalizedEmail);
+
+  // Upgrade legacy 10k hash to 210,000 iterations
+  if (check.legacy) {
+    const upgraded = hashPassword(password);
+    faculty.passwordHash = upgraded.hash;
+    faculty.passwordSalt = upgraded.salt;
+    serverFacultyMemoryStore.set(normalizedEmail, faculty);
+    writeFacultyDisk(faculty);
+    try {
+      const sql = await getSql();
+      await sql.query(
+        "UPDATE cui_faculty SET password_hash = $1, password_salt = $2, updated_at = now() WHERE LOWER(email) = LOWER($3)",
+        [faculty.passwordHash, faculty.passwordSalt, normalizedEmail],
+      );
+    } catch {
+      // Non-blocking
+    }
   }
 
   faculty.lastLoginAt = new Date().toISOString();
@@ -520,19 +583,17 @@ export async function serverFacultySignIn(
     // Non-blocking
   }
 
+  // Issue secure signed httpOnly session cookie
+  await createAndSetSessionCookie({
+    sub: faculty.email,
+    role: "faculty",
+    name: faculty.fullName,
+    teacherId: faculty.teacherId,
+  });
+
   return {
     success: true,
     session: createFacultySession(faculty),
-    credentialSync: {
-      email: faculty.email,
-      fullName: faculty.fullName,
-      teacherId: faculty.teacherId,
-      timetableName: faculty.timetableName,
-      department: faculty.department,
-      passwordHash: faculty.passwordHash,
-      passwordSalt: faculty.passwordSalt,
-      notificationLeadMins: faculty.notificationLeadMins,
-    },
   };
 }
 
@@ -562,6 +623,14 @@ export async function serverFacultyUpdateLeadTime(
   } catch {
     // Non-blocking
   }
+
+  // Update session cookie with faculty info
+  await createAndSetSessionCookie({
+    sub: faculty.email,
+    role: "faculty",
+    name: faculty.fullName,
+    teacherId: faculty.teacherId,
+  });
 
   return {
     success: true,

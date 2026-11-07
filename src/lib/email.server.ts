@@ -119,14 +119,28 @@ export async function sendStudentVerificationEmail({
   `;
 
   if (!transporter) {
-    // If SMTP credentials are not yet set in environment, log to server console
+    const isProduction =
+      process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
+    if (isProduction) {
+      console.error(
+        "[email.server] CRITICAL: SMTP credentials (SMTP_USER / SMTP_PASS) not configured in production environment.",
+      );
+      return {
+        sent: false,
+        error:
+          "Email verification service is currently unavailable. Please contact the campus administrator to complete registration.",
+      };
+    }
+
+    // In local development only: log code to server console for testing
     console.info(
-      `\n[EMAIL VERIFICATION DISPATCH] (SMTP credentials not yet set in env)\n` +
+      `\n[DEV EMAIL VERIFICATION DISPATCH] (Development mode only)\n` +
         `To: ${toEmail}\n` +
-        `Student: ${studentName}\n` +
+        `Recipient: ${studentName}\n` +
         `Verification Code: ${verificationCode}\n` +
         (magicLink ? `Magic Link: ${magicLink}\n` : "") +
-        `Note: To send actual emails via Gmail, set SMTP_USER and SMTP_PASS (Gmail App Password) in your Vercel or local environment.\n`,
+        `Note: In production on Vercel, set SMTP_USER and SMTP_PASS to dispatch real emails.\n`,
     );
 
     return {

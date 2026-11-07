@@ -1,17 +1,28 @@
 /**
  * Server-only Admin Persistence and Validation Layer
- * Handles database operations and server-side state for the Admin Control Center.
+ * Handles database operations, PBKDF2 (210k iterations) passkey security,
+ * and authenticated session checks for the Admin Control Center.
  */
+import crypto from "node:crypto";
 import { getSql } from "@/lib/db";
-import { AUTHORIZED_ADMIN_EMAIL, DEFAULT_ADMIN_PASSKEY, type CampusNotice } from "./admin";
+import { requireAdminSession, createAndSetSessionCookie } from "./session.server";
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
+import { AUTHORIZED_ADMIN_EMAIL, type CampusNotice } from "./admin";
+
+const PBKDF2_ITERATIONS = 210000;
+const PBKDF2_KEY_LEN = 64;
+const PBKDF2_DIGEST = "sha512";
 
 // In-memory cache fallback for serverless warm instances or environments without DB
 const serverMemoryStore = new Map<string, { value: string; updatedAt: string; updatedBy?: string }>();
-serverMemoryStore.set("admin_passkey", {
-  value: DEFAULT_ADMIN_PASSKEY,
-  updatedAt: new Date().toISOString(),
-  updatedBy: "system",
-});
+
+export function getAuthorizedAdminEmail(): string {
+  const envEmail = process.env.ADMIN_EMAIL;
+  if (envEmail && envEmail.trim()) {
+    return envEmail.trim().toLowerCase();
+  }
+  return AUTHORIZED_ADMIN_EMAIL.toLowerCase();
+}
 
 /**
  * Ensures the admin settings table exists in PostgreSQL / PGLite
@@ -28,7 +39,7 @@ async function ensureAdminTableExists() {
       );
     `);
   } catch (err) {
-    console.warn("[admin.server] ensureAdminTableExists notice (using in-memory fallback):", err);
+    console.warn("[admin.server] ensureAdminTableExists notice:", err);
   }
 }
 
@@ -44,7 +55,6 @@ export async function getServerAdminSetting(key: string): Promise<string | null>
       [key],
     );
     if (rows && rows.length > 0 && rows[0]?.value) {
-      // Sync memory cache
       serverMemoryStore.set(key, {
         value: rows[0].value,
         updatedAt: new Date().toISOString(),
@@ -65,9 +75,8 @@ export async function getServerAdminSetting(key: string): Promise<string | null>
 export async function setServerAdminSetting(
   key: string,
   value: string,
-  updatedBy: string = AUTHORIZED_ADMIN_EMAIL,
+  updatedBy: string = getAuthorizedAdminEmail(),
 ): Promise<boolean> {
-  // Always update memory store
   serverMemoryStore.set(key, {
     value,
     updatedAt: new Date().toISOString(),
@@ -89,59 +98,161 @@ export async function setServerAdminSetting(
     return true;
   } catch (err) {
     console.warn(`[admin.server] DB write failed for key ${key}, cached in memory:`, err);
-    return true; // Memory cache succeeded
+    return true;
   }
 }
 
 /**
- * Gets the current server-configured admin passkey
+ * Hashes a passkey using PBKDF2 with SHA-512 (210,000 iterations)
  */
-export async function getServerAdminPasskey(): Promise<string> {
-  const stored = await getServerAdminSetting("admin_passkey");
-  return stored || DEFAULT_ADMIN_PASSKEY;
+function hashPasskey(passkey: string, existingSalt?: string): { hash: string; salt: string } {
+  const salt = existingSalt || crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(passkey, salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LEN, PBKDF2_DIGEST).toString("hex");
+  return { hash, salt };
 }
 
 /**
- * Verifies credentials and updates the admin passkey across all devices
+ * Verifies whether a candidate passkey matches the stored administrative passkey hash.
+ * Checks environment variable override (ADMIN_PASSKEY / ADMIN_PASSKEY_HASH) first.
  */
-export async function verifyAndSaveAdminPasskey(
+async function verifyPasskeyAgainstStored(candidatePasskey: string): Promise<boolean> {
+  const trimmedCandidate = (candidatePasskey || "").trim();
+  if (!trimmedCandidate) return false;
+
+  // 1. Check if ADMIN_PASSKEY or ADMIN_PASSKEY_HASH is explicitly configured in environment variables
+  if (process.env.ADMIN_PASSKEY) {
+    const expected = process.env.ADMIN_PASSKEY.trim();
+    if (
+      trimmedCandidate.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(trimmedCandidate), Buffer.from(expected))
+    ) {
+      return true;
+    }
+  }
+
+  // 2. Check stored hash and salt from database / settings
+  const storedHash = await getServerAdminSetting("admin_passkey_hash");
+  const storedSalt = await getServerAdminSetting("admin_passkey_salt");
+
+  if (storedHash && storedSalt) {
+    try {
+      const calculated = crypto
+        .pbkdf2Sync(trimmedCandidate, storedSalt, PBKDF2_ITERATIONS, PBKDF2_KEY_LEN, PBKDF2_DIGEST)
+        .toString("hex");
+      return crypto.timingSafeEqual(Buffer.from(calculated, "hex"), Buffer.from(storedHash, "hex"));
+    } catch {
+      return false;
+    }
+  }
+
+  // 3. Fallback: If no passkey hash has been configured yet, check if ADMIN_PASSKEY_HASH was set directly
+  if (process.env.ADMIN_PASSKEY_HASH) {
+    return false; // Requires proper salt or direct passkey
+  }
+
+  return false;
+}
+
+/**
+ * Server-only verification of administrator login credentials.
+ * Enforces rate limiting, constant-time comparison, and sets an httpOnly session cookie.
+ */
+export async function verifyAdminLoginServer(
   email: string,
-  currentOrMaster: string,
+  passkey: string,
+): Promise<{ success: boolean; error?: string }> {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  const authorizedEmail = getAuthorizedAdminEmail();
+
+  // 1. Check brute force rate limit
+  const rateLimit = await checkLoginRateLimit(normalizedEmail);
+  if (!rateLimit.allowed) {
+    return {
+      success: false,
+      error: `Too many failed login attempts. This account is locked for ${rateLimit.remainingMinutes || 15} minute(s) to protect against unauthorized access.`,
+    };
+  }
+
+  // 2. Check authorized email
+  if (normalizedEmail !== authorizedEmail) {
+    const rate = await recordFailedLogin(normalizedEmail);
+    if (rate.locked) {
+      return {
+        success: false,
+        error: "Too many failed login attempts. Access temporarily locked for 15 minutes.",
+      };
+    }
+    return {
+      success: false,
+      error: "Access Denied: Invalid administrator credentials or unauthorized email.",
+    };
+  }
+
+  // 3. Verify passkey hash
+  const isMatch = await verifyPasskeyAgainstStored(passkey);
+  if (!isMatch) {
+    const rate = await recordFailedLogin(normalizedEmail);
+    if (rate.locked) {
+      return {
+        success: false,
+        error: "Too many failed login attempts. Access temporarily locked for 15 minutes.",
+      };
+    }
+    return {
+      success: false,
+      error: `Invalid Security Passkey. ${rate.remainingAttempts} attempt(s) remaining before account lockout.`,
+    };
+  }
+
+  // 4. Authentication successful: reset rate limiter and issue httpOnly session cookie
+  await resetLoginRateLimit(normalizedEmail);
+  await createAndSetSessionCookie({
+    sub: normalizedEmail,
+    role: "admin",
+    name: "Campus Administrator",
+  });
+
+  return { success: true };
+}
+
+/**
+ * Verifies the current passkey and updates to a new passkey (min 8 characters).
+ * Protected by requireAdminSession() so only authenticated administrators can invoke it.
+ */
+export async function updateAdminPasskeyServer(
+  currentPasskey: string,
   newPasskey: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!email || email.trim().toLowerCase() !== AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
+  // Enforce valid admin session cookie
+  const session = await requireAdminSession();
+
+  const isCurrentValid = await verifyPasskeyAgainstStored(currentPasskey);
+  if (!isCurrentValid) {
     return {
       success: false,
-      error: "Access Denied: Unauthorized administrator email or credentials.",
+      error: "Incorrect current passkey. Please verify your current passkey.",
     };
   }
 
-  const currentPasskey = await getServerAdminPasskey();
-  const trimmedInput = (currentOrMaster || "").trim();
-
-  // Allow current passkey, default passkey, or the student roll PIN "014"
-  const isAuthorized =
-    trimmedInput === currentPasskey ||
-    trimmedInput === DEFAULT_ADMIN_PASSKEY ||
-    trimmedInput === "014";
-
-  if (!isAuthorized) {
+  const trimmedNew = (newPasskey || "").trim();
+  if (trimmedNew.length < 8) {
     return {
       success: false,
-      error: "Incorrect current passkey or student roll PIN (014).",
+      error: "New passkey must be at least 8 characters long for adequate security.",
     };
   }
 
-  if (!newPasskey || newPasskey.trim().length < 4) {
-    return {
-      success: false,
-      error: "New passkey must be at least 4 characters long.",
-    };
-  }
+  // Hash new passkey with PBKDF2 (210k iterations)
+  const { hash, salt } = hashPasskey(trimmedNew);
+  await setServerAdminSetting("admin_passkey_hash", hash, session.sub);
+  await setServerAdminSetting("admin_passkey_salt", salt, session.sub);
 
-  const saved = await setServerAdminSetting("admin_passkey", newPasskey.trim(), email);
-  if (!saved) {
-    return { success: false, error: "Failed to persist passkey to server." };
+  // Clean up any legacy plaintext passkey entries
+  try {
+    const sql = await getSql();
+    await sql.query("DELETE FROM cui_admin_settings WHERE key = 'admin_passkey'");
+  } catch {
+    // Non-blocking
   }
 
   return { success: true };
@@ -162,30 +273,50 @@ export async function getServerCampusNotice(): Promise<CampusNotice | null> {
 }
 
 /**
- * Saves or updates campus broadcast announcement on the server
+ * Saves or updates campus broadcast announcement on the server.
+ * Enforces requireAdminSession() and uses the session's verified email.
  */
 export async function saveServerCampusNotice(
-  email: string,
   notice: Omit<CampusNotice, "id" | "updatedAt" | "updatedBy">,
 ): Promise<{ success: boolean; error?: string; notice?: CampusNotice }> {
-  if (!email || email.trim().toLowerCase() !== AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
-    return {
-      success: false,
-      error: "Unauthorized: only the campus administrator can broadcast notices.",
-    };
-  }
+  const session = await requireAdminSession();
 
   const fullNotice: CampusNotice = {
     ...notice,
     id: `notice-${Date.now()}`,
     updatedAt: new Date().toISOString(),
-    updatedBy: AUTHORIZED_ADMIN_EMAIL,
+    updatedBy: session.sub,
   };
 
-  const saved = await setServerAdminSetting("campus_notice", JSON.stringify(fullNotice), email);
+  const saved = await setServerAdminSetting("campus_notice", JSON.stringify(fullNotice), session.sub);
   if (!saved) {
     return { success: false, error: "Failed to broadcast campus notice." };
   }
 
   return { success: true, notice: fullNotice };
+}
+
+/**
+ * Clears the active campus broadcast announcement on the server.
+ * Enforces requireAdminSession().
+ */
+export async function clearServerCampusNotice(): Promise<{ success: boolean; error?: string }> {
+  const session = await requireAdminSession();
+
+  const emptyNotice: CampusNotice = {
+    id: `notice-${Date.now()}`,
+    enabled: false,
+    title: "",
+    message: "",
+    type: "info",
+    updatedAt: new Date().toISOString(),
+    updatedBy: session.sub,
+  };
+
+  const saved = await setServerAdminSetting("campus_notice", JSON.stringify(emptyNotice), session.sub);
+  if (!saved) {
+    return { success: false, error: "Failed to clear notice on server." };
+  }
+
+  return { success: true };
 }
