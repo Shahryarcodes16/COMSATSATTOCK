@@ -2,18 +2,14 @@
  * TanStack Start Server Functions for Student Authentication
  * Safe RPC boundary callable from client components with Zod schema validation
  * and signed httpOnly session cookie enforcement.
+ *
+ * NOTE: Account creation is strictly gated by studentVerifyAndSignUpFn.
+ * Unverified sign-up is forbidden.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { StudentSession } from "./student";
 import type { StudentAuthResponse } from "./student.server";
-
-const StudentSignUpSchema = z.object({
-  email: z.string().email().min(5).max(120),
-  fullName: z.string().min(2).max(100),
-  password: z.string().min(6).max(128),
-  defaultBatch: z.string().max(50).optional(),
-});
 
 const StudentSignInSchema = z.object({
   email: z.string().email().min(5).max(120),
@@ -37,25 +33,6 @@ const StudentUpdateBatchSchema = z.object({
   email: z.string().email().optional(),
   defaultBatch: z.string().min(1).max(50),
 });
-
-/**
- * Server Function: Student Sign Up
- */
-export const studentSignUpFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) => StudentSignUpSchema.parse(data))
-  .handler(
-    async ({
-      data,
-    }): Promise<StudentAuthResponse> => {
-      const { serverStudentSignUp } = await import("./student.server.ts");
-      return serverStudentSignUp(
-        data.email,
-        data.fullName,
-        data.password,
-        data.defaultBatch,
-      );
-    },
-  );
 
 /**
  * Server Function: Student Sign In
@@ -98,6 +75,7 @@ export const studentRequestVerificationCodeFn = createServerFn({ method: "POST" 
 
 /**
  * Server Function: Verify 6-Digit Code and Create Student Account
+ * The ONLY permitted entry point to register a student account.
  */
 export const studentVerifyAndSignUpFn = createServerFn({ method: "POST" })
   .validator((data: unknown) => StudentVerifySchema.parse(data))

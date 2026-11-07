@@ -31,7 +31,6 @@ import {
   type ParsedStudentEmail,
 } from "@/lib/student";
 import {
-  studentSignUpFn,
   studentSignInFn,
   studentRequestVerificationCodeFn,
   studentVerifyAndSignUpFn,
@@ -186,9 +185,6 @@ export function StudentGateway({
 
       if (res.success && res.session) {
         setStudentSession(res.session, rememberMe);
-        if (res.credentialSync) {
-          saveLocalRegisteredAccount(res.credentialSync);
-        }
         if (res.session.profile.defaultBatch) {
           const batchIdx = batches.indexOf(res.session.profile.defaultBatch);
           if (batchIdx !== -1) {
@@ -204,110 +200,9 @@ export function StudentGateway({
         return;
       }
 
-      // Check device local registry vault (recovers accounts across serverless cold starts)
-      const localAccount = getLocalRegisteredAccount(normalizedEmail);
-      if (localAccount) {
-        const matches = await verifyClientPassword(
-          password,
-          localAccount.passwordHash,
-          localAccount.passwordSalt,
-        );
-
-        if (matches) {
-          const parsed = parseUniversityEmail(localAccount.email);
-          const profile: StudentProfile = {
-            id: `stu-${Date.now()}`,
-            email: localAccount.email,
-            fullName: localAccount.fullName,
-            session: parsed?.session || "FA",
-            year: parsed?.year || "23",
-            programCode: parsed?.programCode || "bcs",
-            rollNumber: parsed?.rollNumber || "014",
-            regNo: parsed?.regNo || localAccount.email.split("@")[0].toUpperCase(),
-            programTitle: parsed?.program.name || "BS Computer Science",
-            department: parsed?.program.department || "COMSATS Attock",
-            defaultBatch: localAccount.defaultBatch,
-            createdAt: localAccount.registeredAt || new Date().toISOString(),
-          };
-
-          const session: StudentSession = {
-            profile,
-            token: `cui-stu-local-${Date.now()}`,
-            signedInAt: new Date().toISOString(),
-          };
-
-          setStudentSession(session, rememberMe);
-
-          // Silently re-seed serverless instance in the background
-          studentSignUpFn({
-            data: {
-              email: localAccount.email,
-              fullName: localAccount.fullName,
-              password,
-              defaultBatch: localAccount.defaultBatch || undefined,
-            },
-          }).catch(() => {});
-
-          if (profile.defaultBatch) {
-            const batchIdx = batches.indexOf(profile.defaultBatch);
-            if (batchIdx !== -1) {
-              pinBatch(batchIdx);
-              setBatchId(batchIdx);
-            }
-          }
-
-          setSuccessMsg(`Welcome back, ${profile.fullName}! Unlocking campus workspace...`);
-          setTimeout(() => {
-            onAuthenticated(session);
-          }, 900);
-          return;
-        } else {
-          setError("Incorrect password for this student account. Please verify and try again.");
-          setLoading(false);
-          return;
-        }
-      }
-
       setError(res.error || "Authentication failed. Please verify credentials.");
       setLoading(false);
     } catch {
-      // Offline fallback: check local vault
-      const localAccount = getLocalRegisteredAccount(normalizedEmail);
-      if (localAccount) {
-        const matches = await verifyClientPassword(
-          password,
-          localAccount.passwordHash,
-          localAccount.passwordSalt,
-        );
-        if (matches) {
-          const parsed = parseUniversityEmail(localAccount.email);
-          const profile: StudentProfile = {
-            id: `stu-${Date.now()}`,
-            email: localAccount.email,
-            fullName: localAccount.fullName,
-            session: parsed?.session || "FA",
-            year: parsed?.year || "23",
-            programCode: parsed?.programCode || "bcs",
-            rollNumber: parsed?.rollNumber || "014",
-            regNo: parsed?.regNo || localAccount.email.split("@")[0].toUpperCase(),
-            programTitle: parsed?.program.name || "BS Computer Science",
-            department: parsed?.program.department || "COMSATS Attock",
-            defaultBatch: localAccount.defaultBatch,
-            createdAt: localAccount.registeredAt || new Date().toISOString(),
-          };
-          const session: StudentSession = {
-            profile,
-            token: `cui-stu-offline-${Date.now()}`,
-            signedInAt: new Date().toISOString(),
-          };
-          setStudentSession(session, rememberMe);
-          setSuccessMsg(`Welcome back, ${profile.fullName}!`);
-          setTimeout(() => {
-            onAuthenticated(session);
-          }, 800);
-          return;
-        }
-      }
       setError("Unable to connect to authentication server. Please check your network.");
     } finally {
       setLoading(false);

@@ -14,9 +14,12 @@ import {
   Clock,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   RefreshCw,
   BookOpen,
+  KeyRound,
+  Send,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -29,7 +32,12 @@ import {
   type StudentSession,
   type ParsedStudentEmail,
 } from "@/lib/student";
-import { studentSignUpFn, studentSignInFn, studentUpdateBatchFn } from "@/lib/student-server-fn";
+import {
+  studentSignInFn,
+  studentRequestVerificationCodeFn,
+  studentVerifyAndSignUpFn,
+  studentUpdateBatchFn,
+} from "@/lib/student-server-fn";
 import { useDesk } from "@/components/timetable/context";
 import { batches } from "@/lib/schedule";
 
@@ -108,10 +116,24 @@ export function StudentAuthModal({
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
+  // 2-Step OTP Verification State
+  const [signupStage, setSignupStage] = useState<"form" | "verify">("form");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [devPreviewCode, setDevPreviewCode] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   // Status & Feedback
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // Extracted student info for preview
   const parsedEmail: ParsedStudentEmail | null = parseUniversityEmail(email);
@@ -180,17 +202,63 @@ export function StudentAuthModal({
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     if (!fullName.trim() || fullName.trim().length < 2) {
       setError("Please enter your full name (minimum 2 characters).");
       return;
     }
-    if (!isValidUniversityEmail(email)) {
+    if (!isValidUniversityEmail(normalizedEmail)) {
       setError("Please enter your official university email (e.g. fa23-bcs-014@cuiatk.edu.pk).");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const originUrl = typeof window !== "undefined" ? window.location.origin : undefined;
+      const res = await studentRequestVerificationCodeFn({
+        data: {
+          email: normalizedEmail,
+          fullName: fullName.trim(),
+          defaultBatch: selectedBatch || undefined,
+          originUrl,
+        },
+      });
+
+      if (!res.success) {
+        setError(res.error || "Failed to dispatch verification code.");
+        setLoading(false);
+        return;
+      }
+
+      setSignupStage("verify");
+      setResendCooldown(60);
+      if (res.devPreviewCode) {
+        setDevPreviewCode(res.devPreviewCode);
+      }
+      setSuccessMsg(res.message || `Verification code sent to ${normalizedEmail}!`);
+    } catch {
+      setError("Unable to dispatch verification code. Please check your network connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const trimmedCode = verificationCode.trim();
+
+    if (!trimmedCode || trimmedCode.length !== 6) {
+      setError("Please enter the complete 6-digit verification code from your Gmail.");
       return;
     }
     if (password.length < 6) {
@@ -204,17 +272,16 @@ export function StudentAuthModal({
 
     setLoading(true);
     try {
-      const res = await studentSignUpFn({
+      const res = await studentVerifyAndSignUpFn({
         data: {
-          email: email.trim().toLowerCase(),
-          fullName: fullName.trim(),
+          email: normalizedEmail,
+          code: trimmedCode,
           password,
-          defaultBatch: selectedBatch || undefined,
         },
       });
 
       if (!res.success || !res.session) {
-        setError(res.error || "Failed to create account.");
+        setError(res.error || "Verification failed. Please check the code.");
         setLoading(false);
         return;
       }
@@ -230,12 +297,12 @@ export function StudentAuthModal({
         }
       }
 
-      setSuccessMsg("Account created successfully! Welcome to CUI Attock Timetable.");
+      setSuccessMsg("Account verified & created successfully! Welcome to CUI Attock Timetable.");
       setTimeout(() => {
         onClose();
       }, 1500);
     } catch {
-      setError("Unable to register account. Please check your network connection.");
+      setError("Unable to verify account. Please check your network connection.");
     } finally {
       setLoading(false);
     }
@@ -463,6 +530,8 @@ export function StudentAuthModal({
                   className={`student-tab-btn ${mode === "signin" ? "active" : ""}`}
                   onClick={() => {
                     setMode("signin");
+                    setSignupStage("form");
+                    setVerificationCode("");
                     setError("");
                   }}
                   style={{
@@ -482,6 +551,8 @@ export function StudentAuthModal({
                   className={`student-tab-btn ${mode === "signup" ? "active" : ""}`}
                   onClick={() => {
                     setMode("signup");
+                    setSignupStage("form");
+                    setVerificationCode("");
                     setError("");
                   }}
                   style={{
@@ -581,9 +652,9 @@ export function StudentAuthModal({
                 </form>
               )}
 
-              {/* B. SIGN UP FORM */}
-              {mode === "signup" && (
-                <form onSubmit={handleSignUp} className="stack" style={{ gap: "0.85rem" }}>
+              {/* B. SIGN UP FLOW (2-STAGE SECURE OTP VERIFICATION) */}
+              {mode === "signup" && signupStage === "form" && (
+                <form onSubmit={handleRequestCode} className="stack" style={{ gap: "0.85rem" }}>
                   <label className="field-label-wrap">
                     <span className="field-label">Full Name</span>
                     <div style={{ position: "relative" }}>
@@ -663,13 +734,101 @@ export function StudentAuthModal({
                     </label>
                   )}
 
+                  <div className="fine quiet" style={{ fontSize: "0.8rem", color: "var(--muted, #64748b)", margin: "4px 0" }}>
+                    🛡️ A secure 6-digit verification code will be dispatched to your official student Gmail inbox to verify identity.
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn solid tap"
+                    disabled={loading || !isValidUniversityEmail(email)}
+                    style={{ justifyContent: "center", marginTop: 4 }}
+                  >
+                    {loading ? <RefreshCw size={16} className="spin" /> : <Send size={16} />}
+                    <span>{loading ? "Sending Verification Code..." : "Send Verification Code"}</span>
+                  </button>
+
+                  <div className="fine quiet" style={{ textAlign: "center", marginTop: 6 }}>
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setMode("signin")}
+                      style={{ background: "none", border: "none", color: "#087f79", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      Sign in here
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STAGE 2: ENTER CODE & SET PASSWORD */}
+              {mode === "signup" && signupStage === "verify" && (
+                <form onSubmit={handleVerifyAndSignUp} className="stack" style={{ gap: "0.85rem" }}>
+                  <div
+                    style={{
+                      background: "rgba(8,127,121,0.08)",
+                      border: "1px solid rgba(8,127,121,0.22)",
+                      borderRadius: 8,
+                      padding: "10px 14px",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <Mail size={16} color="#087f79" />
+                      <b>Check Your Student Gmail</b>
+                    </div>
+                    <p className="fine quiet" style={{ margin: 0 }}>
+                      A 6-digit verification code was dispatched to <b>{email}</b>.
+                    </p>
+                  </div>
+
+                  {devPreviewCode && (
+                    <div
+                      style={{
+                        background: "rgba(217, 119, 6, 0.12)",
+                        border: "1px solid rgba(217, 119, 6, 0.35)",
+                        borderRadius: 8,
+                        padding: "8px 12px",
+                        fontSize: "0.82rem",
+                        color: "#b45309",
+                      }}
+                    >
+                      <b>Local Dev OTP Preview:</b> <code>{devPreviewCode}</code>
+                    </div>
+                  )}
+
                   <label className="field-label-wrap">
-                    <span className="field-label">Password (min 6 characters)</span>
+                    <span className="field-label">6-Digit Verification Code</span>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type="text"
+                        className="input"
+                        required
+                        autoFocus
+                        maxLength={6}
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        style={{
+                          paddingLeft: "2.3rem",
+                          letterSpacing: "4px",
+                          fontFamily: "monospace",
+                          fontSize: "1.1rem",
+                          fontWeight: 700,
+                        }}
+                      />
+                      <KeyRound size={16} style={{ position: "absolute", left: 12, top: 13, color: "var(--muted, #64748b)" }} />
+                    </div>
+                  </label>
+
+                  <label className="field-label-wrap">
+                    <span className="field-label">Set Account Password (min 6 characters)</span>
                     <div style={{ position: "relative" }}>
                       <input
                         type={showPassword ? "text" : "password"}
                         className="input"
                         required
+                        minLength={6}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Create a strong password"
@@ -694,6 +853,7 @@ export function StudentAuthModal({
                         type={showPassword ? "text" : "password"}
                         className="input"
                         required
+                        minLength={6}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Re-type your password"
@@ -706,21 +866,48 @@ export function StudentAuthModal({
                   <button
                     type="submit"
                     className="btn solid tap"
-                    disabled={loading || !isValidUniversityEmail(email)}
+                    disabled={loading || verificationCode.trim().length !== 6 || password.length < 6}
                     style={{ justifyContent: "center", marginTop: 4 }}
                   >
                     {loading ? <RefreshCw size={16} className="spin" /> : <ShieldCheck size={16} />}
-                    <span>{loading ? "Creating Account..." : "Create Student Account"}</span>
+                    <span>{loading ? "Verifying & Creating..." : "Verify Code & Create Account"}</span>
                   </button>
 
-                  <div className="fine quiet" style={{ textAlign: "center", marginTop: 6 }}>
-                    Already have an account?{" "}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, fontSize: "0.8rem" }}>
                     <button
                       type="button"
-                      onClick={() => setMode("signin")}
-                      style={{ background: "none", border: "none", color: "#087f79", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                      onClick={() => {
+                        setSignupStage("form");
+                        setVerificationCode("");
+                        setError("");
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--muted, #64748b)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
-                      Sign in here
+                      <ArrowLeft size={14} />
+                      <span>Change Email</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loading || resendCooldown > 0}
+                      onClick={handleRequestCode}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: resendCooldown > 0 ? "var(--muted, #64748b)" : "#087f79",
+                        fontWeight: 600,
+                        cursor: resendCooldown > 0 ? "default" : "pointer",
+                      }}
+                    >
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
                     </button>
                   </div>
                 </form>
