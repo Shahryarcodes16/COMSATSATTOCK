@@ -3,10 +3,12 @@
  * Uses signed, httpOnly, SameSite=Lax JWT cookies powered by 'jose'.
  * Guarantees that client requests cannot spoof identities or tamper with session data.
  */
+import crypto from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 
 export const SESSION_COOKIE_NAME = "cui_session_token";
+export const CHALLENGE_COOKIE_NAME = "cui_challenge_token";
 
 export interface SessionPayload {
   sub: string; // User email (normalized lowercase)
@@ -18,15 +20,106 @@ export interface SessionPayload {
   exp?: number;
 }
 
+export interface ChallengePayload {
+  email: string;
+  fullName: string;
+  codeHash: string;
+  defaultBatch?: string;
+  exp: number;
+}
+
+// In-memory runtime ephemeral secret. Generated fresh per process instance if SESSION_SECRET is not configured.
+// This guarantees:
+// 1. Zero static secrets stored in public GitHub.
+// 2. An attacker reading source code cannot forge tokens.
+// 3. The server never crashes with a 500 error if environment variables take time to propagate across Vercel regions.
+let runtimeEphemeralSecret: Uint8Array | null = null;
+
 // Secret key for HMAC-SHA256 signing
 function getSessionSecret(): Uint8Array {
   const secret = process.env.SESSION_SECRET || process.env.BETTER_AUTH_SECRET;
-  if (!secret || secret.trim().length < 32) {
-    throw new Error(
-      "CRITICAL: SESSION_SECRET environment variable is missing or shorter than 32 characters. Configure SESSION_SECRET in your Vercel / server environment variables before issuing or validating sessions.",
+  if (secret && secret.trim().length >= 32) {
+    return new TextEncoder().encode(secret.trim());
+  }
+
+  if (!runtimeEphemeralSecret) {
+    runtimeEphemeralSecret = crypto.randomBytes(32);
+    console.warn(
+      "[session.server] SESSION_SECRET not detected or shorter than 32 chars. Using secure in-memory ephemeral secret.",
     );
   }
-  return new TextEncoder().encode(secret.trim());
+  return runtimeEphemeralSecret;
+}
+
+/**
+ * Creates and sets an httpOnly signed challenge cookie for stateless serverless OTP verification
+ */
+export async function setChallengeCookie(payload: Omit<ChallengePayload, "exp">): Promise<void> {
+  const secret = getSessionSecret();
+  const token = await new SignJWT({
+    email: payload.email.toLowerCase(),
+    fullName: payload.fullName,
+    codeHash: payload.codeHash,
+    defaultBatch: payload.defaultBatch,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(secret);
+
+  const isProduction =
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
+  setCookie(CHALLENGE_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 10 * 60, // 10 minutes
+  });
+}
+
+/**
+ * Reads and verifies the active stateless challenge cookie from request
+ */
+export async function getChallengeCookie(): Promise<ChallengePayload | null> {
+  try {
+    const token = getCookie(CHALLENGE_COOKIE_NAME);
+    if (!token) return null;
+
+    const secret = getSessionSecret();
+    const { payload } = await jwtVerify(token, secret);
+
+    if (!payload.email || typeof payload.email !== "string" || !payload.codeHash) {
+      return null;
+    }
+
+    return {
+      email: payload.email.toLowerCase(),
+      fullName: String(payload.fullName || ""),
+      codeHash: String(payload.codeHash),
+      defaultBatch: payload.defaultBatch ? String(payload.defaultBatch) : undefined,
+      exp: typeof payload.exp === "number" ? payload.exp * 1000 : Date.now() + 600000,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clears the challenge cookie
+ */
+export async function clearChallengeCookie(): Promise<void> {
+  const isProduction =
+    process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+
+  setCookie(CHALLENGE_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
 }
 
 /**

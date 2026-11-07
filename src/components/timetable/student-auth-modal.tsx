@@ -301,8 +301,9 @@ export function StudentAuthModal({
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch {
-      setError("Unable to verify account. Please check your network connection.");
+    } catch (err: any) {
+      console.error("[student-auth-modal] Verification error:", err);
+      setError(err?.message || "Unable to verify account. Please check your network connection.");
     } finally {
       setLoading(false);
     }

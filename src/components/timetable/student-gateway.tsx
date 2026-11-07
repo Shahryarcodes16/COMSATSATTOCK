@@ -249,8 +249,9 @@ export function StudentGateway({
         setDevPreviewCode(res.devPreviewCode);
       }
       setSuccessMsg(res.message || `Verification code sent to ${normalizedEmail}!`);
-    } catch {
-      setError("Unable to dispatch verification code. Please check your network connection.");
+    } catch (err: any) {
+      console.error("[student-gateway] Request code error:", err);
+      setError(err?.message || "Unable to dispatch verification code. Please check your network connection.");
     } finally {
       setLoading(false);
     }
@@ -310,8 +311,9 @@ export function StudentGateway({
       setTimeout(() => {
         onAuthenticated(res.session!);
       }, 1000);
-    } catch {
-      setError("Unable to verify code. Please check your connection.");
+    } catch (err: any) {
+      console.error("[student-gateway] Verification error:", err);
+      setError(err?.message || "Unable to verify code. Please check your connection.");
     } finally {
       setLoading(false);
     }

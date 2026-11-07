@@ -83,8 +83,16 @@ export const studentVerifyAndSignUpFn = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<StudentAuthResponse> => {
-      const { serverVerifyCodeAndSignUp } = await import("./student.server.ts");
-      return serverVerifyCodeAndSignUp(data.email, data.code, data.password);
+      try {
+        const { serverVerifyCodeAndSignUp } = await import("./student.server.ts");
+        return await serverVerifyCodeAndSignUp(data.email, data.code, data.password);
+      } catch (err: any) {
+        console.error("[studentVerifyAndSignUpFn] Server Error:", err);
+        return {
+          success: false,
+          error: err?.message || "Failed to verify code. Please check your credentials.",
+        };
+      }
     },
   );
 

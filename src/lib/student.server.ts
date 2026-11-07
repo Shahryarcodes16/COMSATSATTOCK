@@ -8,7 +8,13 @@ import os from "node:os";
 import path from "node:path";
 import { getSql } from "@/lib/db";
 import { sendStudentVerificationEmail } from "./email.server";
-import { createAndSetSessionCookie, clearSessionCookie } from "./session.server";
+import {
+  createAndSetSessionCookie,
+  clearSessionCookie,
+  setChallengeCookie,
+  getChallengeCookie,
+  clearChallengeCookie,
+} from "./session.server";
 import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
 import {
   isValidUniversityEmail,
@@ -125,8 +131,10 @@ async function ensureStudentTableExists(): Promise<void> {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         last_login_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-      CREATE INDEX IF NOT EXISTS idx_cui_students_email ON cui_students (email);
+      )
+    `);
+    await sql.query(`
+      CREATE INDEX IF NOT EXISTS idx_cui_students_email ON cui_students (email)
     `);
   } catch (err) {
     console.warn("[student.server] DB table init notice (using memory fallback if needed):", err);
@@ -595,8 +603,21 @@ export async function serverRequestStudentVerificationCode(
 
   // 4. Generate a cryptographically secure 6-digit numeric verification code
   const code = Math.floor(100000 + crypto.randomInt(900000)).toString();
+  const codeHash = crypto.createHash("sha256").update(code + normalizedEmail).digest("hex");
 
-  // 5. Store challenge with 10 minute expiry
+  // 5. Store challenge in httpOnly signed cookie (stateless & resilient across all serverless containers)
+  try {
+    await setChallengeCookie({
+      email: normalizedEmail,
+      fullName: trimmedName,
+      codeHash,
+      defaultBatch: defaultBatch || undefined,
+    });
+  } catch (err) {
+    console.warn("[student.server] Failed to set challenge cookie:", err);
+  }
+
+  // Also cache in memory & disk for local dev
   const challenge: VerificationChallenge = {
     email: normalizedEmail,
     fullName: trimmedName,
@@ -647,87 +668,106 @@ export async function serverVerifyCodeAndSignUp(
   code: string,
   password: string,
 ): Promise<StudentAuthResponse> {
-  const normalizedEmail = (email || "").trim().toLowerCase();
-  const trimmedCode = (code || "").trim();
+  try {
+    const normalizedEmail = (email || "").trim().toLowerCase();
+    const trimmedCode = (code || "").trim();
 
-  // 1. Validate inputs
-  if (!isValidUniversityEmail(normalizedEmail)) {
-    return {
-      success: false,
-      error: "Invalid official university email address.",
-    };
-  }
-
-  if (!trimmedCode || trimmedCode.length !== 6) {
-    return {
-      success: false,
-      error: "Please enter the complete 6-digit verification code.",
-    };
-  }
-
-  if (!password || password.length < 6) {
-    return {
-      success: false,
-      error: "Password must be at least 6 characters long.",
-    };
-  }
-
-  // 2. Fetch active verification challenge
-  let challenge = verificationChallenges.get(normalizedEmail);
-  if (!challenge) {
-    const disk = readChallengesDisk();
-    if (disk && disk[normalizedEmail]) {
-      challenge = disk[normalizedEmail];
-      verificationChallenges.set(normalizedEmail, challenge);
+    // 1. Validate inputs
+    if (!isValidUniversityEmail(normalizedEmail)) {
+      return {
+        success: false,
+        error: "Invalid official university email address.",
+      };
     }
-  }
 
-  if (!challenge) {
-    return {
-      success: false,
-      error: "No active verification code found for this email. Please request a new code.",
-    };
-  }
+    if (!trimmedCode || trimmedCode.length !== 6) {
+      return {
+        success: false,
+        error: "Please enter the complete 6-digit verification code.",
+      };
+    }
 
-  if (Date.now() > challenge.expiresAt) {
+    if (!password || password.length < 6) {
+      return {
+        success: false,
+        error: "Password must be at least 6 characters long.",
+      };
+    }
+
+    const computedHash = crypto
+      .createHash("sha256")
+      .update(trimmedCode + normalizedEmail)
+      .digest("hex");
+
+    let challengeFullName = "";
+    let challengeDefaultBatch: string | undefined = undefined;
+    let codeMatched = false;
+
+    // 2. First check stateless signed cookie (works across any Vercel serverless container)
+    try {
+      const cookieChallenge = await getChallengeCookie();
+      if (cookieChallenge && cookieChallenge.email === normalizedEmail) {
+        if (Date.now() <= cookieChallenge.exp && cookieChallenge.codeHash === computedHash) {
+          codeMatched = true;
+          challengeFullName = cookieChallenge.fullName;
+          challengeDefaultBatch = cookieChallenge.defaultBatch;
+        }
+      }
+    } catch {
+      // Continue to memory check
+    }
+
+    // 3. Fallback to memory / disk store
+    if (!codeMatched) {
+      let challenge = verificationChallenges.get(normalizedEmail);
+      if (!challenge) {
+        const disk = readChallengesDisk();
+        if (disk && disk[normalizedEmail]) {
+          challenge = disk[normalizedEmail];
+          verificationChallenges.set(normalizedEmail, challenge);
+        }
+      }
+
+      if (challenge && challenge.attempts < 5 && Date.now() <= challenge.expiresAt) {
+        if (challenge.code === trimmedCode) {
+          codeMatched = true;
+          challengeFullName = challenge.fullName;
+          challengeDefaultBatch = challenge.defaultBatch;
+        } else {
+          challenge.attempts += 1;
+          writeChallengeDisk(challenge);
+          return {
+            success: false,
+            error: "Incorrect 6-digit verification code. Please check your Gmail and try again.",
+          };
+        }
+      }
+    }
+
+    if (!codeMatched) {
+      return {
+        success: false,
+        error: "Invalid or expired verification code. Please request a new code.",
+      };
+    }
+
+    // 4. Code verified successfully! Clean up challenge
+    await clearChallengeCookie();
     verificationChallenges.delete(normalizedEmail);
     removeChallengeDisk(normalizedEmail);
+
+    // 5. Register student account
+    return await serverStudentSignUp(
+      normalizedEmail,
+      challengeFullName,
+      password,
+      challengeDefaultBatch,
+    );
+  } catch (err: any) {
+    console.error("[serverVerifyCodeAndSignUp] Critical error:", err);
     return {
       success: false,
-      error: "Verification code has expired. Please request a new code.",
+      error: err?.message || "An unexpected error occurred during account verification.",
     };
   }
-
-  if (challenge.attempts >= 5) {
-    verificationChallenges.delete(normalizedEmail);
-    removeChallengeDisk(normalizedEmail);
-    return {
-      success: false,
-      error: "Too many incorrect verification attempts. Please request a new code.",
-    };
-  }
-
-  // 3. Compare code
-  if (challenge.code !== trimmedCode) {
-    challenge.attempts += 1;
-    writeChallengeDisk(challenge);
-    return {
-      success: false,
-      error: "Incorrect 6-digit verification code. Please check your Gmail and try again.",
-    };
-  }
-
-  // 4. Code verified successfully! Register student account
-  const result = await serverStudentSignUp(
-    normalizedEmail,
-    challenge.fullName,
-    password,
-    challenge.defaultBatch,
-  );
-
-  // Clean up challenge
-  verificationChallenges.delete(normalizedEmail);
-  removeChallengeDisk(normalizedEmail);
-
-  return result;
 }
