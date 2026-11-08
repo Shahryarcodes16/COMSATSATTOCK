@@ -15,20 +15,25 @@ interface MemoryRateRecord {
 
 const memoryRateStore = new Map<string, MemoryRateRecord>();
 
+let rateLimitTablePromise: Promise<void> | null = null;
 async function ensureRateLimitTable() {
-  try {
-    const sql = await getSql();
-    await sql.query(`
-      CREATE TABLE IF NOT EXISTS cui_login_attempts (
-        key TEXT PRIMARY KEY,
-        failed_count INTEGER NOT NULL DEFAULT 0,
-        locked_until TIMESTAMPTZ,
-        last_attempt TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-  } catch (err) {
-    console.warn("[rate-limiter] Table creation notice:", err);
-  }
+  if (rateLimitTablePromise) return rateLimitTablePromise;
+  rateLimitTablePromise = (async () => {
+    try {
+      const sql = await getSql();
+      await sql.query(`
+        CREATE TABLE IF NOT EXISTS cui_login_attempts (
+          key TEXT PRIMARY KEY,
+          failed_count INTEGER NOT NULL DEFAULT 0,
+          locked_until TIMESTAMPTZ,
+          last_attempt TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+      `);
+    } catch (err) {
+      console.warn("[rate-limiter] Table creation notice:", err);
+    }
+  })();
+  return rateLimitTablePromise;
 }
 
 /**

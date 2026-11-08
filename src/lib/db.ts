@@ -117,7 +117,7 @@ function createNeonSql(): Promise<Sql> {
       ssl: isSsl ? { rejectUnauthorized: false } : undefined,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
-      max: 10,
+      max: 5,
     });
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);

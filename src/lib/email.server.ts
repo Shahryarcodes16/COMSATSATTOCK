@@ -18,7 +18,11 @@ const DEFAULT_SMTP_PASS = process.env.SMTP_PASS || "";
  * Creates nodemailer transport based on environment configuration.
  * Defaults to Gmail SMTP (smtp.gmail.com:465) using SSL with the dedicated campus account.
  */
+let cachedTransporter: nodemailer.Transporter | null = null;
+
 function getEmailTransporter() {
+  if (cachedTransporter) return cachedTransporter;
+
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = parseInt(process.env.SMTP_PORT || "465", 10);
   const rawUser = process.env.SMTP_USER || DEFAULT_SMTP_USER;
@@ -31,15 +35,21 @@ function getEmailTransporter() {
     return null;
   }
 
-  return nodemailer.createTransport({
+  cachedTransporter = nodemailer.createTransport({
     host,
     port,
     secure: port === 465,
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
     auth: {
       user,
       pass,
     },
   });
+  return cachedTransporter;
 }
 
 /**
