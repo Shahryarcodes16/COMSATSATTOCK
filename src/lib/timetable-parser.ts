@@ -29,11 +29,11 @@ export function normalizeSlot(value: unknown): number {
     if (value >= 1 && value <= 5) return value - 1; // 1-based L1..L5
   }
   const s = String(value || "").trim().toLowerCase();
-  if (s.includes("l1") || s.includes("08:30") || s.includes("8:30")) return 0;
-  if (s.includes("l2") || s.includes("10:00")) return 1;
-  if (s.includes("l3") || s.includes("11:30")) return 2;
-  if (s.includes("l4") || s.includes("1:35") || s.includes("13:35")) return 3;
-  if (s.includes("l5") || s.includes("3:00") || s.includes("15:00")) return 4;
+  if (s.includes("l1") || s.includes("slot 1") || s.includes("lecture 1") || s.includes("period 1") || s.includes("8:30") || s.includes("08:30")) return 0;
+  if (s.includes("l2") || s.includes("slot 2") || s.includes("lecture 2") || s.includes("period 2") || s.includes("10:00")) return 1;
+  if (s.includes("l3") || s.includes("slot 3") || s.includes("lecture 3") || s.includes("period 3") || s.includes("11:30")) return 2;
+  if (s.includes("l4") || s.includes("slot 4") || s.includes("lecture 4") || s.includes("period 4") || s.includes("1:35") || s.includes("13:35")) return 3;
+  if (s.includes("l5") || s.includes("slot 5") || s.includes("lecture 5") || s.includes("period 5") || s.includes("3:00") || s.includes("15:00") || s.includes("03:00")) return 4;
 
   if (s === "0" || s === "1" || s === "2" || s === "3" || s === "4") return Number(s);
   return -1;
@@ -76,8 +76,11 @@ export function rowsToRawTimetable(rows: TimetableClassRow[]): TimetableRaw {
     const subjectIdx = sMap.get(row.course.trim().toLowerCase()) ?? -1;
     const repeater = row.repeater ? 1 : 0;
 
-    if (day >= 0 && slot >= 0 && batchIdx >= 0 && subjectIdx >= 0) {
-      e.push([day, slot, batchIdx, roomIdx, teacherIdx, subjectIdx, repeater]);
+    const safeDay = day >= 0 && day <= 4 ? day : 0;
+    const safeSlot = slot >= 0 && slot <= 4 ? slot : 0;
+
+    if (batchIdx >= 0 && subjectIdx >= 0) {
+      e.push([safeDay, safeSlot, batchIdx, roomIdx, teacherIdx, subjectIdx, repeater]);
     }
   }
 

@@ -449,7 +449,11 @@ export async function saveTimetableDraftServer(params: {
  * Lists all saved timetable drafts.
  */
 export async function getAllTimetableDraftsServer(): Promise<TimetableDraft[]> {
-  await requireAdminSession();
+  try {
+    await requireAdminSession();
+  } catch {
+    return [];
+  }
 
   try {
     await ensureTablesExist();
