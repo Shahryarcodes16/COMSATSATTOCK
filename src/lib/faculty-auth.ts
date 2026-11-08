@@ -2,8 +2,8 @@
  * Faculty Authentication & Profile Module
  * Handles faculty email verification, timetable teacher linkages, and client-side session management.
  */
-import { facultyList, type FacultyMember } from "./faculty";
-import { UNIVERSITY_EMAIL_REGEX } from "./student";
+import { facultyList, type FacultyMember } from "./faculty.ts";
+import { UNIVERSITY_EMAIL_REGEX } from "./student.ts";
 
 export const FACULTY_SESSION_STORAGE_KEY = "cui_faculty_active_session_v1";
 export const FACULTY_ACCOUNTS_VAULT_KEY = "cui_registered_faculty_vault_v1";

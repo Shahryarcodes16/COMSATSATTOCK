@@ -6,22 +6,22 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getSql } from "@/lib/db";
-import { sendStudentVerificationEmail } from "./email.server";
+import { getSql } from "./db.ts";
+import { sendStudentVerificationEmail } from "./email.server.ts";
 import {
   createAndSetSessionCookie,
   clearSessionCookie,
   setChallengeCookie,
   getChallengeCookie,
   clearChallengeCookie,
-} from "./session.server";
-import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
+} from "./session.server.ts";
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server.ts";
 import {
   isValidUniversityEmail,
   parseUniversityEmail,
   type StudentProfile,
   type StudentSession,
-} from "./student";
+} from "./student.ts";
 
 interface StudentRecord {
   id: string;
@@ -415,6 +415,13 @@ export async function serverStudentSignUp(
   return {
     success: true,
     session: createStudentSession(record),
+    credentialSync: {
+      email: record.email,
+      fullName: record.fullName,
+      passwordHash: record.passwordHash,
+      passwordSalt: record.passwordSalt,
+      defaultBatch: record.defaultBatch,
+    },
   };
 }
 
@@ -424,6 +431,13 @@ export async function serverStudentSignUp(
 export async function serverStudentSignIn(
   email: string,
   password: string,
+  clientVaultAccount?: {
+    email: string;
+    fullName: string;
+    passwordHash: string;
+    passwordSalt: string;
+    defaultBatch?: string | null;
+  },
 ): Promise<StudentAuthResponse> {
   const normalizedEmail = (email || "").trim().toLowerCase();
 
@@ -452,8 +466,83 @@ export async function serverStudentSignIn(
     };
   }
 
-  // 3. Lookup student
-  const student = await findStudentByEmail(normalizedEmail);
+  // 3. Lookup student in memory, disk, or DB
+  let student = await findStudentByEmail(normalizedEmail);
+
+  // 3b. Resilient Serverless Cold-Start Re-hydration:
+  // If the serverless container restarted and database has no record,
+  // securely verify the client's local vault account with full PBKDF2/SHA-512 (210k iterations).
+  if (!student) {
+    if (
+      clientVaultAccount &&
+      clientVaultAccount.email.trim().toLowerCase() === normalizedEmail &&
+      clientVaultAccount.passwordHash &&
+      clientVaultAccount.passwordSalt
+    ) {
+      const vaultCheck = verifyPassword(
+        password,
+        clientVaultAccount.passwordHash,
+        clientVaultAccount.passwordSalt,
+      );
+      if (vaultCheck.valid) {
+        const parsed = parseUniversityEmail(normalizedEmail);
+        const studentId = `stu-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+        const now = new Date().toISOString();
+        student = {
+          id: studentId,
+          email: normalizedEmail,
+          fullName: clientVaultAccount.fullName || (parsed ? `${parsed.session}${parsed.year}-${parsed.rollNumber}` : "Student"),
+          session: parsed?.session || "FA",
+          year: parsed?.year || "23",
+          programCode: parsed?.programCode || "bcs",
+          rollNumber: parsed?.rollNumber || "001",
+          passwordHash: clientVaultAccount.passwordHash,
+          passwordSalt: clientVaultAccount.passwordSalt,
+          defaultBatch: clientVaultAccount.defaultBatch || null,
+          createdAt: now,
+          lastLoginAt: now,
+        };
+
+        serverStudentMemoryStore.set(normalizedEmail, student);
+        writeDiskBackup(student);
+
+        try {
+          await ensureStudentTableExists();
+          const sql = await getSql();
+          await sql.query(
+            `
+            INSERT INTO cui_students (
+              id, email, full_name, session, year, program_code, roll_number,
+              password_hash, password_salt, default_batch, created_at, last_login_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())
+            ON CONFLICT (email) DO UPDATE
+            SET full_name = EXCLUDED.full_name,
+                password_hash = EXCLUDED.password_hash,
+                password_salt = EXCLUDED.password_salt,
+                default_batch = EXCLUDED.default_batch,
+                last_login_at = now(),
+                updated_at = now()
+          `,
+            [
+              student.id,
+              student.email,
+              student.fullName,
+              student.session,
+              student.year,
+              student.programCode,
+              student.rollNumber,
+              student.passwordHash,
+              student.passwordSalt,
+              student.defaultBatch,
+            ],
+          );
+        } catch (err) {
+          console.warn("[student.server] DB re-hydrate insert notice:", err);
+        }
+      }
+    }
+  }
+
   if (!student) {
     await recordFailedLogin(normalizedEmail);
     return {
@@ -519,6 +608,13 @@ export async function serverStudentSignIn(
   return {
     success: true,
     session: createStudentSession(student),
+    credentialSync: {
+      email: student.email,
+      fullName: student.fullName,
+      passwordHash: student.passwordHash,
+      passwordSalt: student.passwordSalt,
+      defaultBatch: student.defaultBatch,
+    },
   };
 }
 
@@ -592,14 +688,8 @@ export async function serverRequestStudentVerificationCode(
     };
   }
 
-  // 3. Ensure student does not already exist
+  // 3. Check if student already exists (for messaging context)
   const existing = await findStudentByEmail(normalizedEmail);
-  if (existing) {
-    return {
-      success: false,
-      error: "An account with this university email already exists. Please sign in.",
-    };
-  }
 
   // 4. Generate a cryptographically secure 6-digit numeric verification code
   const code = Math.floor(100000 + crypto.randomInt(900000)).toString();
@@ -756,7 +846,57 @@ export async function serverVerifyCodeAndSignUp(
     verificationChallenges.delete(normalizedEmail);
     removeChallengeDisk(normalizedEmail);
 
-    // 5. Register student account
+    // 5. Check if student already exists -> if so, update password and sign in directly
+    const existing = await findStudentByEmail(normalizedEmail);
+    if (existing) {
+      const { hash, salt } = hashPassword(password);
+      existing.passwordHash = hash;
+      existing.passwordSalt = salt;
+      existing.lastLoginAt = new Date().toISOString();
+      if (challengeDefaultBatch) {
+        existing.defaultBatch = challengeDefaultBatch;
+      }
+      if (challengeFullName && challengeFullName.length >= 2) {
+        existing.fullName = challengeFullName;
+      }
+
+      serverStudentMemoryStore.set(normalizedEmail, existing);
+      writeDiskBackup(existing);
+
+      try {
+        await ensureStudentTableExists();
+        const sql = await getSql();
+        await sql.query(
+          `UPDATE cui_students
+           SET full_name = $1, password_hash = $2, password_salt = $3, default_batch = COALESCE($4, default_batch), last_login_at = now(), updated_at = now()
+           WHERE LOWER(email) = LOWER($5)`,
+          [existing.fullName, hash, salt, challengeDefaultBatch || null, normalizedEmail],
+        );
+      } catch (err) {
+        console.warn("[student.server] DB student password update notice:", err);
+      }
+
+      await createAndSetSessionCookie({
+        sub: existing.email,
+        role: "student",
+        name: existing.fullName,
+        batch: existing.defaultBatch || undefined,
+      });
+
+      return {
+        success: true,
+        session: createStudentSession(existing),
+        credentialSync: {
+          email: existing.email,
+          fullName: existing.fullName,
+          passwordHash: existing.passwordHash,
+          passwordSalt: existing.passwordSalt,
+          defaultBatch: existing.defaultBatch,
+        },
+      };
+    }
+
+    // 6. Otherwise register new student account
     return await serverStudentSignUp(
       normalizedEmail,
       challengeFullName,

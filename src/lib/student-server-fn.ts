@@ -14,6 +14,15 @@ import type { StudentAuthResponse } from "./student.server";
 const StudentSignInSchema = z.object({
   email: z.string().email().min(5).max(120),
   password: z.string().min(1).max(128),
+  clientVaultAccount: z
+    .object({
+      email: z.string(),
+      fullName: z.string(),
+      passwordHash: z.string(),
+      passwordSalt: z.string(),
+      defaultBatch: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
 const StudentRequestCodeSchema = z.object({
@@ -44,7 +53,7 @@ export const studentSignInFn = createServerFn({ method: "POST" })
       data,
     }): Promise<StudentAuthResponse> => {
       const { serverStudentSignIn } = await import("./student.server.ts");
-      return serverStudentSignIn(data.email, data.password);
+      return serverStudentSignIn(data.email, data.password, data.clientVaultAccount);
     },
   );
 

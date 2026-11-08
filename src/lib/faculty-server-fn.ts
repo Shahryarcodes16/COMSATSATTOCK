@@ -25,6 +25,18 @@ const FacultyVerifySchema = z.object({
 const FacultySignInSchema = z.object({
   email: z.string().email().min(5).max(120),
   password: z.string().min(1).max(128),
+  clientVaultAccount: z
+    .object({
+      email: z.string(),
+      fullName: z.string(),
+      teacherId: z.number().nullable().optional(),
+      timetableName: z.string().nullable().optional(),
+      department: z.string().optional(),
+      passwordHash: z.string(),
+      passwordSalt: z.string(),
+      notificationLeadMins: z.number().optional(),
+    })
+    .optional(),
 });
 
 const FacultyUpdateLeadTimeSchema = z.object({
@@ -85,7 +97,7 @@ export const facultySignInFn = createServerFn({ method: "POST" })
       data,
     }): Promise<FacultyAuthResponse> => {
       const { serverFacultySignIn } = await import("./faculty.server.ts");
-      return serverFacultySignIn(data.email, data.password);
+      return serverFacultySignIn(data.email, data.password, data.clientVaultAccount);
     },
   );
 

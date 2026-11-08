@@ -176,15 +176,20 @@ export function StudentGateway({
 
     setLoading(true);
     try {
+      const localVault = getLocalRegisteredAccount(normalizedEmail);
       const res = await studentSignInFn({
         data: {
           email: normalizedEmail,
           password,
+          clientVaultAccount: localVault || undefined,
         },
       });
 
       if (res.success && res.session) {
         setStudentSession(res.session, rememberMe);
+        if (res.credentialSync) {
+          saveLocalRegisteredAccount(res.credentialSync);
+        }
         if (res.session.profile.defaultBatch) {
           const batchIdx = batches.indexOf(res.session.profile.defaultBatch);
           if (batchIdx !== -1) {
@@ -439,10 +444,12 @@ export function StudentGateway({
 
     setLoading(true);
     try {
+      const localVault = getLocalFacultyAccount(cleanEmail);
       const res = await facultySignInFn({
         data: {
           email: cleanEmail,
           password: facultyPassword,
+          clientVaultAccount: localVault || undefined,
         },
       });
 
@@ -913,6 +920,22 @@ export function StudentGateway({
                 <span>{loading ? "Authenticating..." : "Sign In & Open Workspace"}</span>
               </button>
 
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", fontSize: "0.82rem", marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signup");
+                    setSignupStage("details");
+                    setError("");
+                    setSuccessMsg(email ? "Enter your name to receive a 6-digit verification code on your university Gmail." : "");
+                  }}
+                  className="link-btn"
+                  style={{ color: "var(--c-accent)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Forgot password or restoring account? Reset via Gmail
+                </button>
+              </div>
+
               <p className="fine quiet" style={{ textAlign: "center", marginTop: 8 }}>
                 New student?{" "}
                 <button
@@ -1350,6 +1373,22 @@ export function StudentGateway({
                 {loading ? <RefreshCw size={18} className="spin" /> : <GraduationCap size={18} />}
                 <span>{loading ? "Authenticating..." : "Sign In & Open Teaching Desk"}</span>
               </button>
+
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", fontSize: "0.82rem", marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFacultyMode("signup");
+                    setFacultyStage("details");
+                    setError("");
+                    setSuccessMsg(facultyEmail ? "Confirm your name to receive a 6-digit verification code on your faculty Gmail." : "");
+                  }}
+                  className="link-btn"
+                  style={{ color: "#087f79", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Forgot password or restoring account? Reset via Faculty Gmail
+                </button>
+              </div>
 
               <p className="fine quiet" style={{ textAlign: "center", marginTop: 8 }}>
                 New faculty member?{" "}

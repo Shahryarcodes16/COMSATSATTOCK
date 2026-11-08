@@ -2,7 +2,7 @@
  * Server-only Rate Limiting & Brute-Force Protection
  * Tracks failed login attempts per email/identifier and locks out after 5 consecutive failures for 15 minutes.
  */
-import { getSql } from "@/lib/db";
+import { getSql } from "./db.ts";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes

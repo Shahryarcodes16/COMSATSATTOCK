@@ -143,13 +143,17 @@ export async function createAndSetSessionCookie(
   const isProduction =
     process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
 
-  setCookie(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
-  });
+  try {
+    setCookie(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+    });
+  } catch {
+    // Graceful fallback for non-HTTP test / background contexts
+  }
 
   return token;
 }
@@ -161,13 +165,17 @@ export async function clearSessionCookie(): Promise<void> {
   const isProduction =
     process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
 
-  setCookie(SESSION_COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  try {
+    setCookie(SESSION_COOKIE_NAME, "", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+  } catch {
+    // Graceful fallback for non-HTTP contexts
+  }
 }
 
 /**

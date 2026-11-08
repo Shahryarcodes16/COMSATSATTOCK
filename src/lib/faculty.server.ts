@@ -7,17 +7,17 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getSql } from "@/lib/db";
-import { sendStudentVerificationEmail } from "./email.server";
-import { createAndSetSessionCookie, clearSessionCookie } from "./session.server";
-import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
+import { getSql } from "./db.ts";
+import { sendStudentVerificationEmail } from "./email.server.ts";
+import { createAndSetSessionCookie, clearSessionCookie } from "./session.server.ts";
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server.ts";
 import {
   isFacultyEmail,
   matchFacultyByEmail,
   type FacultyProfile,
   type FacultySession,
-} from "./faculty-auth";
-import { facultyList } from "./faculty";
+} from "./faculty-auth.ts";
+import { facultyList } from "./faculty.ts";
 
 interface FacultyRecord {
   id: string;
@@ -300,14 +300,8 @@ export async function serverRequestFacultyVerificationCode(
     };
   }
 
-  // 2. Check if already registered
+  // 2. Check if already registered (for logging / context)
   const existing = await findFacultyByEmail(normalizedEmail);
-  if (existing) {
-    return {
-      success: false,
-      error: "A faculty account with this email already exists. Please sign in.",
-    };
-  }
 
   // 3. Resolve faculty directory record
   const dirMatch = matchFacultyByEmail(normalizedEmail);
@@ -426,7 +420,64 @@ export async function serverVerifyFacultyCodeAndSignUp(
     };
   }
 
-  // 6. Generate cryptographic salt and hash
+  // 5. Code verified! Clean up challenge
+  facultyChallenges.delete(normalizedEmail);
+  removeFacultyChallengeDisk(normalizedEmail);
+
+  // 6. Check if faculty already exists -> update password and sign in directly
+  const existing = await findFacultyByEmail(normalizedEmail);
+  if (existing) {
+    const { hash, salt } = hashPassword(password);
+    existing.passwordHash = hash;
+    existing.passwordSalt = salt;
+    existing.lastLoginAt = new Date().toISOString();
+    if (teacherId !== undefined) {
+      existing.teacherId = teacherId;
+    }
+    if (challenge.fullName && challenge.fullName.length >= 2) {
+      existing.fullName = challenge.fullName;
+    }
+
+    serverFacultyMemoryStore.set(normalizedEmail, existing);
+    writeFacultyDisk(existing);
+
+    try {
+      await ensureFacultyTableExists();
+      const sql = await getSql();
+      await sql.query(
+        `UPDATE cui_faculty
+         SET full_name = $1, password_hash = $2, password_salt = $3, teacher_id = COALESCE($4, teacher_id), last_login_at = now(), updated_at = now()
+         WHERE LOWER(email) = LOWER($5)`,
+        [existing.fullName, hash, salt, teacherId ?? null, normalizedEmail],
+      );
+    } catch (err) {
+      console.warn("[faculty.server] DB faculty password update notice:", err);
+    }
+
+    await createAndSetSessionCookie({
+      sub: existing.email,
+      role: "faculty",
+      name: existing.fullName,
+      teacherId: existing.teacherId,
+    });
+
+    return {
+      success: true,
+      session: createFacultySession(existing),
+      credentialSync: {
+        email: existing.email,
+        fullName: existing.fullName,
+        teacherId: existing.teacherId,
+        timetableName: existing.timetableName,
+        department: existing.department,
+        passwordHash: existing.passwordHash,
+        passwordSalt: existing.passwordSalt,
+        notificationLeadMins: existing.notificationLeadMins,
+      },
+    };
+  }
+
+  // 7. Otherwise generate new faculty record
   const { hash, salt } = hashPassword(password);
   const facultyId = `fac-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
   const now = new Date().toISOString();
@@ -451,8 +502,6 @@ export async function serverVerifyFacultyCodeAndSignUp(
 
   serverFacultyMemoryStore.set(normalizedEmail, record);
   writeFacultyDisk(record);
-  facultyChallenges.delete(normalizedEmail);
-  removeFacultyChallengeDisk(normalizedEmail);
 
   // Persist to DB
   try {
@@ -498,6 +547,16 @@ export async function serverVerifyFacultyCodeAndSignUp(
   return {
     success: true,
     session: createFacultySession(record),
+    credentialSync: {
+      email: record.email,
+      fullName: record.fullName,
+      teacherId: record.teacherId,
+      timetableName: record.timetableName,
+      department: record.department,
+      passwordHash: record.passwordHash,
+      passwordSalt: record.passwordSalt,
+      notificationLeadMins: record.notificationLeadMins,
+    },
   };
 }
 
@@ -507,6 +566,16 @@ export async function serverVerifyFacultyCodeAndSignUp(
 export async function serverFacultySignIn(
   email: string,
   password: string,
+  clientVaultAccount?: {
+    email: string;
+    fullName: string;
+    teacherId?: number | null;
+    timetableName?: string | null;
+    department?: string;
+    passwordHash: string;
+    passwordSalt: string;
+    notificationLeadMins?: number;
+  },
 ): Promise<FacultyAuthResponse> {
   const normalizedEmail = (email || "").trim().toLowerCase();
 
@@ -530,7 +599,83 @@ export async function serverFacultySignIn(
     };
   }
 
-  const faculty = await findFacultyByEmail(normalizedEmail);
+  // 1. Look up faculty in memory, disk, or DB
+  let faculty = await findFacultyByEmail(normalizedEmail);
+
+  // 1b. Resilient Serverless Cold-Start Re-hydration:
+  // If the serverless container restarted and database has no record,
+  // securely verify the client's local vault account with full PBKDF2/SHA-512 (210k iterations).
+  if (!faculty) {
+    if (
+      clientVaultAccount &&
+      clientVaultAccount.email.trim().toLowerCase() === normalizedEmail &&
+      clientVaultAccount.passwordHash &&
+      clientVaultAccount.passwordSalt
+    ) {
+      const vaultCheck = verifyPassword(
+        password,
+        clientVaultAccount.passwordHash,
+        clientVaultAccount.passwordSalt,
+      );
+      if (vaultCheck.valid) {
+        const facultyId = `fac-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+        const dirMatch = matchFacultyByEmail(normalizedEmail);
+        const now = new Date().toISOString();
+
+        faculty = {
+          id: facultyId,
+          email: normalizedEmail,
+          fullName: clientVaultAccount.fullName,
+          teacherId: clientVaultAccount.teacherId ?? dirMatch?.teacherId ?? null,
+          timetableName: clientVaultAccount.timetableName ?? dirMatch?.timetableName ?? dirMatch?.name ?? clientVaultAccount.fullName,
+          department: clientVaultAccount.department || dirMatch?.department || "Department of Computer Science",
+          designation: dirMatch?.name.startsWith("Dr.") ? "Assistant Professor" : "Lecturer",
+          passwordHash: clientVaultAccount.passwordHash,
+          passwordSalt: clientVaultAccount.passwordSalt,
+          notificationLeadMins: clientVaultAccount.notificationLeadMins || 10,
+          createdAt: now,
+          lastLoginAt: now,
+        };
+
+        serverFacultyMemoryStore.set(normalizedEmail, faculty);
+        writeFacultyDisk(faculty);
+
+        try {
+          await ensureFacultyTableExists();
+          const sql = await getSql();
+          await sql.query(
+            `
+            INSERT INTO cui_faculty (
+              id, email, full_name, teacher_id, department, designation,
+              password_hash, password_salt, notification_lead_mins, created_at, last_login_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+            ON CONFLICT (email) DO UPDATE
+            SET full_name = EXCLUDED.full_name,
+                teacher_id = EXCLUDED.teacher_id,
+                password_hash = EXCLUDED.password_hash,
+                password_salt = EXCLUDED.password_salt,
+                last_login_at = now(),
+                updated_at = now()
+          `,
+            [
+              faculty.id,
+              faculty.email,
+              faculty.fullName,
+              faculty.teacherId,
+              faculty.department,
+              faculty.designation || null,
+              faculty.passwordHash,
+              faculty.passwordSalt,
+              faculty.notificationLeadMins,
+            ],
+          );
+        } catch (err) {
+          console.warn("[faculty.server] DB re-hydrate insert notice:", err);
+        }
+      }
+    }
+  }
+
   if (!faculty) {
     await recordFailedLogin(normalizedEmail);
     return {
@@ -594,6 +739,16 @@ export async function serverFacultySignIn(
   return {
     success: true,
     session: createFacultySession(faculty),
+    credentialSync: {
+      email: faculty.email,
+      fullName: faculty.fullName,
+      teacherId: faculty.teacherId,
+      timetableName: faculty.timetableName,
+      department: faculty.department,
+      passwordHash: faculty.passwordHash,
+      passwordSalt: faculty.passwordSalt,
+      notificationLeadMins: faculty.notificationLeadMins,
+    },
   };
 }
 

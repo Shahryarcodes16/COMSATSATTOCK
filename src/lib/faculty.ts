@@ -1,4 +1,4 @@
-import facultyData from "@/data/faculty.json";
+import facultyData from "../data/faculty.json" with { type: "json" };
 
 export interface FacultyMember {
   id: number;
