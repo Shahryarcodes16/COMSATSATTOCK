@@ -374,6 +374,33 @@ export function TimetableManagement() {
     });
   }, [parsedRows, previewDayFilter, previewSlotFilter, previewSearch]);
 
+  // Active timetable rows and filters
+  const [activeSearch, setActiveSearch] = useState("");
+  const [activeDayFilter, setActiveDayFilter] = useState<number>(-1);
+  const [activeSlotFilter, setActiveSlotFilter] = useState<number>(-1);
+
+  const activeRows = useMemo(() => {
+    if (!activeVersion?.timetableData) return [];
+    return rawToTimetableRows(activeVersion.timetableData);
+  }, [activeVersion]);
+
+  const displayedActiveRows = useMemo(() => {
+    return activeRows.filter((row) => {
+      if (activeDayFilter >= 0 && row.day !== activeDayFilter) return false;
+      if (activeSlotFilter >= 0 && row.slot !== activeSlotFilter) return false;
+      if (activeSearch.trim()) {
+        const q = activeSearch.toLowerCase();
+        const matches =
+          row.batch.toLowerCase().includes(q) ||
+          row.course.toLowerCase().includes(q) ||
+          row.teacher.toLowerCase().includes(q) ||
+          row.room.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [activeRows, activeDayFilter, activeSlotFilter, activeSearch]);
+
   return (
     <div className="timetable-mgmt-container stack">
       {/* Sub-Navigation Header */}
@@ -415,7 +442,7 @@ export function TimetableManagement() {
           onClick={() => setSubTab("active")}
         >
           <Layers size={15} aria-hidden />
-          <span>Current Active</span>
+          <span>Current Timetable</span>
           {activeVersion && <span className="admin-tab-pill">{activeVersion.versionName}</span>}
         </button>
 
@@ -425,7 +452,7 @@ export function TimetableManagement() {
           onClick={() => setSubTab("upload")}
         >
           <Upload size={15} aria-hidden />
-          <span>Upload & Preview</span>
+          <span>Upload New</span>
           {parsedRaw && <span className="admin-tab-pill ready">Ready</span>}
         </button>
 
@@ -445,7 +472,7 @@ export function TimetableManagement() {
           onClick={() => setSubTab("history")}
         >
           <History size={15} aria-hidden />
-          <span>Version History & Rollback</span>
+          <span>Version History</span>
           {versions.length > 0 && <span className="admin-tab-pill">{versions.length}</span>}
         </button>
       </div>
@@ -456,65 +483,159 @@ export function TimetableManagement() {
       {subTab === "active" && (
         <div className="timetable-tab-pane stack">
           {activeVersion ? (
-            <div className="active-timetable-card">
-              <div className="active-card-top">
-                <div className="active-card-meta">
-                  <span className="live-pill">
-                    <span className="live-dot" /> Live In Production
-                  </span>
-                  <h3>{activeVersion.versionName}</h3>
-                  <p className="quiet fine">
-                    Published on {new Date(activeVersion.publishedAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="active-card-quick-actions">
-                  <button
-                    type="button"
-                    className="btn solid tap"
-                    onClick={() => setSubTab("upload")}
-                  >
-                    <Upload size={15} aria-hidden />
-                    <span>Upload New Version</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="timetable-stats-grid">
-                <div className="stat-box">
-                  <BookOpen size={18} className="stat-icon" aria-hidden />
-                  <div className="stat-val">{activeVersion.timetableData.e.length}</div>
-                  <div className="stat-lbl">Scheduled Lectures</div>
-                </div>
-                <div className="stat-box">
-                  <Users size={18} className="stat-icon" aria-hidden />
-                  <div className="stat-val">{activeVersion.timetableData.b.length}</div>
-                  <div className="stat-lbl">Academic Batches</div>
-                </div>
-                <div className="stat-box">
-                  <DoorOpen size={18} className="stat-icon" aria-hidden />
-                  <div className="stat-val">{activeVersion.timetableData.r.length}</div>
-                  <div className="stat-lbl">Rooms & Labs</div>
-                </div>
-                <div className="stat-box">
-                  <CheckCircle2 size={18} className="stat-icon" aria-hidden />
-                  <div className="stat-val">{activeVersion.timetableData.t.length}</div>
-                  <div className="stat-lbl">Active Faculty</div>
-                </div>
-              </div>
-
-              {/* Batches Preview Tags */}
-              <div className="active-batches-section">
-                <span className="fine quiet">Covered Programs & Batches:</span>
-                <div className="active-batch-tags">
-                  {activeVersion.timetableData.b.map((batch) => (
-                    <span key={batch} className="batch-tag">
-                      {batch}
+            <>
+              <div className="active-timetable-card">
+                <div className="active-card-top">
+                  <div className="active-card-meta">
+                    <span className="live-pill">
+                      <span className="live-dot" /> Live In Production
                     </span>
-                  ))}
+                    <h3>{activeVersion.versionName}</h3>
+                    <p className="quiet fine">
+                      Published on {new Date(activeVersion.publishedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="active-card-quick-actions">
+                    <button
+                      type="button"
+                      className="btn solid tap"
+                      onClick={() => setSubTab("upload")}
+                    >
+                      <Upload size={15} aria-hidden />
+                      <span>Upload New Timetable</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="timetable-stats-grid">
+                  <div className="stat-box">
+                    <BookOpen size={18} className="stat-icon" aria-hidden />
+                    <div className="stat-val">{activeVersion.timetableData.e.length}</div>
+                    <div className="stat-lbl">Scheduled Lectures</div>
+                  </div>
+                  <div className="stat-box">
+                    <Users size={18} className="stat-icon" aria-hidden />
+                    <div className="stat-val">{activeVersion.timetableData.b.length}</div>
+                    <div className="stat-lbl">Academic Batches</div>
+                  </div>
+                  <div className="stat-box">
+                    <DoorOpen size={18} className="stat-icon" aria-hidden />
+                    <div className="stat-val">{activeVersion.timetableData.r.length}</div>
+                    <div className="stat-lbl">Rooms & Labs</div>
+                  </div>
+                  <div className="stat-box">
+                    <CheckCircle2 size={18} className="stat-icon" aria-hidden />
+                    <div className="stat-val">{activeVersion.timetableData.t.length}</div>
+                    <div className="stat-lbl">Active Faculty</div>
+                  </div>
+                </div>
+
+                {/* Batches Preview Tags */}
+                <div className="active-batches-section">
+                  <span className="fine quiet">Covered Programs & Batches ({activeVersion.timetableData.b.length}):</span>
+                  <div className="active-batch-tags">
+                    {activeVersion.timetableData.b.map((batch) => (
+                      <span key={batch} className="batch-tag">
+                        {batch}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {/* Full Interactive Timetable View for Current Schedule */}
+              <div className="timetable-preview-card stack">
+                <div className="preview-card-head">
+                  <div>
+                    <h3>Current Active Timetable ({activeRows.length} Classes)</h3>
+                    <p className="quiet fine">
+                      All lectures currently running on campus. Use search and filters to inspect schedules.
+                    </p>
+                  </div>
+
+                  {/* Filter Controls */}
+                  <div className="preview-filter-row">
+                    <div className="search-box">
+                      <Search size={14} aria-hidden />
+                      <input
+                        type="text"
+                        placeholder="Search course, teacher, room, batch..."
+                        value={activeSearch}
+                        onChange={(e) => setActiveSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      value={activeDayFilter}
+                      onChange={(e) => setActiveDayFilter(Number(e.target.value))}
+                      className="select-filter"
+                    >
+                      <option value={-1}>All Days</option>
+                      {DAYS.map((d, idx) => (
+                        <option key={d} value={idx}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={activeSlotFilter}
+                      onChange={(e) => setActiveSlotFilter(Number(e.target.value))}
+                      className="select-filter"
+                    >
+                      <option value={-1}>All Slots</option>
+                      {SLOTS.map((s, idx) => (
+                        <option key={s.label} value={idx}>
+                          {s.label} ({s.start})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Scrollable Table */}
+                <div className="preview-table-wrapper">
+                  <table className="preview-table">
+                    <thead>
+                      <tr>
+                        <th>Day</th>
+                        <th>Slot</th>
+                        <th>Batch</th>
+                        <th>Course / Subject</th>
+                        <th>Teacher / Instructor</th>
+                        <th>Room</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedActiveRows.slice(0, 100).map((row, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <b>{DAYS[row.day] || `Day ${row.day}`}</b>
+                          </td>
+                          <td>
+                            <span className="slot-pill">
+                              {SLOTS[row.slot]?.label || `L${row.slot + 1}`}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="batch-pill">{row.batch}</span>
+                          </td>
+                          <td>{row.course}</td>
+                          <td>{row.teacher}</td>
+                          <td>
+                            <span className="room-pill">{row.room}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {displayedActiveRows.length > 100 && (
+                    <div className="table-more-hint">
+                      Showing first 100 of {displayedActiveRows.length} classes matching filter.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           ) : (
             <div className="admin-loading-state">
               <RefreshCw className="spin" size={20} aria-hidden />
