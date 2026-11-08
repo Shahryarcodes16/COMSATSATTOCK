@@ -58,40 +58,39 @@ export function CampusNoticeBanner() {
     };
   }, []);
 
-  // Filter cancellations relevant to current student or currently viewed batch
+  // Filter cancellations strictly relevant to this student's course and batch under that teacher
   const relevantCancellations = useMemo(() => {
     const studentSession = getActiveStudentSession();
-    const studentBatchName = (
-      studentSession?.profile?.defaultBatch ||
-      studentSession?.profile?.regNo ||
-      ""
-    )
-      .toLowerCase()
-      .trim();
-    const activeBatchName = batches[batchId]?.toLowerCase().trim();
-    const pinnedBatchName = pinnedBatch !== null ? batches[pinnedBatch]?.toLowerCase().trim() : "";
+    const studentBatch = (studentSession?.profile?.defaultBatch || "").toLowerCase().trim();
+    const pinnedBatchName = pinnedBatch !== null ? (batches[pinnedBatch] || "").toLowerCase().trim() : "";
+    const activeBatchName = (batches[batchId] || "").toLowerCase().trim();
 
     return cancellations.filter((c) => {
       if (dismissedCancellationIds.has(c.id)) return false;
 
-      // If logged in as student, match student's enrolled batch
-      if (studentBatchName) {
-        const cBatch = c.batchName.toLowerCase().trim();
-        if (cBatch.includes(studentBatchName) || studentBatchName.includes(cBatch)) {
+      const cBatch = c.batchName.toLowerCase().trim();
+
+      // 1. If student is logged in, show only notices for their enrolled batch
+      if (studentBatch) {
+        if (cBatch === studentBatch || cBatch.includes(studentBatch) || studentBatch.includes(cBatch)) {
           return true;
         }
       }
 
-      // If viewing or pinned to this batch
-      if (activeBatchName && c.batchName.toLowerCase().trim() === activeBatchName) {
-        return true;
+      // 2. If student saved/pinned their batch, show only notices for that pinned batch
+      if (pinnedBatchName) {
+        if (cBatch === pinnedBatchName || cBatch.includes(pinnedBatchName) || pinnedBatchName.includes(cBatch)) {
+          return true;
+        }
       }
-      if (pinnedBatchName && c.batchName.toLowerCase().trim() === pinnedBatchName) {
+
+      // 3. If student is actively inspecting a specific batch schedule in the timetable
+      if (activeBatchName && (cBatch === activeBatchName || cBatch.includes(activeBatchName))) {
         return true;
       }
 
-      // If student is not enrolled or batch not selected, show all active cancellations
-      return !studentBatchName;
+      // Do not display cancellations to students from unrelated batches or courses
+      return false;
     });
   }, [cancellations, batchId, pinnedBatch, dismissedCancellationIds]);
 
