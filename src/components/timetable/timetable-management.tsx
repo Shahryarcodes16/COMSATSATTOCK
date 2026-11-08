@@ -29,7 +29,6 @@ import {
   CalendarClock,
   Share2,
   GitCompare,
-  Flame,
 } from "lucide-react";
 import {
   getActiveTimetableServerFn,
@@ -49,7 +48,6 @@ import {
 import { validateTimetable } from "@/lib/timetable-validator";
 import { TimetableDiffViewer } from "@/components/timetable/timetable-diff-viewer";
 import { ConflictResolverModal } from "@/components/timetable/conflict-resolver-modal";
-import { RoomUtilizationHeatmap } from "@/components/timetable/room-heatmap";
 import {
   batches,
   rooms,
@@ -70,7 +68,7 @@ import type {
   TimetableClassRow,
 } from "@/lib/timetable-types";
 
-type SubTab = "active" | "upload" | "drafts" | "history" | "heatmap";
+type SubTab = "active" | "upload" | "drafts" | "history";
 
 export function TimetableManagement() {
   const [subTab, setSubTab] = useState<SubTab>("active");
@@ -484,15 +482,6 @@ export function TimetableManagement() {
           <History size={15} aria-hidden />
           <span>Version History</span>
           {versions.length > 0 && <span className="admin-tab-pill">{versions.length}</span>}
-        </button>
-
-        <button
-          type="button"
-          className={`timetable-subtab-btn ${subTab === "heatmap" ? "active" : ""}`}
-          onClick={() => setSubTab("heatmap")}
-        >
-          <Flame size={15} aria-hidden />
-          <span>Venue Heatmap</span>
         </button>
       </div>
 
@@ -1216,21 +1205,6 @@ export function TimetableManagement() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* 5. ROOM, LAB & LT UTILIZATION HEATMAP SUBTAB              */}
-      {/* ========================================================= */}
-      {subTab === "heatmap" && (
-        <div className="timetable-tab-pane stack">
-          <div className="history-header">
-            <h3>Venue Utilization Heatmap & Spatial Matrix</h3>
-            <p className="quiet fine">
-              Live spatial & temporal occupancy map showing which rooms, computer labs, and lecture theatres are most or least utilized.
-            </p>
-          </div>
-          <RoomUtilizationHeatmap rawTimetable={parsedRaw || activeVersion.timetableData} />
         </div>
       )}
 

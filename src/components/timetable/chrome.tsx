@@ -33,6 +33,7 @@ import { NotificationBellButton } from "@/components/timetable/notification-moda
 import { StudentAuthButton } from "@/components/timetable/student-auth-modal";
 import { FacultyAuthButton } from "@/components/timetable/faculty-auth-modal";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
+import { getActiveStudentSession } from "@/lib/student";
 
 // Desktop sidebar navigates all sections
 const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
@@ -168,6 +169,16 @@ export function Topbar() {
   const { now, theme, toggleTheme, setView, view } = useDesk();
   const isSearchActive = view === "find";
   const datesheetActive = isDatesheetActive(now);
+  const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
+
+  useEffect(() => {
+    const handleFacultyUpdate = () => setFacultyActive(!!getActiveFacultySession());
+    window.addEventListener("cui:faculty-session-update", handleFacultyUpdate);
+    window.addEventListener("storage", () => setFacultyActive(!!getActiveFacultySession()));
+    return () => {
+      window.removeEventListener("cui:faculty-session-update", handleFacultyUpdate);
+    };
+  }, []);
 
   return (
     <header className="topbar">
@@ -215,11 +226,12 @@ export function Topbar() {
           <Search size={18} strokeWidth={1.8} aria-hidden />
         </button>
 
-        {/* Student Account / Sign In */}
-        <StudentAuthButton />
-
-        {/* Faculty Account / Teaching Desk */}
-        <FacultyAuthButton />
+        {/* If faculty is logged in, show their official teaching desk pill */}
+        {facultyActive ? (
+          <FacultyAuthButton />
+        ) : (
+          <StudentAuthButton />
+        )}
 
         {/* Class Reminders */}
         <NotificationBellButton />

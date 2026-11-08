@@ -27,7 +27,6 @@ import {
   AlertCircle,
   AlertTriangle,
   ExternalLink,
-  TrendingUp,
 } from "lucide-react";
 import { useDesk } from "@/components/timetable/context";
 import { WeekGrid } from "@/components/timetable/week-grid";
@@ -63,7 +62,6 @@ import {
   type MakeupClassRecord,
 } from "@/lib/makeup-classes";
 import { facultyUpdateLeadTimeFn } from "@/lib/faculty-server-fn";
-import { FacultyAnalyticsPanel } from "@/components/timetable/faculty-analytics-panel";
 import {
   isClassCancelled,
   addClassCancellation,
@@ -77,8 +75,8 @@ export function FacultyWorkspaceView() {
     () => getActiveFacultySession(),
   );
 
-  // Tabs: Today's Lectures | Weekly Timetable (Table) | Smart Makeup & Lab Matcher | Analytics & Quota Tracker
-  const [activeTab, setActiveTab] = useState<"today" | "table" | "makeup" | "analytics">(
+  // Tabs: Today's Lectures | Weekly Timetable (Table) | Smart Makeup & Lab Matcher
+  const [activeTab, setActiveTab] = useState<"today" | "table" | "makeup">(
     () => (clock.dayIndex !== null && clock.dayIndex >= 0 && clock.dayIndex < 5 ? "today" : "table"),
   );
 
@@ -425,16 +423,6 @@ export function FacultyWorkspaceView() {
             <Sparkles size={15} />
             <span>⚡ Arrange Make-up Class</span>
           </button>
-
-          <button
-            type="button"
-            className="btn secondary tap"
-            onClick={() => setActiveTab("analytics")}
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
-          >
-            <TrendingUp size={15} />
-            <span>View Make-up Debt Ledger</span>
-          </button>
         </div>
       </section>
 
@@ -501,19 +489,6 @@ export function FacultyWorkspaceView() {
           {comparison && (
             <span className="tab-badge">{comparison.bothFreeSlotsCount} Free</span>
           )}
-        </button>
-
-        {/* Tab 4: Faculty Analytics & Debt Ledger */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "analytics"}
-          className={`faculty-tab-pill ${activeTab === "analytics" ? "active" : ""}`}
-          onClick={() => setActiveTab("analytics")}
-        >
-          <TrendingUp size={16} />
-          <span className="tab-label-full">Analytics & Quota Tracker</span>
-          <span className="tab-label-short">Analytics</span>
         </button>
       </div>
 
@@ -1742,23 +1717,6 @@ export function FacultyWorkspaceView() {
               </div>
             </div>
           )}
-        </section>
-      )}
-
-      {/* =========================================================================
-          TAB 4: FACULTY ANALYTICS, LIVE LECTURE COUNTER & MAKE-UP DEBT LEDGER
-          ========================================================================= */}
-      {activeTab === "analytics" && (
-        <section className="faculty-analytics-section stack">
-          <FacultyAnalyticsPanel
-            teacherId={teacherId!}
-            teacherName={teacherName}
-            teacherEmail={facultySession.profile.email}
-            onNavigateToMakeup={(batchId) => {
-              if (batchId !== undefined) setSelectedBatchId(batchId);
-              setActiveTab("makeup");
-            }}
-          />
         </section>
       )}
 
