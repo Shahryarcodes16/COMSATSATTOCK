@@ -4,7 +4,7 @@
  * and authenticated session checks for the Admin Control Center.
  */
 import crypto from "node:crypto";
-import { getSql } from "@/lib/db";
+import { getSql } from "./db.ts";
 import { requireAdminSession, createAndSetSessionCookie } from "./session.server";
 import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from "./rate-limiter.server";
 import { AUTHORIZED_ADMIN_EMAIL, type CampusNotice } from "./admin";
@@ -27,20 +27,25 @@ export function getAuthorizedAdminEmail(): string {
 /**
  * Ensures the admin settings table exists in PostgreSQL / PGLite
  */
+let adminTablePromise: Promise<void> | null = null;
 async function ensureAdminTableExists() {
-  try {
-    const sql = await getSql();
-    await sql.query(`
-      CREATE TABLE IF NOT EXISTS cui_admin_settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_by TEXT
-      );
-    `);
-  } catch (err) {
-    console.warn("[admin.server] ensureAdminTableExists notice:", err);
-  }
+  if (adminTablePromise) return adminTablePromise;
+  adminTablePromise = (async () => {
+    try {
+      const sql = await getSql();
+      await sql.query(`
+        CREATE TABLE IF NOT EXISTS cui_admin_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_by TEXT
+        );
+      `);
+    } catch (err) {
+      console.warn("[admin.server] ensureAdminTableExists notice:", err);
+    }
+  })();
+  return adminTablePromise;
 }
 
 /**

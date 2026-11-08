@@ -6,7 +6,12 @@ export type DbSource = "neon" | "pglite";
 // An empty/whitespace DATABASE_URL (an easy misconfig in deploy UIs) must mean
 // "unset" — otherwise production would silently run on the PGLite fallback.
 const rawDatabaseUrl =
-  typeof process !== "undefined" ? process.env.DATABASE_URL : undefined;
+  typeof process !== "undefined"
+    ? process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_PRISMA_URL ||
+      process.env.POSTGRES_URL_NON_POOLING
+    : undefined;
 const databaseUrl =
   rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
 
@@ -17,6 +22,14 @@ const databaseUrl =
  * included. Swap in Neon later by just setting `DATABASE_URL`; no code changes.
  */
 export const dbSource: DbSource = databaseUrl ? "neon" : "pglite";
+
+if (typeof process !== "undefined") {
+  if (databaseUrl) {
+    console.log("[db] Active backend: PostgreSQL / Neon (cross-device multi-device persistent storage enabled)");
+  } else {
+    console.warn("[db] Notice: No DATABASE_URL or POSTGRES_URL detected. Running on local in-memory PGLite. For multi-device cross-login, connect Neon or Vercel Postgres in your deployment settings.");
+  }
+}
 
 /**
  * Minimal shared SQL surface, satisfied by both Neon and PGLite. Both the
@@ -93,7 +106,19 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({ connectionString: databaseUrl });
+    const isSsl =
+      databaseUrl!.includes("sslmode=") ||
+      databaseUrl!.includes("neon.tech") ||
+      databaseUrl!.includes("supabase.co") ||
+      databaseUrl!.includes("vercel-storage.com") ||
+      process.env.NODE_ENV === "production";
+    const pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 10,
+    });
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];

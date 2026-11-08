@@ -113,32 +113,37 @@ function writeDiskBackup(record: StudentRecord): void {
 /**
  * Ensures the student accounts table exists in PostgreSQL / PGLite
  */
+let studentTablePromise: Promise<void> | null = null;
 async function ensureStudentTableExists(): Promise<void> {
-  try {
-    const sql = await getSql();
-    await sql.query(`
-      CREATE TABLE IF NOT EXISTS cui_students (
-        id TEXT PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        full_name TEXT NOT NULL,
-        session TEXT NOT NULL,
-        year TEXT NOT NULL,
-        program_code TEXT NOT NULL,
-        roll_number TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        password_salt TEXT NOT NULL,
-        default_batch TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        last_login_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )
-    `);
-    await sql.query(`
-      CREATE INDEX IF NOT EXISTS idx_cui_students_email ON cui_students (email)
-    `);
-  } catch (err) {
-    console.warn("[student.server] DB table init notice (using memory fallback if needed):", err);
-  }
+  if (studentTablePromise) return studentTablePromise;
+  studentTablePromise = (async () => {
+    try {
+      const sql = await getSql();
+      await sql.query(`
+        CREATE TABLE IF NOT EXISTS cui_students (
+          id TEXT PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          full_name TEXT NOT NULL,
+          session TEXT NOT NULL,
+          year TEXT NOT NULL,
+          program_code TEXT NOT NULL,
+          roll_number TEXT NOT NULL,
+          password_hash TEXT NOT NULL,
+          password_salt TEXT NOT NULL,
+          default_batch TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          last_login_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+      `);
+      await sql.query(`
+        CREATE INDEX IF NOT EXISTS idx_cui_students_email ON cui_students (email)
+      `);
+    } catch (err) {
+      console.warn("[student.server] DB table init notice (using memory fallback if needed):", err);
+    }
+  })();
+  return studentTablePromise;
 }
 
 const PBKDF2_ITERATIONS = 210000;

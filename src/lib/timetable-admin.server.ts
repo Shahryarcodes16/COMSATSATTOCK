@@ -3,7 +3,7 @@
  * Handles database operations for versions, rollbacks, drafts, and active timetable loading.
  */
 import crypto from "node:crypto";
-import { getSql } from "@/lib/db";
+import { getSql } from "./db.ts";
 import { requireAdminSession } from "./session.server";
 import { saveServerCampusNotice } from "./admin.server";
 import { validateTimetable } from "./timetable-validator";
@@ -44,36 +44,41 @@ versionsStore.set("v-default", defaultVersion);
 /**
  * Ensures table existence in PostgreSQL or PGLite
  */
+let timetableTablesPromise: Promise<void> | null = null;
 async function ensureTablesExist() {
-  try {
-    const sql = await getSql();
-    await sql.query(`
-      CREATE TABLE IF NOT EXISTS cui_timetable_versions (
-        id TEXT PRIMARY KEY,
-        version_name TEXT NOT NULL UNIQUE,
-        timetable_data JSONB NOT NULL,
-        status TEXT NOT NULL DEFAULT 'published',
-        is_active BOOLEAN NOT NULL DEFAULT FALSE,
-        published_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        published_by TEXT NOT NULL DEFAULT 'admin',
-        scheduled_for TIMESTAMPTZ,
-        summary JSONB,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await sql.query(`
-      CREATE TABLE IF NOT EXISTS cui_timetable_drafts (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        timetable_data JSONB NOT NULL,
-        stats JSONB,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        created_by TEXT NOT NULL DEFAULT 'admin'
-      );
-    `);
-  } catch (err) {
-    console.warn("[timetable-admin.server] ensureTablesExist notice:", err);
-  }
+  if (timetableTablesPromise) return timetableTablesPromise;
+  timetableTablesPromise = (async () => {
+    try {
+      const sql = await getSql();
+      await sql.query(`
+        CREATE TABLE IF NOT EXISTS cui_timetable_versions (
+          id TEXT PRIMARY KEY,
+          version_name TEXT NOT NULL UNIQUE,
+          timetable_data JSONB NOT NULL,
+          status TEXT NOT NULL DEFAULT 'published',
+          is_active BOOLEAN NOT NULL DEFAULT FALSE,
+          published_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          published_by TEXT NOT NULL DEFAULT 'admin',
+          scheduled_for TIMESTAMPTZ,
+          summary JSONB,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+      `);
+      await sql.query(`
+        CREATE TABLE IF NOT EXISTS cui_timetable_drafts (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          timetable_data JSONB NOT NULL,
+          stats JSONB,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          created_by TEXT NOT NULL DEFAULT 'admin'
+        )
+      `);
+    } catch (err) {
+      console.warn("[timetable-admin.server] ensureTablesExist notice:", err);
+    }
+  })();
+  return timetableTablesPromise;
 }
 
 /**

@@ -18,7 +18,11 @@ import { dirname, join } from "node:path";
 import pg from "pg";
 import { pendingMigrations } from "./migration-plan.mjs";
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
 if (!databaseUrl) {
   console.log(
     "[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).",
@@ -42,7 +46,17 @@ async function main() {
     return;
   }
 
-  const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
+  const isSsl =
+    databaseUrl.includes("sslmode=") ||
+    databaseUrl.includes("neon.tech") ||
+    databaseUrl.includes("supabase.co") ||
+    databaseUrl.includes("vercel-storage.com") ||
+    process.env.NODE_ENV === "production";
+  const pool = new pg.Pool({
+    connectionString: databaseUrl,
+    ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+    max: 1,
+  });
   const client = await pool.connect();
   try {
     await client.query(

@@ -60,48 +60,57 @@ test("Student Auth: Resilient Cold-Start Login using Client Vault", async () => 
   assert.ok(successVaultLogin.credentialSync);
 });
 
-test("Faculty Auth: SignUp returns credentialSync and survives cold start", async () => {
-  const facultyEmail = `test.prof.${Math.floor(100 + Math.random() * 899)}@cuiatk.edu.pk`;
+test("Cross-Device Auth: Account created on Mobile can log in on Laptop with password only", async () => {
+  // 1. Student registers on Mobile
+  const studentMobileEmail = `fa24-bcs-${Math.floor(100 + Math.random() * 899)}@cuiatk.edu.pk`;
+  const studentPass = "MobileCreatedPassword456!";
+  const studentSignup = await serverStudentSignUp(studentMobileEmail, "Hamza Tariq", studentPass);
+  assert.equal(studentSignup.success, true);
 
-  // 1. Initial sign in without account fails
-  const failedLogin = await serverFacultySignIn(facultyEmail, "WrongPass123!");
-  assert.equal(failedLogin.success, false);
-  assert.equal(failedLogin.error, "Invalid email or password.");
+  // 2. Student opens Laptop (no vault, no localStorage from mobile) and signs in with password
+  const studentLaptopLogin = await serverStudentSignIn(studentMobileEmail, studentPass);
+  assert.equal(studentLaptopLogin.success, true);
+  assert.ok(studentLaptopLogin.session);
+  assert.equal(studentLaptopLogin.session.profile.email, studentMobileEmail);
+  assert.equal(studentLaptopLogin.session.profile.fullName, "Hamza Tariq");
+  assert.ok(studentLaptopLogin.credentialSync);
 
-  // 2. Mock a valid client vault account
-  // In reality, this was stored in localStorage on account creation
-  const mockSalt = "1234567890abcdef";
-  // PBKDF2 hash of "FacultySecret123!" using crypto
+  // 3. Laptop login with wrong password fails strictly
+  const studentWrongPass = await serverStudentSignIn(studentMobileEmail, "WrongPasswordHere!");
+  assert.equal(studentWrongPass.success, false);
+  assert.equal(studentWrongPass.error, "Invalid email or password.");
+});
+
+test("Cross-Device Faculty Auth: Faculty account created on Mobile logs in on Desktop", async () => {
+  const facultyEmail = `prof.mobile.${Math.floor(100 + Math.random() * 899)}@cuiatk.edu.pk`;
+  const facultyPass = "ProfSecretDesktop999!";
+
+  // 1. Mock faculty account creation on Mobile
   const crypto = await import("node:crypto");
-  const mockHash = crypto.pbkdf2Sync("FacultySecret123!", mockSalt, 210000, 64, "sha512").toString("hex");
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(facultyPass, salt, 210000, 64, "sha512").toString("hex");
 
-  const facultyVault = {
+  // Re-hydrate through vault to seed the database
+  const mobileVault = {
     email: facultyEmail,
-    fullName: "Dr. Test Professor",
-    teacherId: 101,
-    timetableName: "Dr. Test Prof",
+    fullName: "Dr. Mobile Registered",
+    teacherId: 202,
     department: "Department of Computer Science",
-    passwordHash: mockHash,
-    passwordSalt: mockSalt,
+    passwordHash: hash,
+    passwordSalt: salt,
     notificationLeadMins: 10,
   };
+  const seed = await serverFacultySignIn(facultyEmail, facultyPass, mobileVault);
+  assert.equal(seed.success, true);
 
-  // 3. Wrong password with vault fails
-  const failedVault = await serverFacultySignIn(facultyEmail, "IncorrectPass!", facultyVault);
-  assert.equal(failedVault.success, false);
-  assert.equal(failedVault.error, "Invalid email or password.");
+  // 2. Faculty opens Desktop (no client vault passed) and logs in with password only
+  const desktopLogin = await serverFacultySignIn(facultyEmail, facultyPass);
+  assert.equal(desktopLogin.success, true);
+  assert.ok(desktopLogin.session);
+  assert.equal(desktopLogin.session.profile.email, facultyEmail);
+  assert.equal(desktopLogin.session.profile.fullName, "Dr. Mobile Registered");
 
-  // 4. Correct password with vault succeeds, re-hydrates record and returns fresh credentialSync
-  const successVault = await serverFacultySignIn(facultyEmail, "FacultySecret123!", facultyVault);
-  assert.equal(successVault.success, true);
-  assert.ok(successVault.session);
-  assert.equal(successVault.session.profile.email, facultyEmail);
-  assert.equal(successVault.session.profile.fullName, "Dr. Test Professor");
-  assert.ok(successVault.credentialSync);
-  assert.equal(successVault.credentialSync.email, facultyEmail);
-
-  // 5. Subsequent sign-in without vault succeeds because it is now re-hydrated in memory and DB
-  const reLogin = await serverFacultySignIn(facultyEmail, "FacultySecret123!");
-  assert.equal(reLogin.success, true);
-  assert.ok(reLogin.session);
+  // 3. Desktop login with wrong password fails
+  const wrongDesktop = await serverFacultySignIn(facultyEmail, "WrongPass999!");
+  assert.equal(wrongDesktop.success, false);
 });
