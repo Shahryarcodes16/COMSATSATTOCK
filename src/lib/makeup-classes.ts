@@ -11,8 +11,8 @@
 import {
   SLOTS,
   type ClassEntry,
-} from "./schedule";
-import { CAMPUS_TIME_ZONE } from "./campus";
+} from "./schedule.ts";
+import { CAMPUS_TIME_ZONE } from "./campus.ts";
 
 export const MAKEUP_CLASSES_STORAGE_KEY = "cui_arranged_makeup_classes_v1";
 

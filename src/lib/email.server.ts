@@ -2,7 +2,7 @@
  * Server-only Email Dispatch Service
  * Sends official 6-digit verification codes and magic links to student university Gmail accounts (@cuiatk.edu.pk).
  */
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 interface SendVerificationEmailOptions {
   toEmail: string;
@@ -18,7 +18,7 @@ const DEFAULT_SMTP_PASS = process.env.SMTP_PASS || "";
  * Creates nodemailer transport based on environment configuration.
  * Defaults to Gmail SMTP (smtp.gmail.com:465) using SSL with the dedicated campus account.
  */
-let cachedTransporter: nodemailer.Transporter | null = null;
+let cachedTransporter: Transporter | null = null;
 
 function getEmailTransporter() {
   if (cachedTransporter) return cachedTransporter;

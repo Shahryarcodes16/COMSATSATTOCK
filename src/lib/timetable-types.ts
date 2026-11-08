@@ -91,3 +91,138 @@ export interface TimetableDraft {
   updatedAt: string;
   createdBy: string;
 }
+
+// -------------------------------------------------------------
+// Advanced Features Types: Resolver, Heatmap, Pulse, Analytics
+// -------------------------------------------------------------
+
+export interface ConflictAlternative {
+  id: string;
+  targetClass: "classA" | "classB";
+  day: number;
+  slot: number;
+  dayLabel: string;
+  slotLabel: string;
+  roomIdx: number;
+  roomName: string;
+  score: number; // Higher is better (e.g. same day, minimal disturbance)
+  reason: string;
+}
+
+export interface DetailedDiffItem {
+  type: "added" | "removed" | "modified";
+  day: number;
+  slot: number;
+  dayLabel: string;
+  slotLabel: string;
+  batch: string;
+  course: string;
+  oldDetails?: { room: string; teacher: string };
+  newDetails?: { room: string; teacher: string };
+  changes?: string[];
+}
+
+export interface DetailedTimetableDiff {
+  added: DetailedDiffItem[];
+  removed: DetailedDiffItem[];
+  modified: DetailedDiffItem[];
+  unchangedCount: number;
+  affectedTeachers: string[];
+  affectedBatches: string[];
+}
+
+export type RoomCategory = "Classrooms" | "Computer Labs" | "Engineering Labs" | "Lecture Theatres" | "Other";
+
+export interface RoomUtilizationStat {
+  roomId: number;
+  roomName: string;
+  category: RoomCategory;
+  totalOccupied: number; // occupied slots out of 25 (5 days x 5 slots)
+  totalSlots: number; // 25
+  utilizationRate: number; // 0..100%
+  peakDay: string;
+  peakSlot: string;
+  occupancyMatrix: boolean[][]; // [day: 0..4][slot: 0..4]
+}
+
+export interface ClassCancellationRecord {
+  id: string;
+  day: number;
+  slot: number;
+  batch: number;
+  batchName: string;
+  room: number;
+  roomName: string;
+  teacher: number;
+  teacherName: string;
+  subject: number;
+  subjectName: string;
+  targetDate: string; // YYYY-MM-DD
+  targetDateLabel: string;
+  reason: string;
+  cancelledAt: string;
+  cancelledByEmail: string;
+  settledByMakeupId?: string;
+  status: "active" | "settled";
+}
+
+export interface CampusPulseTelemetry {
+  timestamp: string;
+  livePhase: "live" | "break" | "before" | "after" | "weekend";
+  currentDayIndex: number | null;
+  currentDayLabel: string;
+  liveSlotIndex: number | null;
+  liveSlotLabel: string;
+  nextSlotLabel: string;
+  minutesToNextTransition: number;
+  classesInSessionCount: number;
+  activeTeachersCount: number;
+  freeRoomsCount: number;
+  occupiedRoomsCount: number;
+  totalRoomsCount: number;
+  classesInSession: {
+    batch: string;
+    course: string;
+    teacher: string;
+    room: string;
+    isMakeup?: boolean;
+    isCancelled?: boolean;
+  }[];
+  recentEvents: {
+    id: string;
+    type: "cancellation" | "makeup_scheduled" | "room_freed";
+    title: string;
+    timeAgo: string;
+    details: string;
+  }[];
+}
+
+export interface SubjectLectureStat {
+  subjectId: number;
+  subjectName: string;
+  batchNames: string[];
+  weeklySlotsCount: number;
+  isDoubleLectureL3: boolean; // 11:30 - 1:15 rule (Slot L3) counted as 2 if only 1 lecture/week
+  weeklyEffectiveCount: number; // If isDoubleLectureL3 is true, 1 session counts as 2
+  semesterProjectedCount: number; // based on 16-week semester
+  conductedCountToDate: number;
+  labHours: number;
+  isLab: boolean;
+}
+
+export interface FacultyAnalytics {
+  teacherId: number;
+  teacherName: string;
+  email: string;
+  semesterTargetLectures: number; // standard 32 contact lectures per theory course
+  regularConductedCount: number;
+  doubleLectureBonusCount: number;
+  labSessionsCount: number;
+  totalEffectiveConducted: number;
+  percentageComplete: number;
+  makeupsConductedCount: number;
+  cancellationsDebtCount: number;
+  pendingDebts: ClassCancellationRecord[];
+  courses: SubjectLectureStat[];
+}
+

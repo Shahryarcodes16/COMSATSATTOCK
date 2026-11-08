@@ -28,6 +28,8 @@ import {
   RefreshCw,
   CalendarClock,
   Share2,
+  GitCompare,
+  Flame,
 } from "lucide-react";
 import {
   getActiveTimetableServerFn,
@@ -45,6 +47,9 @@ import {
   rawToTimetableRows,
 } from "@/lib/timetable-parser";
 import { validateTimetable } from "@/lib/timetable-validator";
+import { TimetableDiffViewer } from "@/components/timetable/timetable-diff-viewer";
+import { ConflictResolverModal } from "@/components/timetable/conflict-resolver-modal";
+import { RoomUtilizationHeatmap } from "@/components/timetable/room-heatmap";
 import {
   batches,
   rooms,
@@ -65,10 +70,15 @@ import type {
   TimetableClassRow,
 } from "@/lib/timetable-types";
 
-type SubTab = "active" | "upload" | "drafts" | "history";
+type SubTab = "active" | "upload" | "drafts" | "history" | "heatmap";
 
 export function TimetableManagement() {
   const [subTab, setSubTab] = useState<SubTab>("active");
+
+  // Advanced feature modals state
+  const [showConflictResolver, setShowConflictResolver] = useState(false);
+  const [showPreviewDiff, setShowPreviewDiff] = useState(false);
+  const [historyDiffTarget, setHistoryDiffTarget] = useState<TimetableVersion | null>(null);
 
   // Server state with synchronous client schedule hydration
   const [activeVersion, setActiveVersion] = useState<{
@@ -475,6 +485,15 @@ export function TimetableManagement() {
           <span>Version History</span>
           {versions.length > 0 && <span className="admin-tab-pill">{versions.length}</span>}
         </button>
+
+        <button
+          type="button"
+          className={`timetable-subtab-btn ${subTab === "heatmap" ? "active" : ""}`}
+          onClick={() => setSubTab("heatmap")}
+        >
+          <Flame size={15} aria-hidden />
+          <span>Venue Heatmap</span>
+        </button>
       </div>
 
       {/* ========================================================= */}
@@ -786,6 +805,19 @@ export function TimetableManagement() {
               {/* List of Detected Conflicts */}
               {validation.clashes.length > 0 && (
                 <div className="clashes-list stack">
+                  <div className="clashes-header-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <span className="fine">
+                      Found <strong>{validation.clashes.length}</strong> collision{validation.clashes.length === 1 ? "" : "s"} in this upload.
+                    </span>
+                    <button
+                      type="button"
+                      className="btn primary sm tap"
+                      onClick={() => setShowConflictResolver(true)}
+                    >
+                      <Sparkles size={14} />
+                      <span>⚡ Smart Conflict Auto-Resolver</span>
+                    </button>
+                  </div>
                   {validation.clashes.map((c) => (
                     <div key={c.id} className={`clash-item ${c.severity}`}>
                       <div className="clash-badge">{c.type.replace("_", " ").toUpperCase()}</div>
@@ -819,6 +851,17 @@ export function TimetableManagement() {
                   <p className="quiet fine">
                     Review parsed slots, rooms, and batches before deploying live.
                   </p>
+                </div>
+
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="btn secondary sm tap"
+                    onClick={() => setShowPreviewDiff(true)}
+                  >
+                    <GitCompare size={14} />
+                    <span>View Visual Diff vs Active</span>
+                  </button>
                 </div>
 
                 {/* Filter Controls */}
@@ -1110,6 +1153,16 @@ export function TimetableManagement() {
                 </div>
 
                 <div className="version-card-actions">
+                  <button
+                    type="button"
+                    className="btn secondary tap fine"
+                    onClick={() => setHistoryDiffTarget(ver)}
+                    title="View diff comparison against active timetable"
+                  >
+                    <GitCompare size={14} aria-hidden />
+                    <span>Compare Diff</span>
+                  </button>
+
                   {!ver.isActive && (
                     <button
                       type="button"
@@ -1163,6 +1216,69 @@ export function TimetableManagement() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 5. ROOM, LAB & LT UTILIZATION HEATMAP SUBTAB              */}
+      {/* ========================================================= */}
+      {subTab === "heatmap" && (
+        <div className="timetable-tab-pane stack">
+          <div className="history-header">
+            <h3>Venue Utilization Heatmap & Spatial Matrix</h3>
+            <p className="quiet fine">
+              Live spatial & temporal occupancy map showing which rooms, computer labs, and lecture theatres are most or least utilized.
+            </p>
+          </div>
+          <RoomUtilizationHeatmap rawTimetable={parsedRaw || activeVersion.timetableData} />
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODALS: CONFLICT AUTO-RESOLVER & DIFF VIEWER              */}
+      {/* ========================================================= */}
+      {showConflictResolver && validation && parsedRaw && (
+        <div className="modal-backdrop" onClick={() => setShowConflictResolver(false)}>
+          <div className="modal-card extra-wide" onClick={(e) => e.stopPropagation()}>
+            <ConflictResolverModal
+              clashes={validation.clashes}
+              rawTimetable={parsedRaw}
+              onResolved={(resolved) => {
+                setParsedRaw(resolved);
+                setParsedRows(rawToTimetableRows(resolved));
+                setValidation(validateTimetable(resolved));
+              }}
+              onClose={() => setShowConflictResolver(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showPreviewDiff && parsedRaw && (
+        <div className="modal-backdrop" onClick={() => setShowPreviewDiff(false)}>
+          <div className="modal-card extra-wide" onClick={(e) => e.stopPropagation()}>
+            <TimetableDiffViewer
+              oldTimetable={activeVersion.timetableData}
+              newTimetable={parsedRaw}
+              oldVersionLabel={activeVersion.versionName}
+              newVersionLabel={uploadedFileName || "Uploaded Version"}
+              onClose={() => setShowPreviewDiff(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {historyDiffTarget && (
+        <div className="modal-backdrop" onClick={() => setHistoryDiffTarget(null)}>
+          <div className="modal-card extra-wide" onClick={(e) => e.stopPropagation()}>
+            <TimetableDiffViewer
+              oldTimetable={activeVersion.timetableData}
+              newTimetable={historyDiffTarget.timetableData}
+              oldVersionLabel={activeVersion.versionName}
+              newVersionLabel={historyDiffTarget.versionName}
+              onClose={() => setHistoryDiffTarget(null)}
+            />
+          </div>
         </div>
       )}
     </div>

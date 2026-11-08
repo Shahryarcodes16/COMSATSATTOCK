@@ -1,7 +1,7 @@
-import raw from "@/data/timetable.json";
-import { getActiveArrangedMakeupClasses, getArrangedMakeupClasses, toClassEntry } from "./makeup-classes";
-import { getFacultyEmail } from "@/lib/faculty";
-import { CAMPUS_TIME_ZONE } from "@/lib/campus";
+import raw from "../data/timetable.json" with { type: "json" };
+import { getActiveArrangedMakeupClasses, getArrangedMakeupClasses, toClassEntry } from "./makeup-classes.ts";
+import { getFacultyEmail } from "./faculty.ts";
+import { CAMPUS_TIME_ZONE } from "./campus.ts";
 
 const campusPartsFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: CAMPUS_TIME_ZONE,

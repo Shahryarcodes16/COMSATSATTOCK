@@ -28,7 +28,8 @@ export type View =
   | "find"
   | "datesheet"
   | "admin"
-  | "faculty-desk";
+  | "faculty-desk"
+  | "pulse";
 export type ThemeName = "paper" | "ink" | "midnight";
 
 export type Detail =
@@ -57,6 +58,7 @@ const VIEWS: View[] = [
   "datesheet",
   "admin",
   "faculty-desk",
+  "pulse",
 ];
 
 const defaultBatch = Math.max(

@@ -1,5 +1,6 @@
 import { useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import {
+  Activity,
   ArrowUpRight,
   CalendarCheck,
   CalendarDays,
@@ -36,6 +37,7 @@ import { getActiveFacultySession } from "@/lib/faculty-auth";
 // Desktop sidebar navigates all sections
 const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
+  { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
   { id: "custom", label: "My Schedule", icon: CalendarCheck },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
@@ -46,10 +48,10 @@ const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
 // Mobile dock shows primary schedule & campus views with clean single-line labels
 const MOBILE_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
+  { id: "pulse" as View, label: "Pulse", icon: Activity },
   { id: "custom", label: "Schedule", icon: CalendarCheck },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
-  { id: "batches", label: "Batches", icon: Users },
 ];
 
 export function Brand() {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
   ArrowUpRight,
   Bell,
   Briefcase,
@@ -13,11 +14,13 @@ import {
   Search,
   Users,
   Zap,
+  Flame,
 } from "lucide-react";
 import { FacultyDirectory } from "@/components/timetable/faculty-directory";
 import { FacultyOfficeHours } from "@/components/timetable/teacher-office-hours";
 import { NotificationBellButton } from "@/components/timetable/notification-modal";
 import { FreeRoomsRadar } from "@/components/timetable/room-radar";
+import { RoomUtilizationHeatmap } from "@/components/timetable/room-heatmap";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
@@ -134,6 +137,21 @@ export function TodayView() {
           <p className="quiet">Your schedule. Your spaces. Your next move.</p>
         </div>
         <span className="term-badge">Timetable · 5 Oct 2026</span>
+      </div>
+
+      <div className="campus-pulse-quick-bar">
+        <div className="quick-bar-left">
+          <span className="live-dot-pulse" />
+          <span><strong>Campus Pulse:</strong> Real-time lecture status, active instructors & free room telemetry</span>
+        </div>
+        <button
+          type="button"
+          className="btn secondary sm tap"
+          onClick={() => setView("pulse")}
+        >
+          <Activity size={13} />
+          <span>View Live Pulse</span>
+        </button>
       </div>
 
       {isDatesheetActive(now) && (
@@ -439,7 +457,7 @@ export function TodayView() {
 
 export function RoomsView() {
   const { day, slot, setDay, setSlot, open } = useDesk();
-  const [viewMode, setViewMode] = useState<"radar" | "browser">("radar");
+  const [viewMode, setViewMode] = useState<"radar" | "heatmap" | "browser">("radar");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
   const [group, setGroup] = useState<"All" | RoomGroup>("All");
@@ -476,7 +494,7 @@ export function RoomsView() {
         </div>
       </div>
 
-      <div className="faculty-view-tabs tabs-2" role="tablist" aria-label="Rooms view mode">
+      <div className="faculty-view-tabs tabs-3" role="tablist" aria-label="Rooms view mode">
         <button
           type="button"
           role="tab"
@@ -487,6 +505,17 @@ export function RoomsView() {
           <Zap size={16} aria-hidden />
           <span className="tab-label-full">⚡ Live Free Rooms Radar</span>
           <span className="tab-label-short">⚡ Radar</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={viewMode === "heatmap"}
+          className={viewMode === "heatmap" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+          onClick={() => setViewMode("heatmap")}
+        >
+          <Flame size={16} aria-hidden />
+          <span className="tab-label-full">🔥 Utilization Heatmap</span>
+          <span className="tab-label-short">🔥 Heatmap</span>
         </button>
         <button
           type="button"
@@ -509,6 +538,8 @@ export function RoomsView() {
             setViewMode("browser");
           }}
         />
+      ) : viewMode === "heatmap" ? (
+        <RoomUtilizationHeatmap />
       ) : (
         <>
           <DaySlotBar />
