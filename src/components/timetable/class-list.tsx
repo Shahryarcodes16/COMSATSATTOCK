@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   batches,
   blocksFor,
@@ -10,6 +11,7 @@ import {
   type ClassEntry,
 } from "@/lib/schedule";
 import { useDesk } from "@/components/timetable/context";
+import { isClassCancelled } from "@/lib/campus-pulse";
 
 function overlaps(blocks: Block[]): boolean {
   for (let left = 0; left < blocks.length; left += 1) {
@@ -32,6 +34,18 @@ export function ClassList({
   who: "batch" | "teacher";
 }) {
   const { clock, open } = useDesk();
+  const [, setCancelRevision] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setCancelRevision((r) => r + 1);
+    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
   const blocks = blocksFor(list, day);
   if (blocks.length === 0) {
     return <p className="quiet">Nothing scheduled. A clear day.</p>;
@@ -54,14 +68,37 @@ export function ClassList({
         const person = entry.teacher >= 0 ? teachers[entry.teacher] : "";
         const room = entry.room >= 0 ? rooms[entry.room] : "";
         const batch = batches[entry.batch];
+
+        // Check if class is cancelled for any slot in this block
+        let cancellationRecord = null;
+        for (let s = block.start; s <= block.end; s++) {
+          const c = isClassCancelled(day, s, entry.teacher, entry.batch, entry.room);
+          if (c) {
+            cancellationRecord = c;
+            break;
+          }
+        }
+        const isCancelled = cancellationRecord !== null;
+
         return (
           <article
             key={`${block.start}-${entry.batch}-${entry.subject}-${entry.room}-${entry.repeater}`}
-            className={live ? "class-card live" : "class-card"}
+            className={
+              isCancelled
+                ? "class-card cancelled-class-card"
+                : live
+                  ? "class-card live"
+                  : "class-card"
+            }
           >
             <div className="when">
-              <b>{timeLabel(SLOTS[block.start].from)}</b>
-              <span>{timeLabel(SLOTS[block.end].to)}</span>
+              <b style={{ textDecoration: isCancelled ? "line-through" : undefined, opacity: isCancelled ? 0.7 : 1 }}>
+                {timeLabel(SLOTS[block.start].from)}
+              </b>
+              <span style={{ textDecoration: isCancelled ? "line-through" : undefined, opacity: isCancelled ? 0.7 : 1 }}>
+                {timeLabel(SLOTS[block.end].to)}
+              </span>
+              {isCancelled && <span className="cancelled-side-badge">CANCELLED</span>}
             </div>
             <div>
               <div className="class-kind">
@@ -70,12 +107,32 @@ export function ClassList({
                   {SLOTS[block.start].label}
                   {block.end !== block.start ? `–${SLOTS[block.end].label}` : ""}
                 </span>
+                {isCancelled && (
+                  <span className="badge-cancelled-pill">
+                    ❌ Class Cancelled by Instructor
+                  </span>
+                )}
               </div>
-              <p className="subject">
-                {subjects[entry.subject]}
+
+              {isCancelled && cancellationRecord && (
+                <div className="cancelled-class-notice-box">
+                  <p className="cancelled-notice-text">
+                    <strong>Notice:</strong> This lecture has been officially cancelled.
+                    {cancellationRecord.reason ? ` Reason: "${cancellationRecord.reason}"` : ""}
+                  </p>
+                  <span className="room-freed-indicator">
+                    🟢 Venue <strong>{room || cancellationRecord.roomName}</strong> is freed and available for study.
+                  </span>
+                </div>
+              )}
+
+              <p className={`subject ${isCancelled ? "subject-cancelled" : ""}`}>
+                <span style={{ textDecoration: isCancelled ? "line-through" : undefined, opacity: isCancelled ? 0.7 : 1 }}>
+                  {subjects[entry.subject]}
+                </span>
                 <span className="flags">
                   {entry.repeater ? <span className="flag">Repeater</span> : null}
-                  {live ? <span className="flag now">Now</span> : null}
+                  {live && !isCancelled ? <span className="flag now">Now</span> : null}
                 </span>
               </p>
               <div className="links class-meta">

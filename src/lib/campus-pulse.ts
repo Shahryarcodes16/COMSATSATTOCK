@@ -22,6 +22,7 @@ import {
   getArrangedMakeupClasses,
   type MakeupClassRecord,
 } from "./makeup-classes.ts";
+export type { ClassCancellationRecord } from "./timetable-types.ts";
 import type {
   CampusPulseTelemetry,
   ClassCancellationRecord,
@@ -30,13 +31,20 @@ import type {
   TimetableRaw,
 } from "./timetable-types.ts";
 import { CAMPUS_TIME_ZONE } from "./campus.ts";
+import {
+  getAllActiveCancellationsServerFn,
+  addClassCancellationServerFn,
+  removeClassCancellationServerFn,
+  settleClassCancellationServerFn,
+} from "./cancellations-server-fn.ts";
 
 export const CANCELLATIONS_STORAGE_KEY = "cui_class_cancellations_v1";
 
 let memoryCancellations: ClassCancellationRecord[] = [];
+let isSyncing = false;
 
 // -------------------------------------------------------------
-// 1. Dynamic Class Cancellations Store
+// 1. Dynamic Class Cancellations Store & Multi-Device Sync
 // -------------------------------------------------------------
 
 export function getClassCancellations(): ClassCancellationRecord[] {
@@ -66,8 +74,47 @@ export function saveClassCancellations(list: ClassCancellationRecord[]): void {
 }
 
 /**
+ * Synchronizes cancellations from backend database so students on mobile/laptop
+ * immediately receive real-time class cancellations broadcast by faculty.
+ */
+export async function syncCancellationsFromServer(): Promise<ClassCancellationRecord[]> {
+  if (typeof window === "undefined") return getClassCancellations();
+  if (isSyncing) return getClassCancellations();
+
+  isSyncing = true;
+  try {
+    const serverList = await getAllActiveCancellationsServerFn();
+    if (Array.isArray(serverList)) {
+      saveClassCancellations(serverList);
+      return serverList;
+    }
+  } catch (err) {
+    console.warn("[campus-pulse] Could not sync cancellations from server:", err);
+  } finally {
+    isSyncing = false;
+  }
+  return getClassCancellations();
+}
+
+// Client-side auto synchronization on boot, interval, and window focus
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    syncCancellationsFromServer();
+  }, 200);
+
+  // Poll every 20 seconds for newly announced cancellations
+  setInterval(() => {
+    syncCancellationsFromServer();
+  }, 20000);
+
+  window.addEventListener("focus", () => {
+    syncCancellationsFromServer();
+  });
+}
+
+/**
  * Marks a scheduled class as cancelled by faculty.
- * Immediately frees the room in Room Radar and notifies the campus schedule cascade.
+ * Automatically persists to database, notifies student devices, and frees the venue.
  */
 export function addClassCancellation(params: {
   day: number;
@@ -131,6 +178,14 @@ export function addClassCancellation(params: {
 
   const next = [...current, record];
   saveClassCancellations(next);
+
+  // Sync to database
+  if (typeof window !== "undefined") {
+    addClassCancellationServerFn({ data: record }).catch((err) =>
+      console.error("[campus-pulse] Failed to sync cancellation to server:", err),
+    );
+  }
+
   return record;
 }
 
@@ -141,6 +196,12 @@ export function removeClassCancellation(id: string): void {
   const current = getClassCancellations();
   const next = current.filter((c) => c.id !== id);
   saveClassCancellations(next);
+
+  if (typeof window !== "undefined") {
+    removeClassCancellationServerFn({ data: { id } }).catch((err) =>
+      console.error("[campus-pulse] Failed to remove cancellation from server:", err),
+    );
+  }
 }
 
 /**
@@ -154,6 +215,12 @@ export function settleClassCancellation(cancellationId: string, makeupId: string
       : c,
   );
   saveClassCancellations(next);
+
+  if (typeof window !== "undefined") {
+    settleClassCancellationServerFn({ data: { cancellationId, makeupId } }).catch((err) =>
+      console.error("[campus-pulse] Failed to settle cancellation on server:", err),
+    );
+  }
 }
 
 /**
@@ -176,6 +243,29 @@ export function isClassCancelled(
     return false;
   });
   return match || null;
+}
+
+/**
+ * Returns all active cancellations that affect a specific student batch or course
+ */
+export function getStudentCancellations(
+  batchNameOrId?: string | number,
+): ClassCancellationRecord[] {
+  const all = getClassCancellations().filter((c) => c.status === "active");
+  if (batchNameOrId === undefined || batchNameOrId === null) return all;
+
+  if (typeof batchNameOrId === "number") {
+    return all.filter((c) => c.batch === batchNameOrId);
+  }
+
+  const needle = String(batchNameOrId).toLowerCase().trim();
+  if (!needle) return all;
+
+  return all.filter(
+    (c) =>
+      c.batchName.toLowerCase().includes(needle) ||
+      needle.includes(c.batchName.toLowerCase()),
+  );
 }
 
 // -------------------------------------------------------------

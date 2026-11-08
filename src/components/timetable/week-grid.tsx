@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarDays, List } from "lucide-react";
 import { Segment } from "@/components/timetable/chrome";
 import { DAY_SHORT, DAYS, SLOTS, cellMap, subjects, rangeLabel, type ClassEntry } from "@/lib/schedule";
+import { isClassCancelled } from "@/lib/campus-pulse";
 
 type Props = {
   list: ClassEntry[];
@@ -19,6 +20,18 @@ export function WeekGrid({ list, focusDay, liveDay, liveSlot, caption, onDayChan
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
   const [day, setDay] = useState(focusDay ?? 0);
+  const [, setCancelRevision] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setCancelRevision((r) => r + 1);
+    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
   useEffect(() => {
     const media = window.matchMedia("(max-width: 859px)");
     const update = () => setCompact(media.matches);
@@ -51,14 +64,36 @@ export function WeekGrid({ list, focusDay, liveDay, liveSlot, caption, onDayChan
       const entry = group[0];
       const live = liveDay === cellDay && liveSlot === slot;
       const lab = /lab/i.test(subjects[entry.subject]);
+      const cancelled = isClassCancelled(cellDay, slot, entry.teacher, entry.batch, entry.room);
       return (
-        <article key={key} className={`mini${live ? " live" : ""}${lab ? " lab" : ""}${entry.isMakeup ? " makeup-class" : ""}`}>
+        <article
+          key={key}
+          className={`mini${live && !cancelled ? " live" : ""}${lab ? " lab" : ""}${entry.isMakeup ? " makeup-class" : ""}${cancelled ? " cancelled-mini" : ""}`}
+        >
           <div className="mini-label">
-            <span>{entry.isMakeup ? "⭐ Makeup Class" : entry.repeater ? "Repeater" : lab ? "Lab" : "Lecture"}</span>
-            {live ? <span className="flag now">Now</span> : null}
+            <span>
+              {cancelled
+                ? "❌ Cancelled"
+                : entry.isMakeup
+                  ? "⭐ Makeup Class"
+                  : entry.repeater
+                    ? "Repeater"
+                    : lab
+                      ? "Lab"
+                      : "Lecture"}
+            </span>
+            {live && !cancelled ? <span className="flag now">Now</span> : null}
+            {cancelled ? <span className="flag cancelled-pill">Room Free</span> : null}
           </div>
-          <strong>{subjects[entry.subject]}</strong>
+          <strong style={{ textDecoration: cancelled ? "line-through" : undefined, opacity: cancelled ? 0.65 : 1 }}>
+            {subjects[entry.subject]}
+          </strong>
           <span className="mini-caption">{[...new Set(group.map(caption))].join(" · ")}</span>
+          {cancelled && cancelled.reason && (
+            <span className="mini-cancel-reason" title={cancelled.reason}>
+              "{cancelled.reason}"
+            </span>
+          )}
         </article>
       );
     });

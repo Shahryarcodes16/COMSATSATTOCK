@@ -10113,3 +10113,210 @@ article.mini.makeup-class .mini-label > span:first-child {
   font-size: 0.76rem;
   cursor: pointer;
 }
+
+/* =========================================================================
+   Live Class Cancellation & Room Freeing Styling
+   ========================================================================= */
+
+.cancelled-class-card {
+  border-left: 4px solid #e11d48 !important;
+  background: color-mix(in srgb, #e11d48 4%, var(--c-paper)) !important;
+  opacity: 0.95;
+}
+
+.cancelled-side-badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: #e11d48;
+  border-radius: var(--r-sm);
+  margin-top: 0.25rem;
+}
+
+.badge-cancelled-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e11d48;
+  background: rgba(225, 29, 72, 0.1);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  margin-left: auto;
+}
+
+.cancelled-class-notice-box {
+  margin: 0.5rem 0 0.75rem 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--r-md);
+  background: rgba(225, 29, 72, 0.06);
+  border: 1px solid rgba(225, 29, 72, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cancelled-notice-text {
+  font-size: 0.82rem;
+  color: #be123c;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.room-freed-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.subject-cancelled {
+  color: var(--c-muted) !important;
+}
+
+.cancelled-mini {
+  border-color: rgba(225, 29, 72, 0.4) !important;
+  background: rgba(225, 29, 72, 0.05) !important;
+}
+
+.cancelled-mini .mini-label {
+  color: #e11d48 !important;
+  font-weight: 700;
+}
+
+.cancelled-pill {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #065f46 !important;
+  font-weight: 700 !important;
+}
+
+.mini-cancel-reason {
+  display: block;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: #be123c;
+  margin-top: 0.2rem;
+  line-height: 1.2;
+}
+
+.cancelled-next-panel-card {
+  border: 1px solid rgba(225, 29, 72, 0.3) !important;
+  background: color-mix(in srgb, #e11d48 3%, var(--c-paper)) !important;
+}
+
+.next-cancellation-strip {
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md);
+  background: rgba(225, 29, 72, 0.08);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  margin-bottom: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cancellation-badge-text {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #e11d48;
+}
+
+.cancellation-reason-text {
+  font-size: 0.82rem;
+  color: var(--c-ink);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.room-freed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.batch-today-cancellations-card {
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: rgba(225, 29, 72, 0.06);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.cancellations-card-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #e11d48;
+}
+
+.cancellations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cancellation-quick-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--c-paper);
+  border: 1px solid rgba(225, 29, 72, 0.15);
+  border-radius: var(--r-sm);
+}
+
+.quick-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.quick-item-reason {
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--c-muted);
+  margin: 0;
+}
+
+.quick-item-freed {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #059669;
+}
+
+.room-freed-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #047857;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  width: fit-content;
+  margin-top: 0.2rem;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   ArrowUpRight,
   Bell,
   Briefcase,
@@ -25,6 +26,7 @@ import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal
 import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
+import { isClassCancelled, getClassCancellations } from "@/lib/campus-pulse";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
@@ -121,12 +123,41 @@ export function TodayView() {
       .sort((a, b) => a.slot - b.slot);
   }, [teacherClasses, day]);
 
+  const [cancellations, setCancellations] = useState(() => getClassCancellations());
+
+  useEffect(() => {
+    const handleUpdate = () => setCancellations(getClassCancellations());
+    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
   const cell = at(day, slot);
-  const busyRooms = new Set(cell.map((entry) => entry.room).filter((id) => id >= 0));
-  const busyTeachers = new Set(cell.map((entry) => entry.teacher).filter((id) => id >= 0));
+  // Exclude cancelled classes from busy rooms & faculty so cancelled slots show as free
+  const uncancelledCell = cell.filter(
+    (entry) => !isClassCancelled(day, slot, entry.teacher, entry.batch, entry.room),
+  );
+  const busyRooms = new Set(uncancelledCell.map((entry) => entry.room).filter((id) => id >= 0));
+  const busyTeachers = new Set(uncancelledCell.map((entry) => entry.teacher).filter((id) => id >= 0));
   const mine = pinnedBatch === null ? [] : forBatch(pinnedBatch);
   const currentLecture = ready && clock.dayIndex === day && clock.liveSlot === slot;
   const availabilityWindow = `${DAYS[day]} · ${SLOTS[slot].label}`;
+
+  const pinnedBatchName = pinnedBatch !== null ? (batches[pinnedBatch] || "") : "";
+  const todayBatchCancellations = useMemo(() => {
+    if (pinnedBatch === null) return [];
+    return cancellations.filter(
+      (c) =>
+        c.status === "active" &&
+        c.day === day &&
+        (c.batch === pinnedBatch ||
+          (pinnedBatchName && c.batchName.toLowerCase().includes(pinnedBatchName.toLowerCase())) ||
+          (pinnedBatchName && pinnedBatchName.toLowerCase().includes(c.batchName.toLowerCase()))),
+    );
+  }, [cancellations, day, pinnedBatch, pinnedBatchName]);
 
   return (
     <div className="page today-page">
@@ -394,6 +425,30 @@ export function TodayView() {
               <p className="batch-heading">
                 {batches[pinnedBatch]} <span>{DAYS[day]}</span>
               </p>
+
+              {todayBatchCancellations.length > 0 && (
+                <div className="batch-today-cancellations-card">
+                  <div className="cancellations-card-badge">
+                    <AlertTriangle size={15} />
+                    <span>
+                      {todayBatchCancellations.length} Lecture{todayBatchCancellations.length > 1 ? "s" : ""} Cancelled Today for {pinnedBatchName}
+                    </span>
+                  </div>
+                  <div className="cancellations-list">
+                    {todayBatchCancellations.map((c) => (
+                      <div key={c.id} className="cancellation-quick-item">
+                        <div className="quick-item-main">
+                          <strong>{c.subjectName}</strong>
+                          <span>with {c.teacherName} · Slot: {SLOTS[c.slot]?.label || c.slot}</span>
+                        </div>
+                        {c.reason && <p className="quick-item-reason">"{c.reason}"</p>}
+                        <span className="quick-item-freed">🟢 Room {c.roomName} is free</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <ClassList list={mine} day={day} who="batch" />
               <button
                 type="button"
@@ -464,16 +519,32 @@ export function RoomsView() {
   const [span, setSpan] = useState<1 | 2>(1);
   const effectiveSpan: 1 | 2 = slot === 4 ? 1 : span;
 
+  const [cancellations, setCancellations] = useState(() => getClassCancellations());
+
+  useEffect(() => {
+    const handleUpdate = () => setCancellations(getClassCancellations());
+    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
   const occupied = useMemo(() => {
     const map = new Map<number, ReturnType<typeof at>>();
     for (const entry of [...at(day, slot), ...(effectiveSpan === 2 ? at(day, slot + 1) : [])]) {
       if (entry.room < 0) continue;
+      // If cancelled, do not mark room as occupied
+      if (isClassCancelled(entry.day, entry.slot, entry.teacher, entry.batch, entry.room)) {
+        continue;
+      }
       const list = map.get(entry.room);
       if (list) list.push(entry);
       else map.set(entry.room, [entry]);
     }
     return map;
-  }, [day, slot, effectiveSpan]);
+  }, [day, slot, effectiveSpan, cancellations]);
 
   const needle = query.trim().toLowerCase();
   const matched = rooms
@@ -481,8 +552,25 @@ export function RoomsView() {
     .filter((room) => (group === "All" ? true : roomGroup(room.label) === group))
     .filter((room) => room.label.toLowerCase().includes(needle));
 
-  const free = matched.filter((room) => isFree(forRoom(room.id), day, slot, effectiveSpan));
-  const busy = matched.filter((room) => !isFree(forRoom(room.id), day, slot, effectiveSpan));
+  const getUncancelledRoomClasses = (roomId: number) => {
+    return forRoom(roomId).filter(
+      (entry) =>
+        !cancellations.some(
+          (c) =>
+            c.status === "active" &&
+            c.day === entry.day &&
+            c.slot === entry.slot &&
+            c.room === roomId,
+        ),
+    );
+  };
+
+  const free = matched.filter((room) =>
+    isFree(getUncancelledRoomClasses(room.id), day, slot, effectiveSpan),
+  );
+  const busy = matched.filter(
+    (room) => !isFree(getUncancelledRoomClasses(room.id), day, slot, effectiveSpan),
+  );
 
   return (
     <div className="page rooms-page">
@@ -612,25 +700,36 @@ export function RoomsView() {
                       <span>{list.length}</span>
                     </h2>
                     <div className="tile-grid">
-                      {list.map((room) => (
-                        <button
-                          key={room.id}
-                          type="button"
-                          className="tile tap"
-                          onClick={() => open({ type: "room", id: room.id })}
-                        >
-                          <span className="room-icon">
-                            <DoorOpen size={19} aria-hidden />
-                          </span>
-                          <span className="room-copy">
-                            <b>{room.label}</b>
-                            <span>
-                              Available this {effectiveSpan === 2 ? "and next lecture" : "lecture"}
+                      {list.map((room) => {
+                        const isFreedByCancel = cancellations.some(
+                          (c) => c.status === "active" && c.day === day && c.slot === slot && c.room === room.id,
+                        );
+                        return (
+                          <button
+                            key={room.id}
+                            type="button"
+                            className="tile tap"
+                            onClick={() => open({ type: "room", id: room.id })}
+                          >
+                            <span className="room-icon">
+                              <DoorOpen size={19} aria-hidden />
                             </span>
-                          </span>
-                          <ArrowUpRight size={16} className="card-arrow" aria-hidden />
-                        </button>
-                      ))}
+                            <span className="room-copy">
+                              <b>{room.label}</b>
+                              {isFreedByCancel ? (
+                                <span className="room-freed-tag">
+                                  🟢 Freed by Cancellation
+                                </span>
+                              ) : (
+                                <span>
+                                  Available this {effectiveSpan === 2 ? "and next lecture" : "lecture"}
+                                </span>
+                              )}
+                            </span>
+                            <ArrowUpRight size={16} className="card-arrow" aria-hidden />
+                          </button>
+                        );
+                      })}
                     </div>
                   </section>
                 );
