@@ -49,6 +49,7 @@ import {
 } from "@/lib/admin";
 import { DATESHEET, isDatesheetActive } from "@/lib/datesheet";
 import { batches, rooms, teachers, entries } from "@/lib/schedule";
+import { TimetableManagement } from "./timetable-management";
 
 export function AdminPortal() {
   const { setView, now } = useDesk();
@@ -378,8 +379,8 @@ export function AdminPortal() {
           className={`admin-nav-tab ${activeTab === "uploader" ? "active" : ""}`}
           onClick={() => setActiveTab("uploader")}
         >
-          <Upload size={16} aria-hidden />
-          <span>📤 Upload Timetable</span>
+          <Calendar size={16} aria-hidden />
+          <span>📅 Timetable Management</span>
         </button>
 
         <button
@@ -516,115 +517,11 @@ export function AdminPortal() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 2: TIMETABLE UPLOADER */}
+      {/* TAB 2: TIMETABLE MANAGEMENT SYSTEM                        */}
       {/* ========================================================= */}
       {activeTab === "uploader" && (
         <div className="admin-tab-content stack">
-          <div className="panel-head">
-            <div>
-              <h2 className="section-title">Automated Timetable Excel / CSV Uploader</h2>
-              <p className="quiet">
-                Drop your official university timetable file here. The app automatically parses all batches, rooms, teachers, and lecture slots.
-              </p>
-            </div>
-          </div>
-
-          {/* Current System Overview */}
-          <div className="admin-stats-grid">
-            <div className="admin-stat-card">
-              <span className="fine quiet">Current Batches</span>
-              <span className="admin-stat-num">{batches.length}</span>
-              <span className="fine">Across all departments</span>
-            </div>
-            <div className="admin-stat-card">
-              <span className="fine quiet">Active Faculty</span>
-              <span className="admin-stat-num">{teachers.length}</span>
-              <span className="fine">Professors & Lecturers</span>
-            </div>
-            <div className="admin-stat-card">
-              <span className="fine quiet">Lecture Rooms & Labs</span>
-              <span className="admin-stat-num">{rooms.length}</span>
-              <span className="fine">LH, CR, LT & Computer Labs</span>
-            </div>
-            <div className="admin-stat-card">
-              <span className="fine quiet">Weekly Scheduled Classes</span>
-              <span className="admin-stat-num">{entries.length}</span>
-              <span className="fine">Mon – Fri Lectures</span>
-            </div>
-          </div>
-
-          {/* Upload Drop Zone */}
-          <div className="admin-dropzone stack">
-            <div className="admin-dropzone-inner">
-              <FileSpreadsheet size={42} aria-hidden className="admin-drop-icon" />
-              <h3>Drag and Drop New Timetable (.xlsx or .csv)</h3>
-              <p className="quiet fine">
-                Supports official COMSATS Attock Excel workbooks or CSV exports.
-              </p>
-              <label className="btn solid tap admin-upload-file-btn">
-                <Upload size={16} aria-hidden />
-                <span>Browse Files</span>
-                <input
-                  type="file"
-                  accept=".xlsx, .xls, .csv"
-                  onChange={handleFileUpload}
-                  style={{ display: "none" }}
-                />
-              </label>
-            </div>
-
-            {uploadedFileName && (
-              <div className="admin-uploaded-file-row">
-                <FileText size={18} aria-hidden />
-                <span>{uploadedFileName}</span>
-                {isProcessingFile ? (
-                  <span className="fine quiet">Analyzing file…</span>
-                ) : (
-                  <span className="admin-file-ready-tag">Parsed & Ready</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {uploadFeedback && (
-            <div className="admin-feedback-banner">
-              <CheckCircle2 size={18} aria-hidden />
-              <span>{uploadFeedback}</span>
-            </div>
-          )}
-
-          {parsedStats && (
-            <div className="admin-preview-summary stack">
-              <h3>Preview Parsed Timetable</h3>
-              <div className="admin-grid-2">
-                <div className="admin-summary-item">
-                  <b>{parsedStats.totalRows}</b> Lectures identified
-                </div>
-                <div className="admin-summary-item">
-                  <b>{parsedStats.classesCount}</b> Batches mapped (BSCS, BSE, BBA, etc.)
-                </div>
-                <div className="admin-summary-item">
-                  <b>{parsedStats.roomsCount}</b> Rooms & Labs allocated
-                </div>
-                <div className="admin-summary-item">
-                  <b>{parsedStats.teachersCount}</b> Faculty timetable links verified
-                </div>
-              </div>
-
-              <div className="admin-form-actions">
-                <button
-                  type="button"
-                  className="btn solid tap"
-                  onClick={() => {
-                    alert("Timetable verified! In a production deployment, this replaces src/data/timetable.json or database records.");
-                  }}
-                >
-                  <Save size={16} aria-hidden />
-                  <span>Deploy This Timetable Live to All Students</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <TimetableManagement />
         </div>
       )}
 

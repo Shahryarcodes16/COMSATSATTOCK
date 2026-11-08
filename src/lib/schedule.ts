@@ -30,10 +30,10 @@ export function getCampusMinutes(date: Date | null = new Date()) {
   return { weekday, dayIndex, hour, minute, minutes };
 }
 
-export const batches = raw.b;
-export const rooms = raw.r;
-export const teachers = raw.t;
-export const subjects = raw.s;
+export const batches: string[] = [...raw.b];
+export const rooms: string[] = [...raw.r];
+export const teachers: string[] = [...raw.t];
+export const subjects: string[] = [...raw.s];
 
 export type ClassEntry = {
   day: number;
@@ -59,6 +59,8 @@ export const entries: ClassEntry[] = raw.e.map(
     repeater: repeater === 1,
   }),
 );
+
+export let activeVersionTitle = "Fall-2026-V1";
 
 export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
 export const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
@@ -237,21 +239,122 @@ export function clockFace(date: Date | null): string {
   });
 }
 
-const byBatch: ClassEntry[][] = batches.map(() => []);
-const byTeacher: ClassEntry[][] = teachers.map(() => []);
-const byRoom: ClassEntry[][] = rooms.map(() => []);
-const bySubject: ClassEntry[][] = subjects.map(() => []);
+const byBatch: ClassEntry[][] = [];
+const byTeacher: ClassEntry[][] = [];
+const byRoom: ClassEntry[][] = [];
+const bySubject: ClassEntry[][] = [];
 const byCell = new Map<string, ClassEntry[]>();
 
-for (const entry of entries) {
-  byBatch[entry.batch]?.push(entry);
-  if (entry.teacher >= 0) byTeacher[entry.teacher]?.push(entry);
-  if (entry.room >= 0) byRoom[entry.room]?.push(entry);
-  bySubject[entry.subject]?.push(entry);
-  const key = `${entry.day}|${entry.slot}`;
-  const list = byCell.get(key);
-  if (list) list.push(entry);
-  else byCell.set(key, [entry]);
+export function refreshScheduleDerivedData() {
+  programs.length = 0;
+  const seen = new Set<string>();
+  for (const batch of batches) {
+    const program = programOf(batch);
+    if (!seen.has(program)) {
+      seen.add(program);
+      programs.push(program);
+    }
+  }
+
+  byBatch.length = 0;
+  for (let i = 0; i < batches.length; i++) byBatch.push([]);
+
+  byTeacher.length = 0;
+  for (let i = 0; i < teachers.length; i++) byTeacher.push([]);
+
+  byRoom.length = 0;
+  for (let i = 0; i < rooms.length; i++) byRoom.push([]);
+
+  bySubject.length = 0;
+  for (let i = 0; i < subjects.length; i++) bySubject.push([]);
+
+  byCell.clear();
+
+  for (const entry of entries) {
+    if (byBatch[entry.batch]) byBatch[entry.batch].push(entry);
+    if (entry.teacher >= 0 && byTeacher[entry.teacher]) byTeacher[entry.teacher].push(entry);
+    if (entry.room >= 0 && byRoom[entry.room]) byRoom[entry.room].push(entry);
+    if (bySubject[entry.subject]) bySubject[entry.subject].push(entry);
+
+    const key = `${entry.day}|${entry.slot}`;
+    const list = byCell.get(key);
+    if (list) list.push(entry);
+    else byCell.set(key, [entry]);
+  }
+}
+
+// Initial calculation
+refreshScheduleDerivedData();
+
+/**
+ * Dynamically updates the in-memory timetable and recalculates all derived states
+ */
+export function setActiveTimetable(
+  data: { b: string[]; r: string[]; t: string[]; s: string[]; e: number[][] },
+  versionName?: string,
+) {
+  if (!data || !data.b || !data.r || !data.t || !data.s || !data.e) return;
+
+  batches.length = 0;
+  batches.push(...data.b);
+
+  rooms.length = 0;
+  rooms.push(...data.r);
+
+  teachers.length = 0;
+  teachers.push(...data.t);
+
+  subjects.length = 0;
+  subjects.push(...data.s);
+
+  entries.length = 0;
+  for (const [day, slot, batch, room, teacher, subject, repeater] of data.e) {
+    entries.push({
+      day,
+      slot,
+      batch,
+      room,
+      teacher,
+      subject,
+      repeater: repeater === 1,
+    });
+  }
+
+  if (versionName) {
+    activeVersionTitle = versionName;
+  }
+
+  refreshScheduleDerivedData();
+
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("cui_active_timetable_v1", JSON.stringify(data));
+      if (versionName) {
+        localStorage.setItem("cui_active_timetable_version_v1", versionName);
+      }
+    } catch {
+      // safe fallback
+    }
+    window.dispatchEvent(
+      new CustomEvent("cui:timetable-updated", { detail: { versionName: activeVersionTitle } }),
+    );
+  }
+}
+
+// Hydrate from localStorage on client boot if available
+if (typeof window !== "undefined") {
+  try {
+    const cached = localStorage.getItem("cui_active_timetable_v1");
+    const cachedVer = localStorage.getItem("cui_active_timetable_version_v1");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.b && parsed.r && parsed.t && parsed.s && parsed.e) {
+        setActiveTimetable(parsed, cachedVer || undefined);
+      }
+    }
+  } catch {
+    // fallback to static
+  }
 }
 
 export function getAllEntries(): ClassEntry[] {

@@ -8,8 +8,16 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { batches, readClock, teachers, type ClockInfo } from "@/lib/schedule";
+import {
+  batches,
+  readClock,
+  teachers,
+  activeVersionTitle,
+  setActiveTimetable,
+  type ClockInfo,
+} from "@/lib/schedule";
 import { pruneAndSyncMakeupClasses } from "@/lib/makeup-classes";
+import { getActiveTimetableServerFn } from "@/lib/timetable-server-fn";
 
 export type View =
   | "today"
@@ -110,6 +118,8 @@ type DeskApi = {
   pinnedTeachers: number[];
   togglePinTeacher: (id: number) => void;
   makeupRevision: number;
+  timetableRevision: number;
+  activeVersionTitle: string;
   detail: Detail | null;
   open: (detail: Detail) => void;
   close: () => void;
@@ -140,6 +150,33 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   const [pick, setPick] = useState<{ day: number; slot: number } | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [makeupRevision, setMakeupRevision] = useState(0);
+  const [timetableRevision, setTimetableRevision] = useState(0);
+
+  useEffect(() => {
+    // 1. Fetch active timetable from server to ensure fresh schedule
+    getActiveTimetableServerFn()
+      .then((res) => {
+        if (res?.timetableData) {
+          setActiveTimetable(res.timetableData, res.versionName);
+          setTimetableRevision((v) => v + 1);
+        }
+      })
+      .catch((err) => {
+        console.warn("[context] getActiveTimetableServerFn notice:", err);
+      });
+
+    // 2. React to timetable updates locally and across tabs
+    const handleTimetableUpdate = () => {
+      setTimetableRevision((v) => v + 1);
+    };
+
+    window.addEventListener("cui:timetable-updated", handleTimetableUpdate);
+    window.addEventListener("storage", handleTimetableUpdate);
+    return () => {
+      window.removeEventListener("cui:timetable-updated", handleTimetableUpdate);
+      window.removeEventListener("storage", handleTimetableUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => setMakeupRevision((v) => v + 1);
@@ -322,6 +359,8 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       pinnedTeachers: prefs.pinnedTeachers,
       togglePinTeacher,
       makeupRevision,
+      timetableRevision,
+      activeVersionTitle,
       detail,
       open,
       close,
@@ -336,6 +375,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       pick,
       detail,
       makeupRevision,
+      timetableRevision,
       setTheme,
       toggleTheme,
       setView,
