@@ -23,10 +23,42 @@ export function getNotificationPermission(): NotificationPermission | "unsupport
   return Notification.permission;
 }
 
+let swRegistrationPromise: Promise<ServiceWorkerRegistration | null> | null = null;
+
+/**
+ * Register and wait for the notification service worker (/sw.js)
+ * Required for Android Chrome & iOS PWA notifications
+ */
+export async function registerNotificationServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    return null;
+  }
+  if (!swRegistrationPromise) {
+    swRegistrationPromise = (async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+        // Wait for ready
+        await navigator.serviceWorker.ready;
+        return reg;
+      } catch (err) {
+        console.warn("ServiceWorker registration error:", err);
+        return null;
+      }
+    })();
+  }
+  return swRegistrationPromise;
+}
+
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!isNotificationSupported()) return "denied";
   try {
+    if ("serviceWorker" in navigator) {
+      registerNotificationServiceWorker().catch(() => {});
+    }
     const result = await Notification.requestPermission();
+    if (result === "granted" && "serviceWorker" in navigator) {
+      await registerNotificationServiceWorker();
+    }
     return result;
   } catch (err) {
     console.error("Failed to request notification permission:", err);
@@ -66,6 +98,9 @@ export function playNotificationChime(): void {
     if (!AudioContextClass) return;
 
     const ctx = new AudioContextClass();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
     const now = ctx.currentTime;
 
     // Tone 1: E5 (659.25 Hz)
@@ -99,7 +134,7 @@ export function playNotificationChime(): void {
 }
 
 /**
- * Display a system notification
+ * Display a system notification on mobile and desktop
  */
 export async function sendSystemNotification(
   title: string,
@@ -114,26 +149,63 @@ export async function sendSystemNotification(
     playNotificationChime();
   }
 
+  // Trigger hardware vibration on mobile phones
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    try {
+      navigator.vibrate([200, 100, 200]);
+    } catch {
+      // Ignored if device policy suppresses vibration
+    }
+  }
+
   const notificationOptions: NotificationOptions = {
     icon: "/crest.png",
     badge: "/crest.png",
+    // @ts-expect-error vibrate is standard in web notification options
+    vibrate: [200, 100, 200],
     ...notifOpts,
   };
 
   try {
-    // Check if service worker is active
+    // 1. Service Worker path (MANDATORY on Android mobile browsers where new Notification() throws)
     if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg && "showNotification" in reg) {
+      let reg: ServiceWorkerRegistration | null = null;
+      try {
+        reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<null>((r) => setTimeout(() => r(null), 1200)),
+        ]);
+      } catch {
+        reg = null;
+      }
+
+      if (!reg) {
+        reg = await registerNotificationServiceWorker();
+      }
+
+      if (reg && typeof reg.showNotification === "function") {
         await reg.showNotification(title, notificationOptions);
         return true;
       }
     }
 
+    // 2. Desktop fallback (Window context new Notification)
     new Notification(title, notificationOptions);
     return true;
   } catch (e) {
-    console.error("Error creating notification:", e);
+    console.warn("Initial notification dispatch failed, attempting SW recovery:", e);
+    // On Android, new Notification throws TypeError: Illegal constructor. Recover via SW:
+    try {
+      if ("serviceWorker" in navigator) {
+        const reg = await registerNotificationServiceWorker();
+        if (reg && typeof reg.showNotification === "function") {
+          await reg.showNotification(title, notificationOptions);
+          return true;
+        }
+      }
+    } catch (retryErr) {
+      console.error("ServiceWorker notification retry failed:", retryErr);
+    }
     return false;
   }
 }
@@ -146,7 +218,7 @@ export function hasNotifiedToday(key: string): boolean {
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
     const sentKey = `cui_notif_${todayStr}_${key}`;
-    return sessionStorage.getItem(sentKey) === "1";
+    return sessionStorage.getItem(sentKey) === "1" || localStorage.getItem(sentKey) === "1";
   } catch {
     return false;
   }
@@ -161,7 +233,19 @@ export function markNotifiedToday(key: string): void {
     const todayStr = new Date().toISOString().slice(0, 10);
     const sentKey = `cui_notif_${todayStr}_${key}`;
     sessionStorage.setItem(sentKey, "1");
+    localStorage.setItem(sentKey, "1");
   } catch {
     // Ignore storage errors
+  }
+}
+
+// Automatically register service worker on boot in browser environments
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  if (document.readyState === "complete") {
+    registerNotificationServiceWorker().catch(() => {});
+  } else {
+    window.addEventListener("load", () => {
+      registerNotificationServiceWorker().catch(() => {});
+    });
   }
 }

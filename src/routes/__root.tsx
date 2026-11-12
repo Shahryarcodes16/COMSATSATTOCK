@@ -32,7 +32,7 @@ export const Route = createRootRoute({
         href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap",
       },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/__grok/manifest.webmanifest" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/crest.png" },
     ],
     scripts: [{ children: THEME_BOOT }, { children: PRELOAD_RECOVERY }],

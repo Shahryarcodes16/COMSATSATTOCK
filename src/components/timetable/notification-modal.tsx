@@ -17,6 +17,7 @@ import {
   getStoredNotificationSettings,
   isNotificationSupported,
   playNotificationChime,
+  registerNotificationServiceWorker,
   requestNotificationPermission,
   saveNotificationSettings,
   sendSystemNotification,
@@ -40,6 +41,7 @@ export function useClassNotificationScheduler() {
 
   useEffect(() => {
     if (!isNotificationSupported()) return;
+    registerNotificationServiceWorker().catch(() => {});
 
     const checkAlarms = () => {
       const { dayIndex, minutes: currentCampusMinutes } = getCampusMinutes(now);
@@ -110,8 +112,18 @@ export function useClassNotificationScheduler() {
           )
           .map(toClassEntry);
         todayClasses = [...customItems.filter((item) => item.day === dayIndex), ...makeupExtras];
-      } else if (pinnedBatch !== null) {
-        todayClasses = forBatch(pinnedBatch).filter((e) => e.day === dayIndex);
+      } else {
+        const targetBatch =
+          pinnedBatch !== null
+            ? pinnedBatch
+            : (getActiveStudentSession()?.profile?.defaultBatch ?? null);
+        if (targetBatch !== null) {
+          const baseClasses = forBatch(targetBatch).filter((e) => e.day === dayIndex);
+          const makeupExtras = getActiveArrangedMakeupClasses(now ?? undefined)
+            .filter((m) => m.day === dayIndex && m.batch === targetBatch)
+            .map(toClassEntry);
+          todayClasses = [...baseClasses, ...makeupExtras];
+        }
       }
 
       for (const cls of todayClasses) {
@@ -220,6 +232,11 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
         const next = { ...settings, enabled: true };
         setSettings(next);
         saveNotificationSettings(next);
+        await registerNotificationServiceWorker();
+        await sendSystemNotification("🔔 Class Reminders Activated", {
+          body: `You will receive mobile alerts ${next.leadMinutes} mins before each lecture starts.`,
+          playChime: next.sound,
+        });
       }
     } else {
       const next = { ...settings, enabled: false };
@@ -253,13 +270,15 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
       setPermission(perm);
     }
     if (perm === "granted") {
-      playNotificationChime();
-      await sendSystemNotification("🔔 CUI Attock Timetable: Alert Active!", {
+      await registerNotificationServiceWorker();
+      const sent = await sendSystemNotification("🔔 CUI Attock Timetable: Alert Active!", {
         body: `Testing ${settings.leadMinutes}m class reminder. Next lecture in Lab-03 with Dr. Muazzam Maqsood.`,
         playChime: settings.sound,
       });
-      setTestSent(true);
-      setTimeout(() => setTestSent(false), 3000);
+      if (sent) {
+        setTestSent(true);
+        setTimeout(() => setTestSent(false), 3000);
+      }
     }
   };
 
@@ -399,7 +418,7 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
             <div>
               <b>Works on Android & iOS Lock Screens</b>
               <p className="fine quiet">
-                On iPhone, tap <b>Share ⎋ → Add to Home Screen</b> to receive lock-screen class alerts.
+                Supports Android lock screen alerts, sound chimes & vibration. On iPhone, tap <b>Share ⎋ → Add to Home Screen</b> to receive lock-screen class alerts.
               </p>
             </div>
           </div>
