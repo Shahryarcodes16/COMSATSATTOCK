@@ -229,13 +229,10 @@ export function FacultyOfficeHours() {
                 <div key={dInfo.dayIndex} className="office-day-timeline">
                   <div className="office-timeline-heading-row">
                     <span className="office-timeline-label fine quiet">
-                      {dInfo.dayName} Schedule:
+                      {dInfo.dayName} (5 Slots):
                     </span>
                     <span className="office-timeline-sub-count fine quiet">
-                      {dInfo.freeSlotsCount} free / {dInfo.teachingSlotsCount} lecture{dInfo.teachingSlotsCount !== 1 ? "s" : ""}
-                    </span>
-                    <span className="office-swipe-hint fine quiet" aria-hidden>
-                      All 5 Slots (L1 – L5) ➔
+                      {dInfo.freeSlotsCount} free · {dInfo.teachingSlotsCount} lecture{dInfo.teachingSlotsCount !== 1 ? "s" : ""}
                     </span>
                   </div>
 

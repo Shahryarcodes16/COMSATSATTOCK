@@ -4769,46 +4769,48 @@
   .office-stat-card {
     flex: 1;
   }
-  .office-swipe-hint {
-    display: inline-block;
-  }
   .office-day-timeline {
     width: 100%;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
   }
   .office-timeline-slots {
-    display: flex;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    gap: 0.5rem;
-    padding-bottom: 0.4rem;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: thin;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+    overflow: visible !important;
   }
   .office-timeline-cell {
-    flex: 0 0 135px;
-    min-width: 135px;
-    scroll-snap-align: start;
-    padding: 0.55rem 0.6rem;
-    min-height: 72px;
-    border-radius: 0.65rem;
+    flex: unset !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0.65rem 0.7rem !important;
+    min-height: 76px !important;
+    border-radius: 0.65rem !important;
+    box-sizing: border-box !important;
+  }
+  .office-timeline-cell:last-child:nth-child(odd) {
+    grid-column: span 2;
   }
   .office-free-tag {
     display: inline-block !important;
-    font-size: 0.62rem;
+    font-size: 0.65rem;
   }
   .office-free-badge {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
   }
   .office-cell-slot {
-    font-size: 0.76rem;
+    font-size: 0.78rem;
   }
   .office-cell-time {
     display: inline-block !important;
-    font-size: 0.66rem;
+    font-size: 0.68rem;
+    color: var(--c-muted);
   }
   .office-teach-sub {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4819,14 +4821,30 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .office-notif-modal {
-    border-radius: 1rem;
+  .office-teach-batch {
+    font-size: 0.62rem;
+    color: var(--c-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .office-swipe-hint {
+    display: none !important;
   }
   .notif-modal {
     border-radius: 1rem;
   }
   .notif-lead-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .office-timeline-slots {
+    grid-template-columns: 1fr !important;
+  }
+  .office-timeline-cell:last-child:nth-child(odd) {
+    grid-column: span 1;
   }
 }
 
