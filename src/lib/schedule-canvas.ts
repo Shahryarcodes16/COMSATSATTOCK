@@ -61,9 +61,53 @@ export async function renderScheduleToCanvas(
   const { title, subtitle, list, format, theme } = options;
   const isWallpaper = format === "wallpaper";
 
+  // Calculate day layouts upfront
+  function getDayLayout(count: number) {
+    if (count === 0) {
+      return { cols: 0, rows: 0, height: 115 };
+    }
+    if (count <= 4) {
+      return { cols: count, rows: 1, height: 245 };
+    }
+    // count >= 5: wrap into multiple rows
+    const cols = count <= 6 ? 3 : 4;
+    const rows = Math.ceil(count / cols);
+    const rowH = 145;
+    const rowGap = 12;
+    const height = 76 + rows * rowH + (rows - 1) * rowGap + 20;
+    return { cols, rows, height };
+  }
+
+  const daysData = [0, 1, 2, 3, 4].map((dayIdx) => {
+    const dayClasses = list
+      .filter((e) => e.day === dayIdx)
+      .sort((a, b) => a.slot - b.slot);
+    return {
+      dayIdx,
+      dayName: DAYS[dayIdx],
+      classes: dayClasses,
+      layout: getDayLayout(dayClasses.length),
+    };
+  });
+
+  const startY = 280;
+  const headerH = 145;
+  const gapAfterHeader = 22;
+  const dayGap = 16;
+  const footerH = 65;
+
+  let totalDaysH = 0;
+  for (let i = 0; i < 5; i++) {
+    totalDaysH += daysData[i].layout.height;
+    if (i < 4) totalDaysH += dayGap;
+  }
+
+  const minWallpaperH = 1920;
+  const totalContentH = startY + headerH + gapAfterHeader + totalDaysH + footerH + 30;
+
   // Canvas dimensions
   const width = isWallpaper ? 1080 : 1240;
-  const height = isWallpaper ? 1920 : 880;
+  const height = isWallpaper ? Math.max(minWallpaperH, totalContentH) : 880;
 
   canvas.width = width;
   canvas.height = height;
@@ -108,7 +152,7 @@ export async function renderScheduleToCanvas(
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 
-  // Organize classes by Day (0..4) and Slot (0..4)
+  // Organize classes by Day (0..4) and Slot (0..4) for grid view
   const cellMap = new Map<string, ClassEntry[]>();
   for (const entry of list) {
     const key = `${entry.day}-${entry.slot}`;
@@ -119,13 +163,12 @@ export async function renderScheduleToCanvas(
 
   if (isWallpaper) {
     // -------------------------------------------------------------
-    // WALLPAPER LAYOUT (9:16 Portrait, 1080 x 1920)
+    // WALLPAPER LAYOUT (9:16 Portrait, 1080 x 1920 minimum)
     // -------------------------------------------------------------
-    // Top 360px left relatively clean for phone lock-screen clock & date
-    let y = 370;
+    let y = startY;
 
     // Header container
-    roundRect(ctx, 40, y, width - 80, 150, 24);
+    roundRect(ctx, 40, y, width - 80, headerH, 24);
     ctx.fillStyle = cardFill;
     ctx.fill();
     ctx.strokeStyle = cardBorder;
@@ -134,36 +177,32 @@ export async function renderScheduleToCanvas(
 
     // Draw crest if available
     if (crestImg) {
-      ctx.drawImage(crestImg, 65, y + 25, 100, 100);
+      ctx.drawImage(crestImg, 65, y + 22, 100, 100);
     }
 
     // Title text
     const textStartX = crestImg ? 185 : 70;
     ctx.fillStyle = accentColor;
     ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
-    ctx.fillText("COMSATS UNIVERSITY ISLAMABAD · ATTOCK CAMPUS", textStartX, y + 50);
+    ctx.fillText("COMSATS UNIVERSITY ISLAMABAD · ATTOCK CAMPUS", textStartX, y + 48);
 
     ctx.fillStyle = textPrimary;
     ctx.font = "bold 40px system-ui, -apple-system, sans-serif";
-    ctx.fillText(title, textStartX, y + 95);
+    ctx.fillText(title, textStartX, y + 92);
 
     ctx.fillStyle = textSecondary;
     ctx.font = "20px system-ui, -apple-system, sans-serif";
-    ctx.fillText(subtitle || "Weekly Class Timetable · 5 Oct 2026", textStartX, y + 128);
+    ctx.fillText(subtitle || "Weekly Class Timetable · 5 Oct 2026", textStartX, y + 124);
 
-    y += 180;
+    y += headerH + gapAfterHeader;
 
     // Days (Monday to Friday)
-    const dayHeight = 245;
-    const gap = 16;
-
     for (let dayIdx = 0; dayIdx < 5; dayIdx++) {
-      const dayName = DAYS[dayIdx];
-      const dayClasses = list
-        .filter((e) => e.day === dayIdx)
-        .sort((a, b) => a.slot - b.slot);
+      const dayData = daysData[dayIdx];
+      const { dayName, classes: dayClasses, layout } = dayData;
+      const dayCardHeight = layout.height;
 
-      roundRect(ctx, 40, y, width - 80, dayHeight, 20);
+      roundRect(ctx, 40, y, width - 80, dayCardHeight, 20);
       ctx.fillStyle = cardFill;
       ctx.fill();
       ctx.strokeStyle = cardBorder;
@@ -171,99 +210,165 @@ export async function renderScheduleToCanvas(
       ctx.stroke();
 
       // Day Badge on Left
-      roundRect(ctx, 60, y + 20, 110, 42, 12);
+      roundRect(ctx, 60, y + 18, 110, 42, 12);
       ctx.fillStyle = accentColor;
       ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(dayName.slice(0, 3).toUpperCase(), 115, y + 48);
+      ctx.fillText(dayName.slice(0, 3).toUpperCase(), 115, y + 46);
       ctx.textAlign = "left";
 
       // Count indicator
       ctx.fillStyle = textSecondary;
       ctx.font = "17px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${dayClasses.length} lecture${dayClasses.length !== 1 ? "s" : ""}`, 185, y + 48);
+      ctx.fillText(
+        `${dayClasses.length} lecture${dayClasses.length !== 1 ? "s" : ""}`,
+        185,
+        y + 46,
+      );
 
       // Render day classes
       if (dayClasses.length === 0) {
         ctx.fillStyle = textSecondary;
-        ctx.font = "italic 20px system-ui, -apple-system, sans-serif";
-        ctx.fillText("No classes scheduled — Free Day", 65, y + 130);
+        ctx.font = "italic 19px system-ui, -apple-system, sans-serif";
+        ctx.fillText("No classes scheduled — Free Day", 310, y + 46);
       } else {
-        // Draw up to 3 slots side by side or wrapped
-        let cx = 60;
-        const itemW = 290;
-        const cy = y + 78;
+        const cols = layout.cols;
+        const rowH = 145;
+        const gapY = 12;
 
-        for (let i = 0; i < Math.min(dayClasses.length, 3); i++) {
+        let itemW: number;
+        let gapX: number;
+        if (cols === 1) {
+          itemW = 420;
+          gapX = 0;
+        } else if (cols === 2) {
+          gapX = 20;
+          itemW = Math.floor((960 - gapX) / 2);
+        } else if (cols === 3) {
+          gapX = 16;
+          itemW = Math.floor((960 - 2 * gapX) / 3);
+        } else {
+          // cols === 4
+          gapX = 14;
+          itemW = Math.floor((960 - 3 * gapX) / 4);
+        }
+
+        // Render ALL classes without truncation or +1 more
+        for (let i = 0; i < dayClasses.length; i++) {
           const entry = dayClasses[i];
+          const colIdx = i % cols;
+          const rowIdx = Math.floor(i / cols);
+
+          const itemX = 60 + colIdx * (itemW + gapX);
+          const itemY = y + 78 + rowIdx * (rowH + gapY);
+
           const subName = subjects[entry.subject] || "Subject";
           const roomName = entry.room >= 0 ? rooms[entry.room] : "Room TBA";
           const teacherName = entry.teacher >= 0 ? teachers[entry.teacher] : "";
 
-          roundRect(ctx, cx, cy, itemW, 145, 14);
+          roundRect(ctx, itemX, itemY, itemW, rowH, 14);
           ctx.fillStyle = isDark ? "#172b3c" : "#f1f5f9";
           ctx.fill();
           ctx.strokeStyle = cardBorder;
           ctx.lineWidth = 1;
           ctx.stroke();
 
-          // Slot badge
-          roundRect(ctx, cx + 12, cy + 12, 50, 24, 6);
+          // 1. Slot badge
+          const badgeW = cols === 4 ? 36 : 46;
+          const badgeH = 22;
+          roundRect(ctx, itemX + 10, itemY + 12, badgeW, badgeH, 6);
           ctx.fillStyle = slotBadgeBg;
           ctx.fill();
+
           ctx.fillStyle = slotBadgeText;
-          ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
-          ctx.fillText(SLOTS[entry.slot]?.label || "", cx + 22, cy + 28);
+          ctx.font =
+            cols === 4
+              ? "bold 12px system-ui, -apple-system, sans-serif"
+              : "bold 13px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(
+            SLOTS[entry.slot]?.label || `L${entry.slot + 1}`,
+            itemX + 10 + badgeW / 2,
+            itemY + 27,
+          );
+          ctx.textAlign = "left";
 
-          // Time
+          // 2. Time
           ctx.fillStyle = textSecondary;
-          ctx.font = "13px system-ui, -apple-system, sans-serif";
-          ctx.fillText(`${SLOTS[entry.slot]?.start} – ${SLOTS[entry.slot]?.end}`, cx + 70, cy + 28);
+          ctx.font =
+            cols === 4
+              ? "11.5px system-ui, -apple-system, sans-serif"
+              : "13px system-ui, -apple-system, sans-serif";
+          const slotDef = SLOTS[entry.slot];
+          const timeStr = slotDef ? `${slotDef.start} – ${slotDef.end}` : "";
+          ctx.fillText(timeStr, itemX + 10 + badgeW + 8, itemY + 27);
 
-          // Subject Name
+          // Make-up indicator if applicable
+          if (entry.isMakeup) {
+            const extraW = 50;
+            roundRect(ctx, itemX + itemW - extraW - 8, itemY + 12, extraW, 20, 5);
+            ctx.fillStyle = "rgba(245, 158, 11, 0.18)";
+            ctx.fill();
+            ctx.fillStyle = goldColor;
+            ctx.font = "bold 10px system-ui, -apple-system, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("⭐ Extra", itemX + itemW - extraW / 2 - 8, itemY + 26);
+            ctx.textAlign = "left";
+          }
+
+          // 3. Subject Name
           ctx.fillStyle = textPrimary;
-          ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
-          const maxChar = 24;
-          const displaySub = subName.length > maxChar ? subName.slice(0, maxChar) + "…" : subName;
-          ctx.fillText(displaySub, cx + 12, cy + 66);
+          ctx.font =
+            cols === 4
+              ? "bold 13.5px system-ui, -apple-system, sans-serif"
+              : "bold 16px system-ui, -apple-system, sans-serif";
+          const maxChar = cols === 4 ? 22 : cols === 3 ? 24 : cols === 2 ? 34 : 32;
+          const displaySub =
+            subName.length > maxChar ? subName.slice(0, maxChar - 1) + "…" : subName;
+          ctx.fillText(displaySub, itemX + 10, itemY + 62);
 
-          // Room tag
+          // 4. Room tag
           ctx.fillStyle = accentColor;
-          ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
-          ctx.fillText(`📍 ${roomName}`, cx + 12, cy + 96);
+          ctx.font =
+            cols === 4
+              ? "bold 12px system-ui, -apple-system, sans-serif"
+              : "bold 13px system-ui, -apple-system, sans-serif";
+          const maxRoomLen = cols === 4 ? 18 : 24;
+          const displayRoom =
+            roomName.length > maxRoomLen ? roomName.slice(0, maxRoomLen - 1) + "…" : roomName;
+          ctx.fillText(`📍 ${displayRoom}`, itemX + 10, itemY + 92);
 
-          // Full Teacher Name
+          // 5. Full Teacher Name
           if (teacherName) {
             ctx.fillStyle = textSecondary;
-            ctx.font = "13px system-ui, -apple-system, sans-serif";
-            const maxTeacherLen = 27;
+            ctx.font =
+              cols === 4
+                ? "11.5px system-ui, -apple-system, sans-serif"
+                : "13px system-ui, -apple-system, sans-serif";
+            const maxTeacherLen = cols === 4 ? 20 : cols === 3 ? 24 : 30;
             const displayTeacher =
               teacherName.length > maxTeacherLen
                 ? teacherName.slice(0, maxTeacherLen - 1) + "…"
                 : teacherName;
-            ctx.fillText(`👤 ${displayTeacher}`, cx + 12, cy + 124);
+            ctx.fillText(`👤 ${displayTeacher}`, itemX + 10, itemY + 120);
           }
-
-          cx += itemW + 15;
-        }
-
-        if (dayClasses.length > 3) {
-          ctx.fillStyle = accentColor;
-          ctx.font = "bold 15px system-ui, -apple-system, sans-serif";
-          ctx.fillText(`+${dayClasses.length - 3} more`, 965, y + 145);
         }
       }
 
-      y += dayHeight + gap;
+      y += dayCardHeight + dayGap;
     }
 
     // Footer Watermark
     ctx.textAlign = "center";
     ctx.fillStyle = textSecondary;
     ctx.font = "18px system-ui, -apple-system, sans-serif";
-    ctx.fillText("Generated with CUI Attock Campus Timetable · Developer: Shahryar", width / 2, height - 50);
+    ctx.fillText(
+      "Generated with CUI Attock Campus Timetable · Developer: Shahryar",
+      width / 2,
+      height - 45,
+    );
     ctx.textAlign = "left";
   } else {
     // -------------------------------------------------------------
@@ -376,6 +481,17 @@ export async function renderScheduleToCanvas(
           const maxLen = 20;
           const displaySub = subName.length > maxLen ? subName.slice(0, maxLen) + "…" : subName;
           ctx.fillText(displaySub, cx + 18, ry + 28);
+
+          if (cellItems.length > 1) {
+            roundRect(ctx, cx + colW - 55, ry + 12, 45, 18, 4);
+            ctx.fillStyle = "rgba(245, 158, 11, 0.2)";
+            ctx.fill();
+            ctx.fillStyle = goldColor;
+            ctx.font = "bold 10px system-ui, -apple-system, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`+${cellItems.length - 1} more`, cx + colW - 32, ry + 25);
+            ctx.textAlign = "left";
+          }
 
           // Room tag
           if (roomName) {
