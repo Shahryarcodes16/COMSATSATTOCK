@@ -13,8 +13,25 @@ import {
   type ClassEntry,
 } from "./schedule.ts";
 import { CAMPUS_TIME_ZONE } from "./campus.ts";
+import {
+  getActiveMakeupClassesServerFn,
+  addMakeupClassServerFn,
+  removeMakeupClassServerFn,
+} from "./makeup-server-fn.ts";
 
 export const MAKEUP_CLASSES_STORAGE_KEY = "cui_arranged_makeup_classes_v1";
+export const MAKEUP_UPDATED_EVENT = "cui:makeup-classes-updated";
+
+let memoryMakeups: MakeupClassRecord[] = [];
+let isMakeupSyncing = false;
+let lastMakeupPersistent: boolean | null = null;
+const pendingMakeupAdds = new Map<string, MakeupClassRecord>();
+const pendingMakeupRemovals = new Set<string>();
+const sessionRemovedMakeupIds = new Set<string>();
+
+export function isMakeupCloudPersistent(): boolean | null {
+  return lastMakeupPersistent;
+}
 
 export interface MakeupClassRecord {
   id: string; // Unique ID (e.g. "makeup_1730876400000_abc")
@@ -149,10 +166,10 @@ export function isMakeupActive(
  * Loads all arranged makeup classes from client storage
  */
 export function getArrangedMakeupClasses(): MakeupClassRecord[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return memoryMakeups;
   try {
     const raw = localStorage.getItem(MAKEUP_CLASSES_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return memoryMakeups;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       return parsed.filter(
@@ -171,7 +188,7 @@ export function getArrangedMakeupClasses(): MakeupClassRecord[] {
   } catch (err) {
     console.error("Failed to parse arranged makeup classes", err);
   }
-  return [];
+  return memoryMakeups;
 }
 
 /**
@@ -183,6 +200,22 @@ export function getActiveArrangedMakeupClasses(
 ): MakeupClassRecord[] {
   const list = getArrangedMakeupClasses();
   return list.filter((m) => isMakeupActive(m, now));
+}
+
+export function isMakeupForToday(
+  record: MakeupClassRecord,
+  refDate: Date = new Date(),
+): boolean {
+  const todayDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: CAMPUS_TIME_ZONE,
+  }).format(refDate);
+  if (record.targetDate && record.targetDate === todayDate) return true;
+  const short = new Intl.DateTimeFormat("en-US", {
+    timeZone: CAMPUS_TIME_ZONE,
+    weekday: "short",
+  }).format(refDate);
+  const idx = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(short);
+  return idx >= 0 && record.day === idx;
 }
 
 /**
@@ -221,11 +254,12 @@ export function pruneAndSyncMakeupClasses(
  * Persists makeup classes to storage and notifies subscribers
  */
 export function saveArrangedMakeupClasses(list: MakeupClassRecord[]): void {
+  memoryMakeups = list;
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(MAKEUP_CLASSES_STORAGE_KEY, JSON.stringify(list));
     window.dispatchEvent(
-      new CustomEvent("cui:makeup-classes-updated", { detail: list }),
+      new CustomEvent(MAKEUP_UPDATED_EVENT, { detail: list }),
     );
   } catch (err) {
     console.error("Failed to save arranged makeup classes", err);
@@ -233,9 +267,102 @@ export function saveArrangedMakeupClasses(list: MakeupClassRecord[]): void {
 }
 
 /**
- * Schedules a new makeup class, immediately reserving the room and teacher until slot end time.
+ * Synchronizes active arranged makeup classes from backend PostgreSQL/Neon across all devices.
  */
-export function addMakeupClass(
+export async function syncMakeupClassesFromServer(): Promise<MakeupClassRecord[]> {
+  if (typeof window === "undefined") return getArrangedMakeupClasses();
+  if (isMakeupSyncing) return getArrangedMakeupClasses();
+
+  isMakeupSyncing = true;
+  try {
+    for (const [id, rec] of pendingMakeupAdds.entries()) {
+      try {
+        const addRes = await addMakeupClassServerFn({ data: rec });
+        if (addRes && typeof addRes.persistent === "boolean") {
+          lastMakeupPersistent = addRes.persistent;
+        }
+        pendingMakeupAdds.delete(id);
+      } catch {
+        // Leave in pendingMakeupAdds for next sync cycle
+      }
+    }
+
+    const syncRes = await getActiveMakeupClassesServerFn();
+    const serverList = Array.isArray(syncRes) ? syncRes : syncRes?.records;
+    const persistent = Array.isArray(syncRes) ? false : Boolean(syncRes?.persistent);
+    if (!Array.isArray(syncRes) && typeof syncRes?.persistent === "boolean") {
+      lastMakeupPersistent = syncRes.persistent;
+    }
+
+    if (Array.isArray(serverList)) {
+      const mergedMap = new Map<string, MakeupClassRecord>();
+      const now = new Date();
+
+      if (!persistent) {
+        for (const localItem of getArrangedMakeupClasses()) {
+          if (
+            isMakeupActive(localItem, now) &&
+            !pendingMakeupRemovals.has(localItem.id) &&
+            !sessionRemovedMakeupIds.has(localItem.id)
+          ) {
+            mergedMap.set(localItem.id, localItem);
+          }
+        }
+      }
+
+      for (const item of serverList) {
+        if (
+          isMakeupActive(item, now) &&
+          !pendingMakeupRemovals.has(item.id) &&
+          !sessionRemovedMakeupIds.has(item.id)
+        ) {
+          mergedMap.set(item.id, item);
+        }
+      }
+      for (const [id, pending] of pendingMakeupAdds.entries()) {
+        if (
+          isMakeupActive(pending, now) &&
+          !pendingMakeupRemovals.has(id) &&
+          !sessionRemovedMakeupIds.has(id)
+        ) {
+          mergedMap.set(id, pending);
+        }
+      }
+
+      const merged = Array.from(mergedMap.values());
+      saveArrangedMakeupClasses(merged);
+      return merged;
+    }
+  } catch (err) {
+    console.warn("[makeup-classes] Could not sync makeup classes from server:", err);
+  } finally {
+    isMakeupSyncing = false;
+  }
+  return getArrangedMakeupClasses();
+}
+
+// Background auto-sync on boot, every 10s, on window focus, and visibilitychange
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    syncMakeupClassesFromServer();
+  }, 200);
+
+  setInterval(() => {
+    syncMakeupClassesFromServer();
+  }, 10000);
+
+  window.addEventListener("focus", () => {
+    syncMakeupClassesFromServer();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncMakeupClassesFromServer();
+    }
+  });
+}
+
+function buildMakeupRecord(
   params: Omit<
     MakeupClassRecord,
     "id" | "createdAt" | "targetDate" | "targetDateLabel" | "expiresAt" | "status" | "autoReleasedAt"
@@ -260,18 +387,94 @@ export function addMakeupClass(
     createdAt: now.toISOString(),
   };
 
-  const next = [...current, record];
+  // Prevent duplicate active makeup bookings in same slot+room+teacher+batch
+  const filtered = current.filter(
+    (m) =>
+      !(
+        isMakeupActive(m, now) &&
+        m.day === record.day &&
+        m.slot === record.slot &&
+        m.teacher === record.teacher &&
+        m.batch === record.batch
+      ),
+  );
+  const next = [...filtered, record];
+  pendingMakeupAdds.set(record.id, record);
   saveArrangedMakeupClasses(next);
   return record;
+}
+
+/**
+ * Schedules a new makeup class, immediately reserving the room and teacher until slot end time.
+ */
+export function addMakeupClass(
+  params: Omit<
+    MakeupClassRecord,
+    "id" | "createdAt" | "targetDate" | "targetDateLabel" | "expiresAt" | "status" | "autoReleasedAt"
+  >,
+): MakeupClassRecord {
+  const record = buildMakeupRecord(params);
+  if (typeof window !== "undefined") {
+    addMakeupClassServerFn({ data: record })
+      .then((res) => {
+        if (res && typeof res.persistent === "boolean") {
+          lastMakeupPersistent = res.persistent;
+        }
+        pendingMakeupAdds.delete(record.id);
+      })
+      .catch((err) => {
+        console.error("[makeup-classes] Failed to sync makeup class to server:", err);
+      });
+  }
+  return record;
+}
+
+/**
+ * Schedules a new makeup class and awaits cloud PostgreSQL persistence confirmation.
+ */
+export async function addMakeupClassAsync(
+  params: Omit<
+    MakeupClassRecord,
+    "id" | "createdAt" | "targetDate" | "targetDateLabel" | "expiresAt" | "status" | "autoReleasedAt"
+  >,
+): Promise<{ record: MakeupClassRecord; persistent: boolean; dbSaved: boolean }> {
+  const record = buildMakeupRecord(params);
+  if (typeof window === "undefined") {
+    return { record, persistent: false, dbSaved: false };
+  }
+  try {
+    const res = await addMakeupClassServerFn({ data: record });
+    lastMakeupPersistent = res.persistent;
+    pendingMakeupAdds.delete(record.id);
+    window.dispatchEvent(new CustomEvent(MAKEUP_UPDATED_EVENT, { detail: getArrangedMakeupClasses() }));
+    return res;
+  } catch (err) {
+    console.error("[makeup-classes] Failed to sync makeup class to server:", err);
+    return { record, persistent: false, dbSaved: false };
+  }
 }
 
 /**
  * Cancels an arranged makeup class early, immediately releasing the room & teacher back to FREE.
  */
 export function removeMakeupClass(id: string): void {
+  pendingMakeupAdds.delete(id);
+  pendingMakeupRemovals.add(id);
+  sessionRemovedMakeupIds.add(id);
   const current = getArrangedMakeupClasses();
   const next = current.filter((m) => m.id !== id);
   saveArrangedMakeupClasses(next);
+
+  if (typeof window !== "undefined") {
+    removeMakeupClassServerFn({ data: { id } })
+      .then(() => {
+        pendingMakeupRemovals.delete(id);
+      })
+      .catch((err) => {
+        pendingMakeupRemovals.delete(id);
+        console.error("[makeup-classes] Failed to remove makeup class from server:", err);
+      });
+  }
 }
 
 /**

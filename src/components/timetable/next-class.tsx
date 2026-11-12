@@ -11,9 +11,11 @@ export function NextClassPanel() {
   useEffect(() => {
     const handleUpdate = () => setCancelRevision((r) => r + 1);
     window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
@@ -64,10 +66,32 @@ export function NextClassPanel() {
             </div>
           )}
 
+          {next.entry.isMakeup && !cancellationRecord && (
+            <div
+              className="next-makeup-strip"
+              style={{
+                background: "color-mix(in srgb, var(--c-accent) 12%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--c-accent) 40%, transparent)",
+                borderRadius: "var(--r-sm)",
+                padding: "0.5rem 0.7rem",
+                marginBottom: "0.45rem",
+              }}
+            >
+              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--c-accent)" }}>
+                ⭐ MAKE-UP CLASS ARRANGED
+              </span>
+              {next.entry.makeupNote && (
+                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "var(--c-ink)" }}>
+                  &ldquo;{next.entry.makeupNote}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
+
           <span className="schedule-badge">
             {cancellationRecord
               ? `${active ? "Scheduled now (Cancelled)" : DAYS[clock.focusDay]} · ${spanLabel(next.start, next.end)}`
-              : `${active ? "In progress" : DAYS[clock.focusDay]} · ${spanLabel(next.start, next.end)}`}
+              : `${next.entry.isMakeup ? "Make-up · " : ""}${active ? "In progress" : DAYS[clock.focusDay]} · ${spanLabel(next.start, next.end)}`}
           </span>
           <h3 style={{ textDecoration: cancellationRecord ? "line-through" : undefined, opacity: cancellationRecord ? 0.75 : 1 }}>
             {subjects[next.entry.subject]}

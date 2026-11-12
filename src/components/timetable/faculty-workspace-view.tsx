@@ -55,7 +55,7 @@ import {
 } from "@/lib/schedule-matcher";
 import {
   getArrangedMakeupClasses,
-  addMakeupClass,
+  addMakeupClassAsync,
   removeMakeupClass,
   isMakeupActive,
   computeMakeupTargetAndExpiry,
@@ -66,6 +66,7 @@ import {
   isClassCancelled,
   addClassCancellationAsync,
   removeClassCancellation,
+  settleClassCancellation,
   getClassCancellations,
 } from "@/lib/campus-pulse";
 
@@ -282,28 +283,45 @@ export function FacultyWorkspaceView() {
   };
 
   // Confirm and arrange makeup class
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     if (!bookingModalState || !facultySession || teacherId === null) return;
     const { slot, room } = bookingModalState;
     const subjId = bookingSubjectId || candidateSubjects[0] || 0;
     const slotDef = SLOTS[slot.slot];
+    const targetBatch = selectedBatchId;
+    const noteText = bookingNote.trim() || undefined;
+    const creatorEmail = facultySession.profile.email;
 
-    addMakeupClass({
-      day: slot.day,
-      slot: slot.slot,
-      batch: selectedBatchId,
-      room: room.id,
-      teacher: teacherId,
-      subject: subjId,
-      note: bookingNote.trim() || undefined,
-      createdByEmail: facultySession.profile.email,
-    });
-
-    const msg = `🎉 Makeup class successfully arranged in ${room.name}! Room ${room.name} and your status are now automatically OCCUPIED until ${slotDef.end}. After ${slotDef.end}, the system will automatically change the status of ${room.name} and your schedule back to FREE. You can also cancel and release the room anytime.`;
-    setBookingSuccessNotice(msg);
     setBookingModalState(null);
     setBookingNote("");
     setSelectedSlotDetails(null);
+
+    const syncRes = await addMakeupClassAsync({
+      day: slot.day,
+      slot: slot.slot,
+      batch: targetBatch,
+      room: room.id,
+      teacher: teacherId,
+      subject: subjId,
+      note: noteText,
+      createdByEmail: creatorEmail,
+    });
+
+    // Automatically settle any matching active cancelled class debt for this batch/subject
+    const activeCancels = getClassCancellations().filter(
+      (c) => c.status === "active" && c.batch === targetBatch && c.teacher === teacherId,
+    );
+    const matchingCancel =
+      activeCancels.find((c) => c.subject === subjId) || activeCancels[0];
+    if (matchingCancel) {
+      settleClassCancellation(matchingCancel.id, syncRes.record.id);
+      setCancellationsRevision((r) => r + 1);
+    }
+
+    const msg = syncRes.persistent
+      ? `🎉 Makeup class arranged in ${room.name} (${batches[targetBatch]}) and synced across all student devices! Room ${room.name}, your schedule, and ${batches[targetBatch]} are updated until ${slotDef.end}.`
+      : `🎉 Makeup class arranged in ${room.name}! Room ${room.name}, your schedule, and ${batches[targetBatch]} are updated until ${slotDef.end}.`;
+    setBookingSuccessNotice(msg);
 
     // Auto-clear success banner after 10 seconds
     setTimeout(() => setBookingSuccessNotice(null), 10000);

@@ -541,6 +541,49 @@ export function matchesStudentCancellationContext(
   return false;
 }
 
+/**
+ * Determines whether an arranged make-up class affects the student's enrolled batch,
+ * pinned batch, custom enrolled courses, or fallback active batch view.
+ */
+export function matchesStudentMakeupContext(
+  m: MakeupClassRecord,
+  ctx: StudentCancellationMatchContext,
+): boolean {
+  const mBatchName = batches[m.batch] || "";
+  const studentBatch = (ctx.studentBatch || "").trim();
+  const pinnedBatch = ctx.pinnedBatch ?? null;
+  const pinnedBatchName = pinnedBatch !== null ? (batches[pinnedBatch] || "").trim() : "";
+  const customSchedule = ctx.customSchedule || [];
+
+  if (studentBatch && batchesMatch(mBatchName, studentBatch)) {
+    return true;
+  }
+
+  if (pinnedBatch !== null && (m.batch === pinnedBatch || batchesMatch(mBatchName, pinnedBatchName))) {
+    return true;
+  }
+
+  if (customSchedule.length > 0) {
+    const matchesCustomCourse = customSchedule.some((entry) => {
+      const sameBatch = entry.batch === m.batch || batchesMatch(batches[entry.batch] || "", mBatchName);
+      const sameSubject = entry.subject === m.subject;
+      const sameTeacher = entry.teacher >= 0 && entry.teacher === m.teacher;
+      return (sameBatch && sameSubject) || (sameTeacher && sameSubject);
+    });
+    if (matchesCustomCourse) {
+      return true;
+    }
+  }
+
+  if (ctx.allowFallbackActiveBatch && ctx.activeBatchId !== undefined && ctx.activeBatchId !== null) {
+    if (m.batch === ctx.activeBatchId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // -------------------------------------------------------------
 // 2. Room Categorization and Utilization Stats
 // -------------------------------------------------------------

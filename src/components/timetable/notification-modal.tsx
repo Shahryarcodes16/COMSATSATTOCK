@@ -25,10 +25,12 @@ import {
   markNotifiedToday,
 } from "@/lib/notifications";
 import { useDesk } from "@/components/timetable/context";
-import { SLOTS, batches, forBatch, rooms, subjects, teachers, getCampusMinutes, entries } from "@/lib/schedule";
+import { SLOTS, batches, forBatch, forTeacher, rooms, subjects, teachers, getCampusMinutes } from "@/lib/schedule";
 import { loadCustomSchedule } from "@/lib/my-schedule";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
-import { isClassCancelled } from "@/lib/campus-pulse";
+import { getActiveStudentSession } from "@/lib/student";
+import { isClassCancelled, matchesStudentMakeupContext } from "@/lib/campus-pulse";
+import { getActiveArrangedMakeupClasses, toClassEntry } from "@/lib/makeup-classes";
 
 /**
  * Background hook that checks the schedule every 30s and triggers class alerts
@@ -47,8 +49,8 @@ export function useClassNotificationScheduler() {
       const faculty = getActiveFacultySession();
       if (faculty?.profile?.teacherId !== null && faculty?.profile?.teacherId !== undefined) {
         const leadMins = faculty.profile.notificationLeadMins || 10;
-        const facultyClasses = entries.filter(
-          (e) => e.teacher === faculty.profile.teacherId && e.day === dayIndex,
+        const facultyClasses = forTeacher(faculty.profile.teacherId).filter(
+          (e) => e.day === dayIndex,
         );
 
         for (const cls of facultyClasses) {
@@ -90,11 +92,24 @@ export function useClassNotificationScheduler() {
         room: number;
         teacher: number;
         batch: number;
+        isMakeup?: boolean;
       }[] = [];
 
       if (settings.source === "custom") {
         const customItems = loadCustomSchedule();
-        todayClasses = customItems.filter((item) => item.day === dayIndex);
+        const studentBatch = getActiveStudentSession()?.profile?.defaultBatch || null;
+        const makeupExtras = getActiveArrangedMakeupClasses(now ?? undefined)
+          .filter(
+            (m) =>
+              m.day === dayIndex &&
+              matchesStudentMakeupContext(m, {
+                studentBatch,
+                pinnedBatch,
+                customSchedule: customItems,
+              }),
+          )
+          .map(toClassEntry);
+        todayClasses = [...customItems.filter((item) => item.day === dayIndex), ...makeupExtras];
       } else if (pinnedBatch !== null) {
         todayClasses = forBatch(pinnedBatch).filter((e) => e.day === dayIndex);
       }
@@ -105,7 +120,7 @@ export function useClassNotificationScheduler() {
         if (!slotDef) continue;
 
         const alertMinutes = slotDef.from - settings.leadMinutes;
-        const key = `${settings.source}_${cls.batch}_${cls.slot}_${cls.subject}`;
+        const key = `${settings.source}_${cls.isMakeup ? "makeup_" : ""}${cls.batch}_${cls.slot}_${cls.subject}`;
 
         // Trigger if we are in the alert window: [alertMinutes, alertMinutes + 3]
         if (

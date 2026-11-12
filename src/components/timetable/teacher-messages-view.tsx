@@ -21,6 +21,7 @@ import {
   isCancellationCloudPersistent,
   isCancellationForToday,
   matchesStudentCancellationContext,
+  matchesStudentMakeupContext,
   removeClassCancellation,
   syncCancellationsFromServer,
   type ClassCancellationRecord,
@@ -30,6 +31,10 @@ import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth
 import { loadCustomSchedule } from "@/lib/my-schedule";
 import {
   getActiveArrangedMakeupClasses,
+  isMakeupCloudPersistent,
+  isMakeupForToday,
+  removeMakeupClass,
+  syncMakeupClassesFromServer,
   type MakeupClassRecord,
 } from "@/lib/makeup-classes";
 import {
@@ -79,16 +84,19 @@ export function TeacherMessagesView() {
   const [activeTab, setActiveTab] = useState<MessageTab>("mine");
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [cloudPersistent, setCloudPersistent] = useState<boolean | null>(() =>
-    isCancellationCloudPersistent(),
+  const [cloudPersistent, setCloudPersistent] = useState<boolean | null>(
+    () => isCancellationCloudPersistent() ?? isMakeupCloudPersistent(),
   );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const updated = await syncCancellationsFromServer();
-      setCancellations(updated.filter((c) => c.status === "active"));
-      setCloudPersistent(isCancellationCloudPersistent());
+      const [updatedCancels] = await Promise.all([
+        syncCancellationsFromServer(),
+        syncMakeupClassesFromServer(),
+      ]);
+      setCancellations(updatedCancels.filter((c) => c.status === "active"));
+      setCloudPersistent(isCancellationCloudPersistent() ?? isMakeupCloudPersistent());
       setMakeups(getActiveArrangedMakeupClasses(new Date()));
     } finally {
       setTimeout(() => setIsRefreshing(false), 300);
@@ -96,21 +104,23 @@ export function TeacherMessagesView() {
   };
 
   useEffect(() => {
-    syncCancellationsFromServer().then((list) => {
+    Promise.all([syncCancellationsFromServer(), syncMakeupClassesFromServer()]).then(([list]) => {
       if (Array.isArray(list)) {
         setCancellations(list.filter((c) => c.status === "active"));
       }
-      setCloudPersistent(isCancellationCloudPersistent());
+      setMakeups(getActiveArrangedMakeupClasses(new Date()));
+      setCloudPersistent(isCancellationCloudPersistent() ?? isMakeupCloudPersistent());
     });
 
     const onCancelUpdate = (e: Event) => {
       const customEvent = e as CustomEvent<ClassCancellationRecord[]>;
       const list = customEvent.detail || getClassCancellations();
       setCancellations(list.filter((c) => c.status === "active"));
-      setCloudPersistent(isCancellationCloudPersistent());
+      setCloudPersistent(isCancellationCloudPersistent() ?? isMakeupCloudPersistent());
     };
     const onMakeupUpdate = () => {
       setMakeups(getActiveArrangedMakeupClasses(new Date()));
+      setCloudPersistent(isCancellationCloudPersistent() ?? isMakeupCloudPersistent());
     };
     const onStudentUpdate = (e: Event) => {
       const customEvent = e as CustomEvent<StudentSession | null>;
@@ -236,6 +246,36 @@ export function TeacherMessagesView() {
       );
     });
   }, [makeups, searchQuery]);
+
+  // Make-up classes specifically affecting the student's batch/courses OR scheduled by logged-in faculty
+  const myRelevantMakeups = useMemo(() => {
+    const teacherId = facultySession?.profile?.teacherId ?? null;
+    return makeups.filter((m) => {
+      if (teacherId !== null && m.teacher === teacherId) {
+        return true;
+      }
+      return matchesStudentMakeupContext(m, {
+        studentBatch,
+        pinnedBatch,
+        customSchedule,
+        activeBatchId: batchId,
+        allowFallbackActiveBatch: !hasSavedStudentContext && teacherId === null,
+      });
+    });
+  }, [
+    makeups,
+    facultySession,
+    studentBatch,
+    pinnedBatch,
+    customSchedule,
+    batchId,
+    hasSavedStudentContext,
+  ]);
+
+  const myTodayMakeups = useMemo(
+    () => myRelevantMakeups.filter((m) => isMakeupForToday(m, refDate)),
+    [myRelevantMakeups, refDate],
+  );
 
   const todayDisplayLabel = useMemo(
     () =>
@@ -363,6 +403,104 @@ export function TeacherMessagesView() {
     );
   };
 
+  const renderMakeupCard = (m: MakeupClassRecord) => {
+    const tName = teachers[m.teacher] || "Instructor";
+    const bName = batches[m.batch] || `Batch #${m.batch}`;
+    const sName = subjects[m.subject] || "Make-up Class";
+    const rName = rooms[m.room] || "TBA";
+    const slotDef = SLOTS[m.slot];
+    const slotLabel = slotDef
+      ? `${slotDef.label} (${slotDef.start} – ${slotDef.end})`
+      : `Slot ${m.slot + 1}`;
+    const isOwnerFaculty =
+      facultySession?.profile?.teacherId !== null &&
+      facultySession?.profile?.teacherId !== undefined &&
+      (facultySession.profile.teacherId === m.teacher ||
+        (facultySession.profile.email &&
+          m.createdByEmail &&
+          facultySession.profile.email.toLowerCase() === m.createdByEmail.toLowerCase()));
+
+    return (
+      <article key={m.id} className="tm-message-card makeup">
+        <div className="tm-card-top">
+          <div className="tm-teacher-block">
+            <span className="tm-teacher-avatar makeup" aria-hidden>
+              <Sparkles size={18} />
+            </span>
+            <div>
+              <div className="tm-teacher-name-row">
+                <strong>{tName}</strong>
+                <span className="tm-status-pill makeup">⭐ Make-up Class Arranged</span>
+                {isMakeupForToday(m, refDate) && <span className="tm-today-pill">Today</span>}
+              </div>
+              <span className="tm-meta-line">
+                {m.targetDateLabel || DAYS[m.day]} · {slotLabel}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="tm-course-row">
+          <span className="tm-course-title">{sName}</span>
+          <span className="tm-batch-chip">
+            <Users size={13} aria-hidden />
+            {bName}
+          </span>
+        </div>
+
+        {m.note && (
+          <div className="tm-quote-box makeup">
+            <div className="tm-quote-label">
+              <MessageSquareText size={14} aria-hidden />
+              <span>Note from {tName}</span>
+            </div>
+            <p className="tm-quote-text">&ldquo;{m.note}&rdquo;</p>
+          </div>
+        )}
+
+        <div className="tm-impact-strip">
+          <span className="tm-impact-room">
+            📍 Venue: <strong>{rName}</strong>
+          </span>
+        </div>
+
+        <div className="tm-card-actions">
+          <button
+            type="button"
+            className="btn sm tap"
+            onClick={() => {
+              setBatchId(m.batch);
+              setView("batches");
+            }}
+          >
+            <Users size={14} aria-hidden />
+            <span>View Batch Timetable</span>
+          </button>
+          {m.teacher >= 0 && (
+            <button
+              type="button"
+              className="btn sm tap"
+              onClick={() => open({ type: "teacher", id: m.teacher })}
+            >
+              <ArrowUpRight size={14} aria-hidden />
+              <span>Teacher Schedule</span>
+            </button>
+          )}
+          {isOwnerFaculty && (
+            <button
+              type="button"
+              className="btn sm tap tm-undo-btn"
+              onClick={() => removeMakeupClass(m.id)}
+            >
+              <RotateCcw size={14} aria-hidden />
+              <span>Cancel / Release Room</span>
+            </button>
+          )}
+        </div>
+      </article>
+    );
+  };
+
   return (
     <div className="page teacher-messages-page">
       <div className="page-heading">
@@ -370,8 +508,8 @@ export function TeacherMessagesView() {
           <p className="eyebrow">Faculty Broadcasts &amp; Live Alerts</p>
           <h1 className="page-title">Teacher Messages</h1>
           <p className="quiet">
-            Official class cancellation messages from instructors and live freed classrooms for{" "}
-            <strong>{todayDisplayLabel}</strong>.
+            Official class cancellation &amp; make-up notices from instructors and live room updates
+            for <strong>{todayDisplayLabel}</strong>.
           </p>
         </div>
         <div className="tm-header-actions">
@@ -406,9 +544,11 @@ export function TeacherMessagesView() {
       {/* Summary KPI Cards */}
       <div className="tm-summary-strip">
         <div className="tm-kpi-card highlight">
-          <span className="tm-kpi-label">Your Cancelled Classes Today</span>
-          <strong className="tm-kpi-value">{myTodayCancellations.length}</strong>
-          <span className="tm-kpi-sub">Tracking: {trackedBatchLabel}</span>
+          <span className="tm-kpi-label">Your Class Alerts Today</span>
+          <strong className="tm-kpi-value">{myTodayCancellations.length + myTodayMakeups.length}</strong>
+          <span className="tm-kpi-sub">
+            {myTodayCancellations.length} cancelled · {myTodayMakeups.length} make-up ({trackedBatchLabel})
+          </span>
         </div>
         <div className="tm-kpi-card">
           <span className="tm-kpi-label">Campus Cancellations Today</span>
@@ -418,7 +558,7 @@ export function TeacherMessagesView() {
         <div className="tm-kpi-card">
           <span className="tm-kpi-label">Classrooms / Labs Freed</span>
           <strong className="tm-kpi-value">{freedRoomsTodayCount}</strong>
-          <span className="tm-kpi-sub">Open for study or make-ups</span>
+          <span className="tm-kpi-sub">{makeups.length} active make-up{makeups.length === 1 ? "" : "s"} campus-wide</span>
         </div>
       </div>
 
@@ -432,7 +572,7 @@ export function TeacherMessagesView() {
           onClick={() => setActiveTab("mine")}
         >
           <Megaphone size={15} aria-hidden />
-          <span>My Class Messages ({myRelevantCancellations.length})</span>
+          <span>My Class Messages ({myRelevantCancellations.length + myRelevantMakeups.length})</span>
         </button>
         <button
           type="button"
@@ -470,16 +610,18 @@ export function TeacherMessagesView() {
         </label>
       )}
 
-      {/* TAB 1: MY CLASS MESSAGES (TODAY FIRST, THEN OTHER ACTIVE) */}
+      {/* TAB 1: MY CLASS MESSAGES (MAKE-UPS + TODAY CANCELLATIONS FIRST) */}
       {activeTab === "mine" && (
         <div className="stack">
-          {myTodayCancellations.length === 0 && myOtherCancellations.length === 0 ? (
+          {myTodayCancellations.length === 0 &&
+          myOtherCancellations.length === 0 &&
+          myRelevantMakeups.length === 0 ? (
             <section className="panel tm-empty-panel">
               <CheckCircle2 size={34} color="#10b981" aria-hidden />
-              <h3>No Cancelled Classes for {trackedBatchLabel}</h3>
+              <h3>No Teacher Messages for {trackedBatchLabel}</h3>
               <p className="quiet">
-                All your scheduled lectures under your teachers are running normally today. New
-                cancellation messages from instructors appear here automatically.
+                All your scheduled lectures are running normally and no extra make-up lectures are
+                posted. New cancellation or make-up notices from instructors appear here automatically.
               </p>
               <div className="tm-empty-actions">
                 <button
@@ -504,6 +646,18 @@ export function TeacherMessagesView() {
             </section>
           ) : (
             <>
+              {myRelevantMakeups.length > 0 && (
+                <section className="stack">
+                  <div className="tm-section-heading">
+                    <Sparkles size={16} aria-hidden />
+                    <h2>Arranged Make-up Classes ({myRelevantMakeups.length})</h2>
+                  </div>
+                  <div className="tm-cards-list">
+                    {myRelevantMakeups.map((m) => renderMakeupCard(m))}
+                  </div>
+                </section>
+              )}
+
               {myTodayCancellations.length > 0 && (
                 <section className="stack">
                   <div className="tm-section-heading">
@@ -564,60 +718,7 @@ export function TeacherMessagesView() {
             </section>
           ) : (
             <div className="tm-cards-list">
-              {relevantMakeups.map((m) => {
-                const tName = teachers[m.teacher] || "Instructor";
-                const bName = batches[m.batch] || `Batch #${m.batch}`;
-                const sName = subjects[m.subject] || "Make-up Class";
-                const rName = rooms[m.room] || "TBA";
-                const slotDef = SLOTS[m.slot];
-                const slotLabel = slotDef
-                  ? `${slotDef.label} (${slotDef.start} – ${slotDef.end})`
-                  : `Slot ${m.slot + 1}`;
-                return (
-                  <article key={m.id} className="tm-message-card makeup">
-                    <div className="tm-card-top">
-                      <div className="tm-teacher-block">
-                        <span className="tm-teacher-avatar makeup" aria-hidden>
-                          <Sparkles size={18} />
-                        </span>
-                        <div>
-                          <div className="tm-teacher-name-row">
-                            <strong>{tName}</strong>
-                            <span className="tm-status-pill makeup">⭐ Make-up Class Arranged</span>
-                          </div>
-                          <span className="tm-meta-line">
-                            {m.targetDateLabel || DAYS[m.day]} · {slotLabel}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="tm-course-row">
-                      <span className="tm-course-title">{sName}</span>
-                      <span className="tm-batch-chip">
-                        <Users size={13} aria-hidden />
-                        {bName}
-                      </span>
-                    </div>
-
-                    {m.note && (
-                      <div className="tm-quote-box makeup">
-                        <div className="tm-quote-label">
-                          <MessageSquareText size={14} aria-hidden />
-                          <span>Note from {tName}</span>
-                        </div>
-                        <p className="tm-quote-text">&ldquo;{m.note}&rdquo;</p>
-                      </div>
-                    )}
-
-                    <div className="tm-impact-strip">
-                      <span className="tm-impact-room">
-                        📍 Venue: <strong>{rName}</strong>
-                      </span>
-                    </div>
-                  </article>
-                );
-              })}
+              {relevantMakeups.map((m) => renderMakeupCard(m))}
             </div>
           )}
         </div>

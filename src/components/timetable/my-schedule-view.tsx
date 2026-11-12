@@ -47,26 +47,45 @@ import {
   saveCustomSchedule,
   type ScheduleClash,
 } from "@/lib/my-schedule";
-import { isClassCancelled } from "@/lib/campus-pulse";
+import { isClassCancelled, matchesStudentMakeupContext } from "@/lib/campus-pulse";
+import { getActiveArrangedMakeupClasses, toClassEntry } from "@/lib/makeup-classes";
+import { getActiveStudentSession } from "@/lib/student";
 
 export function MyScheduleView() {
-  const { clock, day: selectedDay, open, setView } = useDesk();
+  const { clock, day: selectedDay, open, setView, pinnedBatch, makeupRevision } = useDesk();
   const [schedule, setSchedule] = useState<ClassEntry[]>([]);
+  const [studentBatch, setStudentBatch] = useState<string | null>(
+    () => getActiveStudentSession()?.profile?.defaultBatch || null,
+  );
   const [viewTab, setViewTab] = useState<"week" | "today" | "courses">("week");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [, setCancelRevision] = useState(0);
+  const [makeupRev, setMakeupRev] = useState(0);
 
-  // Load from localStorage on mount and subscribe to cancellation updates
+  // Load from localStorage on mount and subscribe to cancellation & make-up updates
   useEffect(() => {
     setSchedule(loadCustomSchedule());
     const handleCancelUpdate = () => setCancelRevision((r) => r + 1);
+    const handleMakeupUpdate = () => setMakeupRev((r) => r + 1);
+    const handleStudentUpdate = () =>
+      setStudentBatch(getActiveStudentSession()?.profile?.defaultBatch || null);
+    const handleStorage = () => {
+      setSchedule(loadCustomSchedule());
+      setStudentBatch(getActiveStudentSession()?.profile?.defaultBatch || null);
+      setCancelRevision((r) => r + 1);
+      setMakeupRev((r) => r + 1);
+    };
     window.addEventListener("cui:class-cancellations-updated", handleCancelUpdate);
-    window.addEventListener("storage", handleCancelUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleMakeupUpdate);
+    window.addEventListener("cui:student-session-update", handleStudentUpdate);
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("cui:class-cancellations-updated", handleCancelUpdate);
-      window.removeEventListener("storage", handleCancelUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleMakeupUpdate);
+      window.removeEventListener("cui:student-session-update", handleStudentUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
@@ -90,13 +109,38 @@ export function MyScheduleView() {
   // Clashes
   const clashes = useMemo(() => findScheduleClashes(schedule), [schedule]);
 
-  // Today's classes
+  // Merge active make-up classes matching this student's saved batch or courses
+  const effectiveSchedule = useMemo(() => {
+    const activeMakeups = getActiveArrangedMakeupClasses();
+    const matchingMakeups = activeMakeups.filter((m) =>
+      matchesStudentMakeupContext(m, {
+        studentBatch,
+        pinnedBatch,
+        customSchedule: schedule,
+      }),
+    );
+    if (matchingMakeups.length === 0) return schedule;
+    const seen = new Set(schedule.map((e) => getEntryKey(e)));
+    const merged = [...schedule];
+    for (const m of matchingMakeups) {
+      const entry = toClassEntry(m);
+      const key = getEntryKey(entry);
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(entry);
+      }
+    }
+    return merged;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedule, studentBatch, pinnedBatch, makeupRevision, makeupRev]);
+
+  // Today's classes (includes active make-ups matching student's batch/courses)
   const todayClasses = useMemo(() => {
     const currentDay = clock.dayIndex !== null ? clock.dayIndex : selectedDay;
-    return schedule
+    return effectiveSchedule
       .filter((e) => e.day === currentDay)
       .sort((a, b) => a.slot - b.slot);
-  }, [schedule, clock.dayIndex, selectedDay]);
+  }, [effectiveSchedule, clock.dayIndex, selectedDay]);
 
   // Unique courses count
   const uniqueSubjects = useMemo(() => {
@@ -270,12 +314,13 @@ export function MyScheduleView() {
           {viewTab === "week" ? (
             <div className="my-schedule-week-container">
               <WeekGrid
-                list={schedule}
+                list={effectiveSchedule}
                 focusDay={clock.dayIndex ?? 0}
                 liveDay={clock.dayIndex}
                 liveSlot={clock.liveSlot}
                 caption={(entry) =>
                   [
+                    entry.isMakeup ? "⭐ Make-up" : "",
                     batches[entry.batch],
                     entry.room >= 0 ? rooms[entry.room] : "",
                     entry.teacher >= 0 ? teachers[entry.teacher] : "",
@@ -325,8 +370,8 @@ export function MyScheduleView() {
 
                     return (
                       <div
-                        key={getEntryKey(entry)}
-                        className={`today-card ${cancellation ? "cancelled-class-card" : isLive ? "today-live" : ""} ${isPast && !cancellation ? "today-past" : ""}`}
+                        key={entry.makeupId || getEntryKey(entry)}
+                        className={`today-card ${cancellation ? "cancelled-class-card" : entry.isMakeup ? "makeup-card-highlight" : ""} ${!cancellation && isLive ? "today-live" : ""} ${isPast && !cancellation ? "today-past" : ""}`}
                       >
                         <div className="today-time-badge">
                           <span className="slot-badge" style={{ textDecoration: cancellation ? "line-through" : undefined }}>
@@ -339,6 +384,7 @@ export function MyScheduleView() {
                             <span className="cancelled-side-badge">CANCELLED</span>
                           ) : (
                             <>
+                              {entry.isMakeup ? <span className="makeup-badge-tag">⭐ Make-up Class</span> : null}
                               {isLive ? <span className="live-pill">In Progress</span> : null}
                               {isPast ? <span className="past-pill">Finished</span> : null}
                             </>
@@ -346,6 +392,11 @@ export function MyScheduleView() {
                         </div>
 
                         <div className="today-class-info">
+                          {entry.isMakeup && entry.makeupNote && !cancellation && (
+                            <p className="fine" style={{ color: "var(--gold, #eab308)", marginBottom: "0.35rem" }}>
+                              📢 {entry.makeupNote}
+                            </p>
+                          )}
                           {cancellation && (
                             <div className="cancelled-class-notice-box" style={{ marginBottom: "0.45rem" }}>
                               <p className="cancelled-notice-text">

@@ -39,9 +39,11 @@ export function ClassList({
   useEffect(() => {
     const handleUpdate = () => setCancelRevision((r) => r + 1);
     window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
@@ -82,13 +84,15 @@ export function ClassList({
 
         return (
           <article
-            key={`${block.start}-${entry.batch}-${entry.subject}-${entry.room}-${entry.repeater}`}
+            key={`${block.start}-${entry.batch}-${entry.subject}-${entry.room}-${entry.repeater}-${entry.makeupId || "std"}`}
             className={
               isCancelled
                 ? "class-card cancelled-class-card"
-                : live
-                  ? "class-card live"
-                  : "class-card"
+                : entry.isMakeup
+                  ? `class-card makeup-card-highlight${live ? " live" : ""}`
+                  : live
+                    ? "class-card live"
+                    : "class-card"
             }
           >
             <div className="when">
@@ -102,7 +106,13 @@ export function ClassList({
             </div>
             <div>
               <div className="class-kind">
-                <span>{/lab/i.test(subjects[entry.subject]) ? "Practical lab" : "Lecture"}</span>
+                <span>
+                  {entry.isMakeup
+                    ? "⭐ Make-up Class"
+                    : /lab/i.test(subjects[entry.subject])
+                      ? "Practical lab"
+                      : "Lecture"}
+                </span>
                 <span>
                   {SLOTS[block.start].label}
                   {block.end !== block.start ? `–${SLOTS[block.end].label}` : ""}
@@ -113,6 +123,12 @@ export function ClassList({
                   </span>
                 )}
               </div>
+
+              {entry.isMakeup && !isCancelled && entry.makeupNote && (
+                <p className="makeup-note-text" style={{ margin: "0.25rem 0 0.45rem" }}>
+                  Note from instructor: &ldquo;{entry.makeupNote}&rdquo;
+                </p>
+              )}
 
               {isCancelled && cancellationRecord && (
                 <div className="cancelled-class-notice-box">

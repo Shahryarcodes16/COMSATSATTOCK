@@ -30,9 +30,11 @@ export function FreeRoomsRadar({
   useEffect(() => {
     const handleUpdate = () => setCancelRevision((r) => r + 1);
     window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);

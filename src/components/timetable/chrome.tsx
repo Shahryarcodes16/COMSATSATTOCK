@@ -38,14 +38,22 @@ import { getActiveStudentSession } from "@/lib/student";
 import {
   getClassCancellations,
   matchesStudentCancellationContext,
+  matchesStudentMakeupContext,
   type ClassCancellationRecord,
 } from "@/lib/campus-pulse";
+import {
+  getActiveArrangedMakeupClasses,
+  type MakeupClassRecord,
+} from "@/lib/makeup-classes";
 import { loadCustomSchedule } from "@/lib/my-schedule";
 
 function useTeacherMessageCount() {
   const { pinnedBatch, batchId } = useDesk();
   const [cancellations, setCancellations] = useState<ClassCancellationRecord[]>(() =>
     getClassCancellations().filter((c) => c.status === "active"),
+  );
+  const [makeups, setMakeups] = useState<MakeupClassRecord[]>(() =>
+    getActiveArrangedMakeupClasses(new Date()),
   );
   const [, setRev] = useState(0);
 
@@ -55,17 +63,23 @@ function useTeacherMessageCount() {
       const list = customEvent.detail || getClassCancellations();
       setCancellations(list.filter((c) => c.status === "active"));
     };
+    const onMakeupUpdate = () => {
+      setMakeups(getActiveArrangedMakeupClasses(new Date()));
+    };
     const onBump = () => {
       setCancellations(getClassCancellations().filter((c) => c.status === "active"));
+      setMakeups(getActiveArrangedMakeupClasses(new Date()));
       setRev((r) => r + 1);
     };
     window.addEventListener("cui:class-cancellations-updated", onCancelUpdate);
+    window.addEventListener("cui:makeup-classes-updated", onMakeupUpdate);
     window.addEventListener("cui:student-session-update", onBump);
     window.addEventListener("cui:faculty-session-update", onBump);
     window.addEventListener("cui:custom-schedule-update", onBump);
     window.addEventListener("storage", onBump);
     return () => {
       window.removeEventListener("cui:class-cancellations-updated", onCancelUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", onMakeupUpdate);
       window.removeEventListener("cui:student-session-update", onBump);
       window.removeEventListener("cui:faculty-session-update", onBump);
       window.removeEventListener("cui:custom-schedule-update", onBump);
@@ -81,7 +95,7 @@ function useTeacherMessageCount() {
   const hasSavedStudentContext =
     Boolean(studentBatch) || pinnedBatch !== null || customSchedule.length > 0;
 
-  return cancellations.filter((c) => {
+  const cancelCount = cancellations.filter((c) => {
     if (teacherId !== null && c.teacher === teacherId) return true;
     return matchesStudentCancellationContext(c, {
       studentBatch,
@@ -91,6 +105,19 @@ function useTeacherMessageCount() {
       allowFallbackActiveBatch: !hasSavedStudentContext && teacherId === null,
     });
   }).length;
+
+  const makeupCount = makeups.filter((m) => {
+    if (teacherId !== null && m.teacher === teacherId) return true;
+    return matchesStudentMakeupContext(m, {
+      studentBatch,
+      pinnedBatch,
+      customSchedule,
+      activeBatchId: batchId,
+      allowFallbackActiveBatch: !hasSavedStudentContext && teacherId === null,
+    });
+  }).length;
+
+  return cancelCount + makeupCount;
 }
 
 // Desktop sidebar navigates all sections

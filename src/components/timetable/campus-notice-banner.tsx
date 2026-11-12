@@ -1,17 +1,23 @@
 import { useState, useEffect, useMemo } from "react";
-import { AlertCircle, AlertTriangle, Info, CheckCircle2, X } from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, CheckCircle2, Sparkles, X } from "lucide-react";
 import { getCampusNotice, syncAdminDataFromServer, type CampusNotice } from "@/lib/admin";
 import {
   batchesMatch,
   getClassCancellations,
+  matchesStudentMakeupContext,
   syncCancellationsFromServer,
   type ClassCancellationRecord,
 } from "@/lib/campus-pulse";
+import {
+  getActiveArrangedMakeupClasses,
+  syncMakeupClassesFromServer,
+  type MakeupClassRecord,
+} from "@/lib/makeup-classes";
 import { getActiveStudentSession, type StudentSession } from "@/lib/student";
 import { loadCustomSchedule } from "@/lib/my-schedule";
 import { isNotificationSupported, sendSystemNotification } from "@/lib/notifications";
 import { useDesk } from "@/components/timetable/context";
-import { DAYS, SLOTS, batches, subjects, teachers, type ClassEntry } from "@/lib/schedule";
+import { DAYS, SLOTS, batches, rooms, subjects, teachers, type ClassEntry } from "@/lib/schedule";
 
 const NOTIFIED_CANCEL_KEY = "cui_notified_cancellations_v1";
 
@@ -35,6 +41,9 @@ export function CampusNoticeBanner() {
   const [cancellations, setCancellations] = useState<ClassCancellationRecord[]>(() =>
     getClassCancellations().filter((c) => c.status === "active"),
   );
+  const [makeups, setMakeups] = useState<MakeupClassRecord[]>(() =>
+    getActiveArrangedMakeupClasses(),
+  );
   const [studentSession, setStudentSession] = useState<StudentSession | null>(() =>
     getActiveStudentSession(),
   );
@@ -45,6 +54,7 @@ export function CampusNoticeBanner() {
   const [dismissedCancellationIds, setDismissedCancellationIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [dismissedMakeupIds, setDismissedMakeupIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     // 1. Sync admin announcement
@@ -54,11 +64,14 @@ export function CampusNoticeBanner() {
       }
     });
 
-    // 2. Sync cancellations from server database
+    // 2. Sync cancellations and makeups from server database
     syncCancellationsFromServer().then((list) => {
       if (Array.isArray(list)) {
         setCancellations(list.filter((c) => c.status === "active"));
       }
+    });
+    syncMakeupClassesFromServer().then(() => {
+      setMakeups(getActiveArrangedMakeupClasses());
     });
 
     const handleNoticeUpdate = () => {
@@ -70,6 +83,10 @@ export function CampusNoticeBanner() {
       const customEvent = e as CustomEvent<ClassCancellationRecord[]>;
       const list = customEvent.detail || getClassCancellations();
       setCancellations(list.filter((c) => c.status === "active"));
+    };
+
+    const handleMakeupsUpdate = () => {
+      setMakeups(getActiveArrangedMakeupClasses());
     };
 
     const handleStudentUpdate = (e: Event) => {
@@ -84,12 +101,14 @@ export function CampusNoticeBanner() {
     const handleStorage = () => {
       setNotice(getCampusNotice());
       setCancellations(getClassCancellations().filter((c) => c.status === "active"));
+      setMakeups(getActiveArrangedMakeupClasses());
       setStudentSession(getActiveStudentSession());
       setCustomSchedule(loadCustomSchedule());
     };
 
     window.addEventListener("cui:campus-notice-update", handleNoticeUpdate);
     window.addEventListener("cui:class-cancellations-updated", handleCancellationsUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleMakeupsUpdate);
     window.addEventListener("cui:student-session-update", handleStudentUpdate);
     window.addEventListener("cui:custom-schedule-update", handleCustomScheduleUpdate);
     window.addEventListener("storage", handleStorage);
@@ -97,6 +116,7 @@ export function CampusNoticeBanner() {
     return () => {
       window.removeEventListener("cui:campus-notice-update", handleNoticeUpdate);
       window.removeEventListener("cui:class-cancellations-updated", handleCancellationsUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleMakeupsUpdate);
       window.removeEventListener("cui:student-session-update", handleStudentUpdate);
       window.removeEventListener("cui:custom-schedule-update", handleCustomScheduleUpdate);
       window.removeEventListener("storage", handleStorage);
@@ -171,7 +191,32 @@ export function CampusNoticeBanner() {
     dismissedCancellationIds,
   ]);
 
-  // Also trigger a system notification (if enabled) when a fresh relevant cancellation arrives
+  const relevantMakeups = useMemo(() => {
+    const studentBatch = (studentSession?.profile?.defaultBatch || "").trim();
+    const hasSavedBatchContext =
+      Boolean(studentBatch) || pinnedBatch !== null || customSchedule.length > 0;
+
+    return makeups.filter((m) => {
+      if (dismissedMakeupIds.has(m.id)) return false;
+      return matchesStudentMakeupContext(m, {
+        studentBatch,
+        pinnedBatch,
+        customSchedule,
+        activeBatchId: batchId,
+        allowFallbackActiveBatch: view === "batches" || !hasSavedBatchContext,
+      });
+    });
+  }, [
+    makeups,
+    studentSession,
+    pinnedBatch,
+    batchId,
+    view,
+    customSchedule,
+    dismissedMakeupIds,
+  ]);
+
+  // Also trigger a system notification (if enabled) when a fresh relevant cancellation or makeup arrives
   useEffect(() => {
     if (!isNotificationSupported() || Notification.permission !== "granted") return;
     for (const c of relevantCancellations) {
@@ -185,10 +230,29 @@ export function CampusNoticeBanner() {
         });
       }
     }
-  }, [relevantCancellations]);
+    for (const m of relevantMakeups) {
+      if (markCancellationNotified(m.id)) {
+        const slotDef = SLOTS[m.slot];
+        const slotLabel = slotDef ? `${slotDef.label} (${slotDef.start})` : `Slot ${m.slot + 1}`;
+        const tName = teachers[m.teacher] || "Instructor";
+        const sName = subjects[m.subject] || "Make-up Class";
+        const bName = batches[m.batch] || "";
+        const rName = rooms[m.room] || "Campus";
+        sendSystemNotification(`⭐ Make-up Class Scheduled: ${sName}`, {
+          body: `${tName} scheduled ${bName} (${m.targetDateLabel || DAYS[m.day]} ${slotLabel}) in ${rName}.`,
+          playChime: true,
+          tag: `makeup_${m.id}`,
+        });
+      }
+    }
+  }, [relevantCancellations, relevantMakeups]);
 
   const handleDismissCancellation = (id: string) => {
     setDismissedCancellationIds((prev) => new Set([...prev, id]));
+  };
+
+  const handleDismissMakeup = (id: string) => {
+    setDismissedMakeupIds((prev) => new Set([...prev, id]));
   };
 
   const getNoticeIcon = (type: string) => {
@@ -288,6 +352,106 @@ export function CampusNoticeBanner() {
               className="campus-notice-close"
               onClick={() => handleDismissCancellation(c.id)}
               aria-label="Dismiss cancellation alert"
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: "0.25rem",
+                color: "var(--c-muted)",
+              }}
+            >
+              <X size={16} aria-hidden />
+            </button>
+          </div>
+        );
+      })}
+
+      {/* 1b. Student Make-up Class Alert Banners */}
+      {relevantMakeups.map((m) => {
+        const slotDef = SLOTS[m.slot];
+        const slotLabel = slotDef ? `${slotDef.label} (${slotDef.start} – ${slotDef.end})` : `Slot ${m.slot + 1}`;
+        const dayLabel = m.targetDateLabel || DAYS[m.day] || "Day";
+        const subjName = subjects[m.subject] || "Make-up Class";
+        const bName = batches[m.batch] || "Batch";
+        const tName = teachers[m.teacher] || "Instructor";
+        const rName = rooms[m.room] || "Campus";
+
+        return (
+          <div
+            key={m.id}
+            className="campus-global-notice makeup-student-banner"
+            role="status"
+            style={{
+              background: "color-mix(in srgb, var(--c-accent) 12%, var(--c-paper))",
+              border: "1.5px solid var(--c-accent)",
+              color: "var(--c-ink)",
+              borderRadius: "var(--r-md)",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.85rem",
+              boxShadow: "0 4px 14px rgba(8, 127, 121, 0.14)",
+            }}
+          >
+            <div style={{ color: "var(--c-accent)", marginTop: "2px", flexShrink: 0 }}>
+              <Sparkles size={20} aria-hidden />
+            </div>
+
+            <div style={{ flex: 1, fontSize: "0.88rem", lineHeight: 1.45 }}>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.25rem" }}>
+                <span
+                  style={{
+                    background: "var(--c-accent)",
+                    color: "var(--c-on-accent)",
+                    fontWeight: 800,
+                    fontSize: "0.72rem",
+                    padding: "0.15rem 0.5rem",
+                    borderRadius: "4px",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  ⭐ MAKE-UP CLASS ARRANGED
+                </span>
+                <strong style={{ color: "var(--c-accent)" }}>{subjName} ({bName})</strong>
+                <span className="fine quiet">• {dayLabel} at {slotLabel}</span>
+              </div>
+
+              <p style={{ margin: "0.2rem 0", color: "var(--c-ink)" }}>
+                Instructor <strong>{tName}</strong> scheduled this make-up class in{" "}
+                <strong>{rName}</strong>.
+                {m.note && (
+                  <span>
+                    {" "}Note: <em>&quot;{m.note}&quot;</em>.
+                  </span>
+                )}
+              </p>
+
+              <div style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.25rem" }}>
+                <span>• Students of <strong>{bName}</strong> should attend in <strong>{rName}</strong>.</span>
+                <button
+                  type="button"
+                  onClick={() => setView("notices")}
+                  style={{
+                    background: "color-mix(in srgb, var(--c-accent) 14%, transparent)",
+                    color: "var(--c-accent)",
+                    border: "1px solid color-mix(in srgb, var(--c-accent) 35%, transparent)",
+                    borderRadius: "999px",
+                    padding: "0.15rem 0.65rem",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Open Teacher Messages Screen →
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="campus-notice-close"
+              onClick={() => handleDismissMakeup(m.id)}
+              aria-label="Dismiss makeup class alert"
               style={{
                 background: "transparent",
                 border: "none",

@@ -28,6 +28,7 @@ import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
 import { batchesMatch, isClassCancelled, getClassCancellations } from "@/lib/campus-pulse";
+import { getActiveArrangedMakeupClasses } from "@/lib/makeup-classes";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
@@ -96,6 +97,7 @@ export function TodayView() {
     pinnedTeachers,
     open,
     setView,
+    makeupRevision,
   } = useDesk();
 
   const [facultySession, setFacultySession] = useState<FacultySession | null>(
@@ -112,29 +114,38 @@ export function TodayView() {
     };
   }, []);
 
+  const [cancellations, setCancellations] = useState(() => getClassCancellations());
+  const [makeups, setMakeups] = useState(() => getActiveArrangedMakeupClasses(now || new Date()));
+
+  useEffect(() => {
+    const handleCancelUpdate = () => setCancellations(getClassCancellations());
+    const handleMakeupUpdate = () => setMakeups(getActiveArrangedMakeupClasses(new Date()));
+    const handleStorage = () => {
+      setCancellations(getClassCancellations());
+      setMakeups(getActiveArrangedMakeupClasses(new Date()));
+    };
+    window.addEventListener("cui:class-cancellations-updated", handleCancelUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleMakeupUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("cui:class-cancellations-updated", handleCancelUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleMakeupUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
   const teacherId = facultySession?.profile?.teacherId ?? null;
   const teacherClasses = useMemo(() => {
     if (teacherId === null) return [];
     return forTeacher(teacherId);
-  }, [teacherId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherId, makeupRevision, makeups]);
 
   const teacherTodayClasses = useMemo(() => {
     return teacherClasses
       .filter((c) => c.day === day)
       .sort((a, b) => a.slot - b.slot);
   }, [teacherClasses, day]);
-
-  const [cancellations, setCancellations] = useState(() => getClassCancellations());
-
-  useEffect(() => {
-    const handleUpdate = () => setCancellations(getClassCancellations());
-    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
-  }, []);
 
   const cell = at(day, slot);
   // Exclude cancelled classes from busy rooms & faculty so cancelled slots show as free
@@ -157,6 +168,15 @@ export function TodayView() {
         (c.batch === pinnedBatch || batchesMatch(c.batchName, pinnedBatchName)),
     );
   }, [cancellations, day, pinnedBatch, pinnedBatchName]);
+
+  const todayBatchMakeups = useMemo(() => {
+    if (pinnedBatch === null) return [];
+    return makeups.filter(
+      (m) =>
+        m.day === day &&
+        (m.batch === pinnedBatch || batchesMatch(batches[m.batch] || "", pinnedBatchName)),
+    );
+  }, [makeups, day, pinnedBatch, pinnedBatchName]);
 
   return (
     <div className="page today-page">
@@ -377,6 +397,10 @@ export function TodayView() {
                         </span>
                         {cancellation ? (
                           <span className="flag cancelled-pill">Cancelled</span>
+                        ) : c.isMakeup ? (
+                          <span className="flag" style={{ background: "var(--c-accent)", color: "var(--c-on-accent)" }}>
+                            ⭐ Make-up
+                          </span>
                         ) : isLive ? (
                           <span className="flag now">Live Now</span>
                         ) : null}
@@ -501,6 +525,39 @@ export function TodayView() {
                 </div>
               )}
 
+              {todayBatchMakeups.length > 0 && (
+                <div
+                  className="batch-today-makeups-card"
+                  style={{
+                    background: "color-mix(in srgb, var(--c-accent) 9%, var(--c-paper))",
+                    border: "1px solid color-mix(in srgb, var(--c-accent) 40%, transparent)",
+                    borderRadius: "var(--r-md)",
+                    padding: "0.75rem 0.9rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.45rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", fontWeight: 700, color: "var(--c-accent)" }}>
+                    <span>
+                      ⭐ {todayBatchMakeups.length} Make-up Class{todayBatchMakeups.length > 1 ? "es" : ""} Scheduled for {pinnedBatchName}
+                    </span>
+                  </div>
+                  <div className="cancellations-list">
+                    {todayBatchMakeups.map((m) => (
+                      <div key={m.id} className="cancellation-quick-item" style={{ borderColor: "color-mix(in srgb, var(--c-accent) 25%, transparent)" }}>
+                        <div className="quick-item-main">
+                          <strong>{subjects[m.subject] || "Make-up Class"}</strong>
+                          <span>with {teachers[m.teacher] || "Instructor"} · {SLOTS[m.slot]?.label || m.slot}</span>
+                        </div>
+                        {m.note && <p className="quick-item-reason">&ldquo;{m.note}&rdquo;</p>}
+                        <span className="quick-item-freed">📍 Venue: {rooms[m.room] || "Campus"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <ClassList list={mine} day={day} who="batch" />
               <button
                 type="button"
@@ -565,7 +622,7 @@ export function TodayView() {
 }
 
 export function RoomsView() {
-  const { day, slot, setDay, setSlot, open } = useDesk();
+  const { day, slot, setDay, setSlot, open, makeupRevision } = useDesk();
   const [viewMode, setViewMode] = useState<"radar" | "heatmap" | "browser">("radar");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
@@ -574,14 +631,20 @@ export function RoomsView() {
   const effectiveSpan: 1 | 2 = slot === 4 ? 1 : span;
 
   const [cancellations, setCancellations] = useState(() => getClassCancellations());
+  const [makeupRev, setMakeupRev] = useState(0);
 
   useEffect(() => {
     const handleUpdate = () => setCancellations(getClassCancellations());
+    const handleMakeup = () => setMakeupRev((r) => r + 1);
     window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleMakeup);
     window.addEventListener("storage", handleUpdate);
+    window.addEventListener("storage", handleMakeup);
     return () => {
       window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleMakeup);
       window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleMakeup);
     };
   }, []);
 
@@ -598,7 +661,8 @@ export function RoomsView() {
       else map.set(entry.room, [entry]);
     }
     return map;
-  }, [day, slot, effectiveSpan, cancellations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, slot, effectiveSpan, cancellations, makeupRevision, makeupRev]);
 
   const needle = query.trim().toLowerCase();
   const matched = rooms
@@ -814,7 +878,7 @@ export function RoomsView() {
 }
 
 export function FacultyView() {
-  const { day, slot, open, pinnedTeachers } = useDesk();
+  const { day, slot, open, pinnedTeachers, makeupRevision } = useDesk();
   const [activeTab, setActiveTab] = useState<"directory" | "office-hours" | "schedule">("directory");
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"free" | "busy">("free");
@@ -822,16 +886,24 @@ export function FacultyView() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(18);
   const [cancelRevision, setCancelRevision] = useState(0);
+  const [makeupRev, setMakeupRev] = useState(0);
   useEffect(() => {
     setVisibleCount(18);
   }, [query, mode, sort, savedOnly, day, slot]);
   useEffect(() => {
-    const handleUpdate = () => setCancelRevision((r) => r + 1);
-    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
+    const handleCancelUpdate = () => setCancelRevision((r) => r + 1);
+    const handleMakeupUpdate = () => setMakeupRev((r) => r + 1);
+    const handleStorage = () => {
+      setCancelRevision((r) => r + 1);
+      setMakeupRev((r) => r + 1);
+    };
+    window.addEventListener("cui:class-cancellations-updated", handleCancelUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleMakeupUpdate);
+    window.addEventListener("storage", handleStorage);
     return () => {
-      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("cui:class-cancellations-updated", handleCancelUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleMakeupUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
   const needle = query.trim().toLowerCase();
@@ -849,7 +921,7 @@ export function FacultyView() {
     }
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [day, slot, cancelRevision]);
+  }, [day, slot, cancelRevision, makeupRevision, makeupRev]);
 
   const order = (left: number, right: number) => {
     if (sort === "light") {
