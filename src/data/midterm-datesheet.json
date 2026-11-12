@@ -1,7 +1,8 @@
 {
   "title": "CUI Attock Midterm Exams - FA26 (Fall 2026)",
+  "active": false,
   "notice": "Papers originally scheduled for 4 November 2026 are shifted to 12 November 2026. Time and rooms remain identical.",
-  "expirationIso": "2026-11-12T19:30:00+05:00",
+  "expirationIso": "2026-11-12T18:30:00+05:00",
   "totalExams": 708,
   "dates": [
     "2026-11-05",

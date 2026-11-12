@@ -21,6 +21,7 @@ export interface ExamEntry {
 
 export interface DatesheetPayload {
   title: string;
+  active?: boolean;
   notice: string;
   expirationIso: string;
   totalExams: number;
@@ -34,16 +35,17 @@ export const DATESHEET: DatesheetPayload = datesheetData as DatesheetPayload;
 const REPEATER_STORAGE_KEY = "cui_datesheet_repeater_exams_v1";
 
 /**
- * Returns whether the midterm datesheet is currently active
- * Automatically returns false after 2026-11-12 at 19:30 (Pakistan Time)
+ * Returns whether the midterm datesheet is currently active.
+ * Returns false once explicitly disabled (papers completed) or past expirationIso.
  */
 export function isDatesheetActive(now?: Date | null): boolean {
   try {
+    if (DATESHEET.active === false) return false;
     const current = now ?? new Date();
     const expireTime = new Date(DATESHEET.expirationIso).getTime();
     return current.getTime() < expireTime;
   } catch {
-    return true;
+    return false;
   }
 }
 

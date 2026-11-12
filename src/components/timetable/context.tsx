@@ -18,6 +18,7 @@ import {
 } from "@/lib/schedule";
 import { pruneAndSyncMakeupClasses } from "@/lib/makeup-classes";
 import { getActiveTimetableServerFn } from "@/lib/timetable-server-fn";
+import { isDatesheetActive } from "@/lib/datesheet";
 
 export type View =
   | "today"
@@ -93,7 +94,10 @@ function sanitize(value: unknown): Prefs {
         : raw.theme === "ink"
           ? "ink"
           : "paper",
-    view: VIEWS.includes(raw.view as View) ? (raw.view as View) : "today",
+    view:
+      VIEWS.includes(raw.view as View) && !(raw.view === "datesheet" && !isDatesheetActive())
+        ? (raw.view as View)
+        : "today",
     batchId: inRange(raw.batchId, batches.length) ? raw.batchId : defaultBatch,
     pinnedBatch: inRange(raw.pinnedBatch, batches.length) ? raw.pinnedBatch : null,
     pinnedTeachers,
