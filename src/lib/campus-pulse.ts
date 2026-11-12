@@ -358,6 +358,102 @@ export function getStudentCancellations(
   return all.filter((c) => batchesMatch(c.batchName, needle));
 }
 
+export function getTodayPktDateString(refDate: Date = new Date()): string {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: CAMPUS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(refDate);
+  const find = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  return `${find("year")}-${find("month")}-${find("day")}`;
+}
+
+export function getTodayPktDayIndex(refDate: Date = new Date()): number | null {
+  const short = new Intl.DateTimeFormat("en-US", {
+    timeZone: CAMPUS_TIME_ZONE,
+    weekday: "short",
+  }).format(refDate);
+  const idx = ["Mon", "Tue", "Wed", "Thu", "Fri"].indexOf(short);
+  return idx >= 0 ? idx : null;
+}
+
+export function isCancellationForToday(
+  c: ClassCancellationRecord,
+  refDate: Date = new Date(),
+): boolean {
+  const todayDate = getTodayPktDateString(refDate);
+  if (c.targetDate && c.targetDate === todayDate) return true;
+  const todayDayIdx = getTodayPktDayIndex(refDate);
+  if (todayDayIdx !== null && c.day === todayDayIdx) return true;
+  return false;
+}
+
+export interface StudentCancellationMatchContext {
+  studentBatch?: string | null;
+  pinnedBatch?: number | null;
+  customSchedule?: ClassEntry[];
+  activeBatchId?: number | null;
+  allowFallbackActiveBatch?: boolean;
+}
+
+/**
+ * Determines whether a cancellation record belongs to the student's batch,
+ * pinned batch, custom enrolled courses, or fallback active batch view.
+ */
+export function matchesStudentCancellationContext(
+  c: ClassCancellationRecord,
+  ctx: StudentCancellationMatchContext,
+): boolean {
+  const studentBatch = (ctx.studentBatch || "").trim();
+  const pinnedBatch = ctx.pinnedBatch ?? null;
+  const pinnedBatchName = pinnedBatch !== null ? (batches[pinnedBatch] || "").trim() : "";
+  const customSchedule = ctx.customSchedule || [];
+
+  if (studentBatch && batchesMatch(c.batchName, studentBatch)) {
+    return true;
+  }
+
+  if (
+    pinnedBatch !== null &&
+    (c.batch === pinnedBatch || batchesMatch(c.batchName, pinnedBatchName))
+  ) {
+    return true;
+  }
+
+  if (customSchedule.length > 0) {
+    const matchesCustomCourse = customSchedule.some((entry) => {
+      const entryBatch = batches[entry.batch] || "";
+      const entrySubject = subjects[entry.subject] || "";
+      const entryTeacher = entry.teacher >= 0 ? teachers[entry.teacher] || "" : "";
+
+      const sameBatch = entry.batch === c.batch || batchesMatch(entryBatch, c.batchName);
+      const sameSubject =
+        entry.subject === c.subject ||
+        entrySubject.toLowerCase().trim() === c.subjectName.toLowerCase().trim();
+      const sameTeacher =
+        entry.teacher === c.teacher ||
+        (entryTeacher !== "" &&
+          entryTeacher.toLowerCase().trim() === c.teacherName.toLowerCase().trim());
+
+      return (sameBatch && sameSubject) || (sameTeacher && sameSubject);
+    });
+    if (matchesCustomCourse) {
+      return true;
+    }
+  }
+
+  if (ctx.allowFallbackActiveBatch && ctx.activeBatchId !== undefined && ctx.activeBatchId !== null) {
+    const activeBatchName = (batches[ctx.activeBatchId] || "").trim();
+    if (c.batch === ctx.activeBatchId || batchesMatch(c.batchName, activeBatchName)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // -------------------------------------------------------------
 // 2. Room Categorization and Utilization Stats
 // -------------------------------------------------------------

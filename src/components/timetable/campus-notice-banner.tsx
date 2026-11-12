@@ -30,7 +30,7 @@ function markCancellationNotified(id: string): boolean {
 }
 
 export function CampusNoticeBanner() {
-  const { batchId, pinnedBatch, view } = useDesk();
+  const { batchId, pinnedBatch, view, setView } = useDesk();
   const [notice, setNotice] = useState<CampusNotice | null>(() => getCampusNotice());
   const [cancellations, setCancellations] = useState<ClassCancellationRecord[]>(() =>
     getClassCancellations().filter((c) => c.status === "active"),
@@ -261,9 +261,25 @@ export function CampusNoticeBanner() {
                 )}
               </p>
 
-              <div style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+              <div style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.25rem" }}>
                 <span>• Students of <strong>{c.batchName}</strong> are not required to attend.</span>
                 <span>• Venue <strong>{c.roomName}</strong> is released as FREE.</span>
+                <button
+                  type="button"
+                  onClick={() => setView("notices")}
+                  style={{
+                    background: "rgba(225, 29, 72, 0.14)",
+                    color: "#e11d48",
+                    border: "1px solid rgba(225, 29, 72, 0.35)",
+                    borderRadius: "999px",
+                    padding: "0.15rem 0.65rem",
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Open Teacher Messages Screen →
+                </button>
               </div>
             </div>
 

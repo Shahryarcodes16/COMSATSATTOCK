@@ -9,6 +9,7 @@ import {
   GraduationCap,
   Lock,
   Mail,
+  Megaphone,
   Moon,
   Phone,
   Search,
@@ -34,10 +35,68 @@ import { StudentAuthButton } from "@/components/timetable/student-auth-modal";
 import { FacultyAuthButton } from "@/components/timetable/faculty-auth-modal";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
 import { getActiveStudentSession } from "@/lib/student";
+import {
+  getClassCancellations,
+  matchesStudentCancellationContext,
+  type ClassCancellationRecord,
+} from "@/lib/campus-pulse";
+import { loadCustomSchedule } from "@/lib/my-schedule";
+
+function useTeacherMessageCount() {
+  const { pinnedBatch, batchId } = useDesk();
+  const [cancellations, setCancellations] = useState<ClassCancellationRecord[]>(() =>
+    getClassCancellations().filter((c) => c.status === "active"),
+  );
+  const [, setRev] = useState(0);
+
+  useEffect(() => {
+    const onCancelUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<ClassCancellationRecord[]>;
+      const list = customEvent.detail || getClassCancellations();
+      setCancellations(list.filter((c) => c.status === "active"));
+    };
+    const onBump = () => {
+      setCancellations(getClassCancellations().filter((c) => c.status === "active"));
+      setRev((r) => r + 1);
+    };
+    window.addEventListener("cui:class-cancellations-updated", onCancelUpdate);
+    window.addEventListener("cui:student-session-update", onBump);
+    window.addEventListener("cui:faculty-session-update", onBump);
+    window.addEventListener("cui:custom-schedule-update", onBump);
+    window.addEventListener("storage", onBump);
+    return () => {
+      window.removeEventListener("cui:class-cancellations-updated", onCancelUpdate);
+      window.removeEventListener("cui:student-session-update", onBump);
+      window.removeEventListener("cui:faculty-session-update", onBump);
+      window.removeEventListener("cui:custom-schedule-update", onBump);
+      window.removeEventListener("storage", onBump);
+    };
+  }, []);
+
+  const studentSession = getActiveStudentSession();
+  const facultySession = getActiveFacultySession();
+  const customSchedule = loadCustomSchedule();
+  const studentBatch = studentSession?.profile?.defaultBatch || null;
+  const teacherId = facultySession?.profile?.teacherId ?? null;
+  const hasSavedStudentContext =
+    Boolean(studentBatch) || pinnedBatch !== null || customSchedule.length > 0;
+
+  return cancellations.filter((c) => {
+    if (teacherId !== null && c.teacher === teacherId) return true;
+    return matchesStudentCancellationContext(c, {
+      studentBatch,
+      pinnedBatch,
+      customSchedule,
+      activeBatchId: batchId,
+      allowFallbackActiveBatch: !hasSavedStudentContext && teacherId === null,
+    });
+  }).length;
+}
 
 // Desktop sidebar navigates all sections
 const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
+  { id: "notices" as View, label: "Teacher Messages", icon: Megaphone },
   { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
   { id: "custom", label: "My Schedule", icon: CalendarCheck },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
@@ -71,6 +130,7 @@ export function Sidebar() {
   const { now, view, setView } = useDesk();
   const datesheetActive = isDatesheetActive(now);
   const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
+  const messageCount = useTeacherMessageCount();
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -116,7 +176,10 @@ export function Sidebar() {
               onClick={() => setView(item.id)}
             >
               <Icon size={18} strokeWidth={1.75} aria-hidden />
-              {item.label}
+              <span>{item.label}</span>
+              {item.id === "notices" && messageCount > 0 ? (
+                <span className="side-nav-badge">{messageCount}</span>
+              ) : null}
               {on ? <ArrowUpRight className="nav-arrow" size={15} aria-hidden /> : null}
             </button>
           );
@@ -170,6 +233,7 @@ export function Topbar() {
   const isSearchActive = view === "find";
   const datesheetActive = isDatesheetActive(now);
   const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
+  const messageCount = useTeacherMessageCount();
 
   useEffect(() => {
     const handleFacultyUpdate = () => setFacultyActive(!!getActiveFacultySession());
@@ -232,6 +296,19 @@ export function Topbar() {
         ) : (
           <StudentAuthButton />
         )}
+
+        {/* Teacher Messages & Today's Cancelled Classes Screen */}
+        <button
+          type="button"
+          className={`icon-btn tap notices-topbar-btn ${view === "notices" ? "on" : ""}`}
+          aria-label={`Teacher Messages & Today's Cancelled Classes${messageCount > 0 ? ` (${messageCount} active)` : ""}`}
+          aria-current={view === "notices" ? "page" : undefined}
+          onClick={() => setView("notices")}
+          title="Teacher Messages & Today's Cancelled Classes"
+        >
+          <Megaphone size={18} strokeWidth={1.8} aria-hidden />
+          {messageCount > 0 && <span className="notices-badge-count">{messageCount}</span>}
+        </button>
 
         {/* Class Reminders */}
         <NotificationBellButton />

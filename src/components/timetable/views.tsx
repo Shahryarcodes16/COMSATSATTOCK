@@ -10,6 +10,7 @@ import {
   DoorOpen,
   GraduationCap,
   Mail,
+  Megaphone,
   Pin,
   Printer,
   Search,
@@ -180,6 +181,26 @@ export function TodayView() {
         >
           <Activity size={13} />
           <span>View Live Pulse</span>
+        </button>
+      </div>
+
+      <div className="campus-pulse-quick-bar teacher-messages-quick-bar">
+        <div className="quick-bar-left">
+          <Megaphone size={16} className="tm-quick-icon" aria-hidden />
+          <span>
+            <strong>Teacher Messages:</strong>{" "}
+            {todayBatchCancellations.length > 0
+              ? `${todayBatchCancellations.length} cancelled class notice${todayBatchCancellations.length > 1 ? "s" : ""} for ${pinnedBatchName} today`
+              : `${cancellations.filter((c) => c.status === "active").length} active class cancellation${cancellations.filter((c) => c.status === "active").length === 1 ? "" : "s"} & instructor alerts`}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="btn secondary sm tap"
+          onClick={() => setView("notices")}
+        >
+          <Megaphone size={13} />
+          <span>Open Teacher Messages</span>
         </button>
       </div>
 
@@ -468,6 +489,15 @@ export function TodayView() {
                       </div>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    className="btn sm tap"
+                    style={{ marginTop: "0.35rem", alignSelf: "flex-start" }}
+                    onClick={() => setView("notices")}
+                  >
+                    <Megaphone size={13} aria-hidden />
+                    <span>Open Teacher Messages Screen</span>
+                  </button>
                 </div>
               )}
 

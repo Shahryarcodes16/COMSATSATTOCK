@@ -11,6 +11,7 @@ import { MyScheduleView } from "@/components/timetable/my-schedule-view";
 import { AdminPortal } from "@/components/timetable/admin-portal";
 import { CampusNoticeBanner } from "@/components/timetable/campus-notice-banner";
 import { CampusPulseView } from "@/components/timetable/campus-pulse-view";
+import { TeacherMessagesView } from "@/components/timetable/teacher-messages-view";
 import { DeskProvider, useDesk } from "@/components/timetable/context";
 import { CampusFooter, Dock, Sidebar, Topbar } from "@/components/timetable/chrome";
 import { DetailSheet } from "@/components/timetable/sheet";
@@ -124,6 +125,9 @@ function Frame() {
             </div>
             <div hidden={view !== "faculty-desk"}>
               <FacultyWorkspaceView />
+            </div>
+            <div hidden={view !== "notices"}>
+              <TeacherMessagesView />
             </div>
           </main>
           <CampusFooter />
