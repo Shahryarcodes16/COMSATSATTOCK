@@ -5,6 +5,7 @@ import appCss from "../styles.css?url";
 import { APP_NAME } from "@/lib/campus";
 
 const THEME_BOOT = `try{var p=JSON.parse(localStorage.getItem("cui-attock-desk-v1")||"{}");if(p.theme==="ink"||p.theme==="midnight")document.documentElement.dataset.theme=p.theme;}catch(e){}`;
+const PRELOAD_RECOVERY = `window.addEventListener("vite:preloadError",function(e){try{var t=Number(sessionStorage.getItem("cui_chunk_reload_ts")||"0");if(Date.now()-t>15000){sessionStorage.setItem("cui_chunk_reload_ts",String(Date.now()));e.preventDefault();window.location.reload();}}catch(err){}});`;
 
 export const Route = createRootRoute({
   head: () => ({
@@ -34,7 +35,7 @@ export const Route = createRootRoute({
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/crest.png" },
     ],
-    scripts: [{ children: THEME_BOOT }],
+    scripts: [{ children: THEME_BOOT }, { children: PRELOAD_RECOVERY }],
   }),
   component: () => (
     <html lang="en" suppressHydrationWarning>
