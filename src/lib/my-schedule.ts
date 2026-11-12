@@ -33,6 +33,7 @@ export function saveCustomSchedule(list: ClassEntry[]): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(MY_SCHEDULE_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent("cui:custom-schedule-update", { detail: list }));
   } catch (e) {
     console.error("Failed to save custom schedule", e);
   }

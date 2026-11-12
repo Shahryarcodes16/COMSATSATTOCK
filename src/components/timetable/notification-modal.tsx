@@ -28,6 +28,7 @@ import { useDesk } from "@/components/timetable/context";
 import { SLOTS, batches, forBatch, rooms, subjects, teachers, getCampusMinutes, entries } from "@/lib/schedule";
 import { loadCustomSchedule } from "@/lib/my-schedule";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
+import { isClassCancelled } from "@/lib/campus-pulse";
 
 /**
  * Background hook that checks the schedule every 30s and triggers class alerts
@@ -51,6 +52,7 @@ export function useClassNotificationScheduler() {
         );
 
         for (const cls of facultyClasses) {
+          if (isClassCancelled(dayIndex, cls.slot, cls.teacher, cls.batch, cls.room)) continue;
           const slotDef = SLOTS[cls.slot];
           if (!slotDef) continue;
 
@@ -98,6 +100,7 @@ export function useClassNotificationScheduler() {
       }
 
       for (const cls of todayClasses) {
+        if (isClassCancelled(dayIndex, cls.slot, cls.teacher, cls.batch, cls.room)) continue;
         const slotDef = SLOTS[cls.slot];
         if (!slotDef) continue;
 

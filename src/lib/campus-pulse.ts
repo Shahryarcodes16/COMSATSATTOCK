@@ -39,9 +39,21 @@ import {
 } from "./cancellations-server-fn.ts";
 
 export const CANCELLATIONS_STORAGE_KEY = "cui_class_cancellations_v1";
+export const CANCELLATIONS_UPDATED_EVENT = "cui:class-cancellations-updated";
 
 let memoryCancellations: ClassCancellationRecord[] = [];
 let isSyncing = false;
+const pendingAdds = new Map<string, ClassCancellationRecord>();
+const pendingRemovals = new Set<string>();
+
+export function normalizeBatchLabel(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, "").trim();
+}
+
+export function batchesMatch(a?: string | null, b?: string | null): boolean {
+  if (!a || !b) return false;
+  return normalizeBatchLabel(a) === normalizeBatchLabel(b);
+}
 
 // -------------------------------------------------------------
 // 1. Dynamic Class Cancellations Store & Multi-Device Sync
@@ -66,7 +78,7 @@ export function saveClassCancellations(list: ClassCancellationRecord[]): void {
   try {
     localStorage.setItem(CANCELLATIONS_STORAGE_KEY, JSON.stringify(list));
     window.dispatchEvent(
-      new CustomEvent("cui:class-cancellations-updated", { detail: list }),
+      new CustomEvent(CANCELLATIONS_UPDATED_EVENT, { detail: list }),
     );
   } catch (err) {
     console.error("Failed to save class cancellations", err);
@@ -83,10 +95,32 @@ export async function syncCancellationsFromServer(): Promise<ClassCancellationRe
 
   isSyncing = true;
   try {
+    // Retry any pending local additions that have not yet finished syncing
+    for (const [id, rec] of pendingAdds.entries()) {
+      try {
+        await addClassCancellationServerFn({ data: rec });
+        pendingAdds.delete(id);
+      } catch {
+        // Leave in pendingAdds for next sync cycle
+      }
+    }
+
     const serverList = await getAllActiveCancellationsServerFn();
     if (Array.isArray(serverList)) {
-      saveClassCancellations(serverList);
-      return serverList;
+      const mergedMap = new Map<string, ClassCancellationRecord>();
+      for (const item of serverList) {
+        if (!pendingRemovals.has(item.id)) {
+          mergedMap.set(item.id, item);
+        }
+      }
+      for (const [id, pending] of pendingAdds.entries()) {
+        if (!pendingRemovals.has(id)) {
+          mergedMap.set(id, pending);
+        }
+      }
+      const merged = Array.from(mergedMap.values());
+      saveClassCancellations(merged);
+      return merged;
     }
   } catch (err) {
     console.warn("[campus-pulse] Could not sync cancellations from server:", err);
@@ -96,19 +130,25 @@ export async function syncCancellationsFromServer(): Promise<ClassCancellationRe
   return getClassCancellations();
 }
 
-// Client-side auto synchronization on boot, interval, and window focus
+// Client-side auto synchronization on boot, interval, focus, and visibility change
 if (typeof window !== "undefined") {
   setTimeout(() => {
     syncCancellationsFromServer();
-  }, 200);
+  }, 150);
 
-  // Poll every 20 seconds for newly announced cancellations
+  // Poll every 10 seconds for newly announced cancellations across devices
   setInterval(() => {
     syncCancellationsFromServer();
-  }, 20000);
+  }, 10000);
 
   window.addEventListener("focus", () => {
     syncCancellationsFromServer();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncCancellationsFromServer();
+    }
   });
 }
 
@@ -176,14 +216,30 @@ export function addClassCancellation(params: {
     status: "active",
   };
 
-  const next = [...current, record];
+  // Replace any duplicate active cancellation for the same teacher+batch+day+slot
+  const filtered = current.filter(
+    (c) =>
+      !(
+        c.status === "active" &&
+        c.day === record.day &&
+        c.slot === record.slot &&
+        c.teacher === record.teacher &&
+        c.batch === record.batch
+      ),
+  );
+  const next = [...filtered, record];
+  pendingAdds.set(record.id, record);
   saveClassCancellations(next);
 
   // Sync to database
   if (typeof window !== "undefined") {
-    addClassCancellationServerFn({ data: record }).catch((err) =>
-      console.error("[campus-pulse] Failed to sync cancellation to server:", err),
-    );
+    addClassCancellationServerFn({ data: record })
+      .then(() => {
+        pendingAdds.delete(record.id);
+      })
+      .catch((err) => {
+        console.error("[campus-pulse] Failed to sync cancellation to server:", err);
+      });
   }
 
   return record;
@@ -193,14 +249,21 @@ export function addClassCancellation(params: {
  * Removes or undoes a class cancellation
  */
 export function removeClassCancellation(id: string): void {
+  pendingAdds.delete(id);
+  pendingRemovals.add(id);
   const current = getClassCancellations();
   const next = current.filter((c) => c.id !== id);
   saveClassCancellations(next);
 
   if (typeof window !== "undefined") {
-    removeClassCancellationServerFn({ data: { id } }).catch((err) =>
-      console.error("[campus-pulse] Failed to remove cancellation from server:", err),
-    );
+    removeClassCancellationServerFn({ data: { id } })
+      .then(() => {
+        pendingRemovals.delete(id);
+      })
+      .catch((err) => {
+        pendingRemovals.delete(id);
+        console.error("[campus-pulse] Failed to remove cancellation from server:", err);
+      });
   }
 }
 
@@ -234,12 +297,42 @@ export function isClassCancelled(
   roomId?: number,
 ): ClassCancellationRecord | null {
   const list = getClassCancellations();
+  const tName = teacherId !== undefined && teacherId >= 0 ? (teachers[teacherId] || "").toLowerCase().trim() : "";
+  const bName = batchId !== undefined && batchId >= 0 ? (batches[batchId] || "").toLowerCase().trim() : "";
+  const rName = roomId !== undefined && roomId >= 0 ? (rooms[roomId] || "").toLowerCase().trim() : "";
+
   const match = list.find((c) => {
     if (c.status !== "active") return false;
     if (c.day !== day || c.slot !== slot) return false;
-    if (teacherId !== undefined && teacherId >= 0 && c.teacher === teacherId) return true;
-    if (batchId !== undefined && batchId >= 0 && c.batch === batchId) return true;
-    if (roomId !== undefined && roomId >= 0 && c.room === roomId) return true;
+
+    const hasTeacherFilter = teacherId !== undefined && teacherId >= 0;
+    const hasBatchFilter = batchId !== undefined && batchId >= 0;
+    const hasRoomFilter = roomId !== undefined && roomId >= 0;
+
+    const teacherMatches =
+      hasTeacherFilter &&
+      (c.teacher === teacherId || (tName !== "" && c.teacherName.toLowerCase().trim() === tName));
+    const batchMatches =
+      hasBatchFilter &&
+      (c.batch === batchId || (bName !== "" && normalizeBatchLabel(c.batchName) === normalizeBatchLabel(bName)));
+    const roomMatches =
+      hasRoomFilter &&
+      (c.room === roomId || (rName !== "" && c.roomName.toLowerCase().trim() === rName));
+
+    // When both teacher and batch of a specific lecture entry are supplied, require both to match
+    // (prevents cancelling one parallel section from falsely cancelling another instructor's lecture)
+    if (hasTeacherFilter && hasBatchFilter) {
+      return teacherMatches && batchMatches;
+    }
+    if (hasTeacherFilter && hasRoomFilter) {
+      return teacherMatches && roomMatches;
+    }
+    if (hasBatchFilter && hasRoomFilter) {
+      return batchMatches && roomMatches;
+    }
+    if (hasTeacherFilter) return teacherMatches;
+    if (hasBatchFilter) return batchMatches;
+    if (hasRoomFilter) return roomMatches;
     return false;
   });
   return match || null;
@@ -255,17 +348,14 @@ export function getStudentCancellations(
   if (batchNameOrId === undefined || batchNameOrId === null) return all;
 
   if (typeof batchNameOrId === "number") {
-    return all.filter((c) => c.batch === batchNameOrId);
+    const bName = batches[batchNameOrId] || "";
+    return all.filter((c) => c.batch === batchNameOrId || (bName && batchesMatch(c.batchName, bName)));
   }
 
-  const needle = String(batchNameOrId).toLowerCase().trim();
+  const needle = String(batchNameOrId).trim();
   if (!needle) return all;
 
-  return all.filter(
-    (c) =>
-      c.batchName.toLowerCase().includes(needle) ||
-      needle.includes(c.batchName.toLowerCase()),
-  );
+  return all.filter((c) => batchesMatch(c.batchName, needle));
 }
 
 // -------------------------------------------------------------

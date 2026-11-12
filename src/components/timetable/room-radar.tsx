@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Clock,
   Compass,
@@ -25,6 +25,17 @@ export function FreeRoomsRadar({
 }) {
   const { clock, day: deskDay, slot: deskSlot, setDay, setSlot, open } = useDesk();
   const [selectedGroup, setSelectedGroup] = useState<"All" | RoomGroup>("All");
+  const [cancelRevision, setCancelRevision] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setCancelRevision((r) => r + 1);
+    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   // Determine current active day & slot for radar:
   // If clock is live (weekdays 8:30am - 4:30pm), use live slot.
@@ -38,7 +49,8 @@ export function FreeRoomsRadar({
 
   const freeRooms = useMemo(
     () => getFreeRoomsForSlot(radarDay, radarSlot),
-    [radarDay, radarSlot],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [radarDay, radarSlot, cancelRevision],
   );
 
   const filteredRooms = useMemo(() => {

@@ -1,20 +1,45 @@
 import { useState, useEffect, useMemo } from "react";
-import { AlertCircle, AlertTriangle, Info, CheckCircle2, X, Bell } from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, CheckCircle2, X } from "lucide-react";
 import { getCampusNotice, syncAdminDataFromServer, type CampusNotice } from "@/lib/admin";
 import {
+  batchesMatch,
   getClassCancellations,
   syncCancellationsFromServer,
   type ClassCancellationRecord,
 } from "@/lib/campus-pulse";
-import { getActiveStudentSession } from "@/lib/student";
+import { getActiveStudentSession, type StudentSession } from "@/lib/student";
+import { loadCustomSchedule } from "@/lib/my-schedule";
+import { isNotificationSupported, sendSystemNotification } from "@/lib/notifications";
 import { useDesk } from "@/components/timetable/context";
-import { DAYS, SLOTS, batches } from "@/lib/schedule";
+import { DAYS, SLOTS, batches, subjects, teachers, type ClassEntry } from "@/lib/schedule";
+
+const NOTIFIED_CANCEL_KEY = "cui_notified_cancellations_v1";
+
+function markCancellationNotified(id: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = sessionStorage.getItem(NOTIFIED_CANCEL_KEY);
+    const seen: string[] = raw ? JSON.parse(raw) : [];
+    if (seen.includes(id)) return false;
+    seen.push(id);
+    sessionStorage.setItem(NOTIFIED_CANCEL_KEY, JSON.stringify(seen.slice(-50)));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function CampusNoticeBanner() {
-  const { batchId, pinnedBatch } = useDesk();
+  const { batchId, pinnedBatch, view } = useDesk();
   const [notice, setNotice] = useState<CampusNotice | null>(() => getCampusNotice());
   const [cancellations, setCancellations] = useState<ClassCancellationRecord[]>(() =>
     getClassCancellations().filter((c) => c.status === "active"),
+  );
+  const [studentSession, setStudentSession] = useState<StudentSession | null>(() =>
+    getActiveStudentSession(),
+  );
+  const [customSchedule, setCustomSchedule] = useState<ClassEntry[]>(() =>
+    loadCustomSchedule(),
   );
   const [dismissedNotice, setDismissedNotice] = useState(false);
   const [dismissedCancellationIds, setDismissedCancellationIds] = useState<Set<string>>(
@@ -47,52 +72,120 @@ export function CampusNoticeBanner() {
       setCancellations(list.filter((c) => c.status === "active"));
     };
 
+    const handleStudentUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<StudentSession | null>;
+      setStudentSession(customEvent.detail ?? getActiveStudentSession());
+    };
+
+    const handleCustomScheduleUpdate = () => {
+      setCustomSchedule(loadCustomSchedule());
+    };
+
+    const handleStorage = () => {
+      setNotice(getCampusNotice());
+      setCancellations(getClassCancellations().filter((c) => c.status === "active"));
+      setStudentSession(getActiveStudentSession());
+      setCustomSchedule(loadCustomSchedule());
+    };
+
     window.addEventListener("cui:campus-notice-update", handleNoticeUpdate);
     window.addEventListener("cui:class-cancellations-updated", handleCancellationsUpdate);
-    window.addEventListener("storage", handleNoticeUpdate);
+    window.addEventListener("cui:student-session-update", handleStudentUpdate);
+    window.addEventListener("cui:custom-schedule-update", handleCustomScheduleUpdate);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       window.removeEventListener("cui:campus-notice-update", handleNoticeUpdate);
       window.removeEventListener("cui:class-cancellations-updated", handleCancellationsUpdate);
-      window.removeEventListener("storage", handleNoticeUpdate);
+      window.removeEventListener("cui:student-session-update", handleStudentUpdate);
+      window.removeEventListener("cui:custom-schedule-update", handleCustomScheduleUpdate);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
-  // Filter cancellations strictly relevant to this student's course and batch under that teacher
+  // Filter cancellations strictly relevant to this student's enrolled batch, pinned batch, or custom courses
   const relevantCancellations = useMemo(() => {
-    const studentSession = getActiveStudentSession();
-    const studentBatch = (studentSession?.profile?.defaultBatch || "").toLowerCase().trim();
-    const pinnedBatchName = pinnedBatch !== null ? (batches[pinnedBatch] || "").toLowerCase().trim() : "";
-    const activeBatchName = (batches[batchId] || "").toLowerCase().trim();
+    const studentBatch = (studentSession?.profile?.defaultBatch || "").trim();
+    const pinnedBatchName = pinnedBatch !== null ? (batches[pinnedBatch] || "").trim() : "";
+    const activeBatchName = (batches[batchId] || "").trim();
 
     return cancellations.filter((c) => {
       if (dismissedCancellationIds.has(c.id)) return false;
 
-      const cBatch = c.batchName.toLowerCase().trim();
+      // 1. Match logged-in student's enrolled batch
+      if (studentBatch && batchesMatch(c.batchName, studentBatch)) {
+        return true;
+      }
 
-      // 1. If student is logged in, show only notices for their enrolled batch
-      if (studentBatch) {
-        if (cBatch === studentBatch || cBatch.includes(studentBatch) || studentBatch.includes(cBatch)) {
+      // 2. Match student's pinned batch on dashboard
+      if (
+        pinnedBatch !== null &&
+        (c.batch === pinnedBatch || batchesMatch(c.batchName, pinnedBatchName))
+      ) {
+        return true;
+      }
+
+      // 3. Match any specific course the student added into "My Schedule" (handles repeaters & cross-section courses)
+      if (customSchedule.length > 0) {
+        const matchesCustomCourse = customSchedule.some((entry) => {
+          const entryBatch = batches[entry.batch] || "";
+          const entrySubject = subjects[entry.subject] || "";
+          const entryTeacher = entry.teacher >= 0 ? teachers[entry.teacher] || "" : "";
+
+          const sameBatch = entry.batch === c.batch || batchesMatch(entryBatch, c.batchName);
+          const sameSubject =
+            entry.subject === c.subject ||
+            entrySubject.toLowerCase().trim() === c.subjectName.toLowerCase().trim();
+          const sameTeacher =
+            entry.teacher === c.teacher ||
+            (entryTeacher !== "" &&
+              entryTeacher.toLowerCase().trim() === c.teacherName.toLowerCase().trim());
+
+          return (sameBatch && sameSubject) || (sameTeacher && sameSubject);
+        });
+        if (matchesCustomCourse) {
           return true;
         }
       }
 
-      // 2. If student saved/pinned their batch, show only notices for that pinned batch
-      if (pinnedBatchName) {
-        if (cBatch === pinnedBatchName || cBatch.includes(pinnedBatchName) || pinnedBatchName.includes(cBatch)) {
-          return true;
-        }
-      }
-
-      // 3. If student is actively inspecting a specific batch schedule in the timetable
-      if (activeBatchName && (cBatch === activeBatchName || cBatch.includes(activeBatchName))) {
+      // 4. Match currently inspected batch when browsing Batches tab or if student has no saved batch yet
+      const hasSavedBatchContext =
+        Boolean(studentBatch) || pinnedBatch !== null || customSchedule.length > 0;
+      if (
+        (view === "batches" || !hasSavedBatchContext) &&
+        (c.batch === batchId || batchesMatch(c.batchName, activeBatchName))
+      ) {
         return true;
       }
 
       // Do not display cancellations to students from unrelated batches or courses
       return false;
     });
-  }, [cancellations, batchId, pinnedBatch, dismissedCancellationIds]);
+  }, [
+    cancellations,
+    studentSession,
+    pinnedBatch,
+    batchId,
+    view,
+    customSchedule,
+    dismissedCancellationIds,
+  ]);
+
+  // Also trigger a system notification (if enabled) when a fresh relevant cancellation arrives
+  useEffect(() => {
+    if (!isNotificationSupported() || Notification.permission !== "granted") return;
+    for (const c of relevantCancellations) {
+      if (markCancellationNotified(c.id)) {
+        const slotDef = SLOTS[c.slot];
+        const slotLabel = slotDef ? `${slotDef.label} (${slotDef.start})` : `Slot ${c.slot + 1}`;
+        sendSystemNotification(`🚨 Lecture Cancelled: ${c.subjectName}`, {
+          body: `${c.teacherName} cancelled ${c.batchName} (${slotLabel}). ${c.reason || ""}`.trim(),
+          playChime: true,
+          tag: `cancel_${c.id}`,
+        });
+      }
+    }
+  }, [relevantCancellations]);
 
   const handleDismissCancellation = (id: string) => {
     setDismissedCancellationIds((prev) => new Set([...prev, id]));

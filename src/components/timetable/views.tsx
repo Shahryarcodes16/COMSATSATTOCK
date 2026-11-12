@@ -26,7 +26,7 @@ import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal
 import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
-import { isClassCancelled, getClassCancellations } from "@/lib/campus-pulse";
+import { batchesMatch, isClassCancelled, getClassCancellations } from "@/lib/campus-pulse";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
@@ -127,10 +127,10 @@ export function TodayView() {
 
   useEffect(() => {
     const handleUpdate = () => setCancellations(getClassCancellations());
-    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
-      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
@@ -153,9 +153,7 @@ export function TodayView() {
       (c) =>
         c.status === "active" &&
         c.day === day &&
-        (c.batch === pinnedBatch ||
-          (pinnedBatchName && c.batchName.toLowerCase().includes(pinnedBatchName.toLowerCase())) ||
-          (pinnedBatchName && pinnedBatchName.toLowerCase().includes(c.batchName.toLowerCase()))),
+        (c.batch === pinnedBatch || batchesMatch(c.batchName, pinnedBatchName)),
     );
   }, [cancellations, day, pinnedBatch, pinnedBatchName]);
 
@@ -335,18 +333,42 @@ export function TodayView() {
                 {teacherTodayClasses.map((c, idx) => {
                   const slotInfo = SLOTS[c.slot];
                   const isLive = currentLecture && clock.liveSlot === c.slot;
+                  const cancellation = isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room);
                   return (
                     <div
                       key={`teacher-today-${idx}`}
-                      className={`faculty-quick-class-item ${isLive ? "live" : ""}`}
+                      className={`faculty-quick-class-item ${isLive && !cancellation ? "live" : ""}`}
+                      style={
+                        cancellation
+                          ? {
+                              borderColor: "rgba(225, 29, 72, 0.4)",
+                              background: "color-mix(in srgb, #e11d48 8%, var(--c-paper))",
+                            }
+                          : undefined
+                      }
                     >
                       <div className="quick-class-time">
-                        <b>{slotInfo.label}</b>
-                        <span>{slotInfo.start} - {slotInfo.end}</span>
-                        {isLive && <span className="flag now">Live Now</span>}
+                        <b style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                          {slotInfo.label}
+                        </b>
+                        <span style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                          {slotInfo.start} - {slotInfo.end}
+                        </span>
+                        {cancellation ? (
+                          <span className="flag cancelled-pill">Cancelled</span>
+                        ) : isLive ? (
+                          <span className="flag now">Live Now</span>
+                        ) : null}
                       </div>
                       <div className="quick-class-body">
-                        <strong>{subjects[c.subject]}</strong>
+                        <strong style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                          {subjects[c.subject]}
+                        </strong>
+                        {cancellation && (
+                          <span className="fine" style={{ color: "#e11d48", fontWeight: 600 }}>
+                            Cancelled ({rooms[c.room]} freed)
+                          </span>
+                        )}
                         <div className="quick-class-meta">
                           <button
                             type="button"
@@ -479,7 +501,9 @@ export function TodayView() {
             ) : (
               <div className="stack">
                 {pinnedTeachers.map((id) => {
-                  const hits = groupBySlot(forTeacher(id), day, slot);
+                  const hits = groupBySlot(forTeacher(id), day, slot).filter(
+                    (entry) => !isClassCancelled(entry.day, entry.slot, entry.teacher, entry.batch, entry.room),
+                  );
                   return (
                     <button
                       key={id}
@@ -523,10 +547,10 @@ export function RoomsView() {
 
   useEffect(() => {
     const handleUpdate = () => setCancellations(getClassCancellations());
-    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
-      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
@@ -767,21 +791,35 @@ export function FacultyView() {
   const [sort, setSort] = useState<"az" | "light">("az");
   const [savedOnly, setSavedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(18);
+  const [cancelRevision, setCancelRevision] = useState(0);
   useEffect(() => {
     setVisibleCount(18);
   }, [query, mode, sort, savedOnly, day, slot]);
+  useEffect(() => {
+    const handleUpdate = () => setCancelRevision((r) => r + 1);
+    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
   const needle = query.trim().toLowerCase();
 
   const occupied = useMemo(() => {
     const map = new Map<number, ReturnType<typeof at>>();
     for (const entry of at(day, slot)) {
       if (entry.teacher < 0) continue;
+      if (isClassCancelled(entry.day, entry.slot, entry.teacher, entry.batch, entry.room)) {
+        continue;
+      }
       const list = map.get(entry.teacher);
       if (list) list.push(entry);
       else map.set(entry.teacher, [entry]);
     }
     return map;
-  }, [day, slot]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, slot, cancelRevision]);
 
   const order = (left: number, right: number) => {
     if (sort === "light") {
@@ -802,7 +840,12 @@ export function FacultyView() {
       );
     })
     .sort((a, b) => order(a.id, b.id));
-  const free = matched.filter((person) => isFree(forTeacher(person.id), day, slot, 1));
+  const free = matched.filter((person) => {
+    const uncancelled = forTeacher(person.id).filter(
+      (entry) => !isClassCancelled(entry.day, entry.slot, entry.teacher, entry.batch, entry.room),
+    );
+    return isFree(uncancelled, day, slot, 1);
+  });
   const busy = matched.filter((person) => occupied.has(person.id));
 
   return (

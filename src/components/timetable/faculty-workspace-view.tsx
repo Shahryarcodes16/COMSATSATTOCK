@@ -124,7 +124,7 @@ export function FacultyWorkspaceView() {
   const [bookingNote, setBookingNote] = useState("");
   const [bookingSuccessNotice, setBookingSuccessNotice] = useState<string | null>(null);
 
-  // Sync session changes from storage
+  // Sync session & cancellation changes from storage/server
   useEffect(() => {
     const handleUpdate = () => {
       const sess = getActiveFacultySession();
@@ -133,11 +133,16 @@ export function FacultyWorkspaceView() {
         setLeadMins(sess.profile.notificationLeadMins);
       }
     };
+    const handleCancelUpdate = () => setCancellationsRevision((r) => r + 1);
     window.addEventListener("cui:faculty-session-update", handleUpdate);
+    window.addEventListener("cui:class-cancellations-updated", handleCancelUpdate);
     window.addEventListener("storage", handleUpdate);
+    window.addEventListener("storage", handleCancelUpdate);
     return () => {
       window.removeEventListener("cui:faculty-session-update", handleUpdate);
+      window.removeEventListener("cui:class-cancellations-updated", handleCancelUpdate);
       window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleCancelUpdate);
     };
   }, []);
 
@@ -398,15 +403,22 @@ export function FacultyWorkspaceView() {
               borderRadius: "var(--r-md)",
             }}
             onClick={() => {
-              const firstClass = teacherClasses[0] || {
-                day: currentWeekday,
-                slot: 0,
-                batch: 0,
-                room: 0,
-                teacher: teacherId!,
-                subject: 0,
-                repeater: false,
-              };
+              const firstClass =
+                todayDayClasses.find(
+                  (c) => !isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room),
+                ) ||
+                teacherClasses.find(
+                  (c) => !isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room),
+                ) ||
+                teacherClasses[0] || {
+                  day: currentWeekday,
+                  slot: 0,
+                  batch: 0,
+                  room: 0,
+                  teacher: teacherId!,
+                  subject: 0,
+                  repeater: false,
+                };
               setCancelClassModal(firstClass);
             }}
           >

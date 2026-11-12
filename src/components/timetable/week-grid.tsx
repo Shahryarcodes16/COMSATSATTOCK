@@ -24,10 +24,10 @@ export function WeekGrid({ list, focusDay, liveDay, liveSlot, caption, onDayChan
 
   useEffect(() => {
     const handleUpdate = () => setCancelRevision((r) => r + 1);
-    window.addEventListener("cui:pulse-cancellation-change", handleUpdate);
+    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
-      window.removeEventListener("cui:pulse-cancellation-change", handleUpdate);
+      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);

@@ -57,7 +57,7 @@ export async function serverGetAllActiveCancellations(): Promise<ClassCancellati
       `SELECT * FROM class_cancellations WHERE status = 'active' ORDER BY cancelled_at DESC`,
     );
 
-    if (Array.isArray(rows) && rows.length > 0) {
+    if (Array.isArray(rows)) {
       return rows.map((r) => ({
         id: String(r.id),
         day: Number(r.day),

@@ -47,6 +47,7 @@ import {
   saveCustomSchedule,
   type ScheduleClash,
 } from "@/lib/my-schedule";
+import { isClassCancelled } from "@/lib/campus-pulse";
 
 export function MyScheduleView() {
   const { clock, day: selectedDay, open, setView } = useDesk();
@@ -55,10 +56,18 @@ export function MyScheduleView() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [, setCancelRevision] = useState(0);
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount and subscribe to cancellation updates
   useEffect(() => {
     setSchedule(loadCustomSchedule());
+    const handleCancelUpdate = () => setCancelRevision((r) => r + 1);
+    window.addEventListener("cui:class-cancellations-updated", handleCancelUpdate);
+    window.addEventListener("storage", handleCancelUpdate);
+    return () => {
+      window.removeEventListener("cui:class-cancellations-updated", handleCancelUpdate);
+      window.removeEventListener("storage", handleCancelUpdate);
+    };
   }, []);
 
   // Update schedule & persist
@@ -306,22 +315,53 @@ export function MyScheduleView() {
                     const teacherName = entry.teacher >= 0 ? teachers[entry.teacher] : null;
                     const email = entry.teacher >= 0 ? getFacultyEmail(entry.teacher, teacherName ?? "") : null;
                     const roomName = entry.room >= 0 ? rooms[entry.room] : "Room TBA";
+                    const cancellation = isClassCancelled(
+                      entry.day,
+                      entry.slot,
+                      entry.teacher,
+                      entry.batch,
+                      entry.room,
+                    );
 
                     return (
                       <div
                         key={getEntryKey(entry)}
-                        className={`today-card ${isLive ? "today-live" : ""} ${isPast ? "today-past" : ""}`}
+                        className={`today-card ${cancellation ? "cancelled-class-card" : isLive ? "today-live" : ""} ${isPast && !cancellation ? "today-past" : ""}`}
                       >
                         <div className="today-time-badge">
-                          <span className="slot-badge">{SLOTS[entry.slot]?.label}</span>
-                          <span className="time-range">{rangeLabel(entry.slot)}</span>
-                          {isLive ? <span className="live-pill">In Progress</span> : null}
-                          {isPast ? <span className="past-pill">Finished</span> : null}
+                          <span className="slot-badge" style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                            {SLOTS[entry.slot]?.label}
+                          </span>
+                          <span className="time-range" style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                            {rangeLabel(entry.slot)}
+                          </span>
+                          {cancellation ? (
+                            <span className="cancelled-side-badge">CANCELLED</span>
+                          ) : (
+                            <>
+                              {isLive ? <span className="live-pill">In Progress</span> : null}
+                              {isPast ? <span className="past-pill">Finished</span> : null}
+                            </>
+                          )}
                         </div>
 
                         <div className="today-class-info">
+                          {cancellation && (
+                            <div className="cancelled-class-notice-box" style={{ marginBottom: "0.45rem" }}>
+                              <p className="cancelled-notice-text">
+                                <strong>🚨 Class Cancelled by {cancellation.teacherName || teacherName || "Instructor"}</strong>
+                                {cancellation.reason ? ` · "${cancellation.reason}"` : ""}
+                              </p>
+                              <span className="room-freed-indicator">
+                                🟢 Venue <strong>{roomName}</strong> is now FREE
+                              </span>
+                            </div>
+                          )}
+
                           <h3 className="course-title">
-                            {subjects[entry.subject]}
+                            <span style={{ textDecoration: cancellation ? "line-through" : undefined, opacity: cancellation ? 0.7 : 1 }}>
+                              {subjects[entry.subject]}
+                            </span>
                             {entry.repeater ? (
                               <span className="repeater-tag">Repeater</span>
                             ) : null}

@@ -6,30 +6,25 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ClassCancellationRecord } from "./timetable-types.ts";
-import {
-  serverGetAllActiveCancellations,
-  serverAddClassCancellation,
-  serverRemoveClassCancellation,
-  serverSettleClassCancellation,
-} from "./cancellations.server.ts";
 
 export const getAllActiveCancellationsServerFn = createServerFn({
   method: "GET",
-}).handler(async () => {
+}).handler(async (): Promise<ClassCancellationRecord[]> => {
+  const { serverGetAllActiveCancellations } = await import("./cancellations.server.ts");
   return await serverGetAllActiveCancellations();
 });
 
 const AddCancellationSchema = z.object({
-  id: z.string(),
-  day: z.number().int().min(0).max(4),
-  slot: z.number().int().min(0).max(4),
-  batch: z.number().int().min(0),
+  id: z.string().min(1),
+  day: z.number().int().min(0).max(6),
+  slot: z.number().int().min(0).max(10),
+  batch: z.number().int().min(-1),
   batchName: z.string(),
-  room: z.number().int().min(0),
+  room: z.number().int().min(-1),
   roomName: z.string(),
-  teacher: z.number().int().min(0),
+  teacher: z.number().int().min(-1),
   teacherName: z.string(),
-  subject: z.number().int().min(0),
+  subject: z.number().int().min(-1),
   subjectName: z.string(),
   targetDate: z.string(),
   targetDateLabel: z.string(),
@@ -44,15 +39,17 @@ export const addClassCancellationServerFn = createServerFn({
   method: "POST",
 })
   .validator((d: unknown) => AddCancellationSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<ClassCancellationRecord> => {
+    const { serverAddClassCancellation } = await import("./cancellations.server.ts");
     return await serverAddClassCancellation(data as ClassCancellationRecord);
   });
 
 export const removeClassCancellationServerFn = createServerFn({
   method: "POST",
 })
-  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
-  .handler(async ({ data }) => {
+  .validator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
+  .handler(async ({ data }): Promise<boolean> => {
+    const { serverRemoveClassCancellation } = await import("./cancellations.server.ts");
     return await serverRemoveClassCancellation(data.id);
   });
 
@@ -60,8 +57,9 @@ export const settleClassCancellationServerFn = createServerFn({
   method: "POST",
 })
   .validator((d: unknown) =>
-    z.object({ cancellationId: z.string(), makeupId: z.string() }).parse(d),
+    z.object({ cancellationId: z.string().min(1), makeupId: z.string().min(1) }).parse(d),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<boolean> => {
+    const { serverSettleClassCancellation } = await import("./cancellations.server.ts");
     return await serverSettleClassCancellation(data.cancellationId, data.makeupId);
   });
