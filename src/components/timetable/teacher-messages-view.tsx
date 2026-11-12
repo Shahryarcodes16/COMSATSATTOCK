@@ -18,6 +18,7 @@ import {
 import { useDesk } from "@/components/timetable/context";
 import {
   getClassCancellations,
+  isCancellationCloudPersistent,
   isCancellationForToday,
   matchesStudentCancellationContext,
   removeClassCancellation,
@@ -78,12 +79,16 @@ export function TeacherMessagesView() {
   const [activeTab, setActiveTab] = useState<MessageTab>("mine");
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cloudPersistent, setCloudPersistent] = useState<boolean | null>(() =>
+    isCancellationCloudPersistent(),
+  );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       const updated = await syncCancellationsFromServer();
       setCancellations(updated.filter((c) => c.status === "active"));
+      setCloudPersistent(isCancellationCloudPersistent());
       setMakeups(getActiveArrangedMakeupClasses(new Date()));
     } finally {
       setTimeout(() => setIsRefreshing(false), 300);
@@ -95,12 +100,14 @@ export function TeacherMessagesView() {
       if (Array.isArray(list)) {
         setCancellations(list.filter((c) => c.status === "active"));
       }
+      setCloudPersistent(isCancellationCloudPersistent());
     });
 
     const onCancelUpdate = (e: Event) => {
       const customEvent = e as CustomEvent<ClassCancellationRecord[]>;
       const list = customEvent.detail || getClassCancellations();
       setCancellations(list.filter((c) => c.status === "active"));
+      setCloudPersistent(isCancellationCloudPersistent());
     };
     const onMakeupUpdate = () => {
       setMakeups(getActiveArrangedMakeupClasses(new Date()));
@@ -379,6 +386,22 @@ export function TeacherMessagesView() {
           </button>
         </div>
       </div>
+
+      {cloudPersistent === false && (
+        <div
+          className="campus-global-notice warning"
+          role="status"
+          style={{ borderRadius: "var(--r-md)" }}
+        >
+          <AlertTriangle size={18} aria-hidden />
+          <div style={{ fontSize: "0.84rem" }}>
+            <strong>Local / Ephemeral Sync Mode:</strong> To broadcast teacher cancellation
+            messages automatically across different student phones/devices on Vercel, connect a
+            PostgreSQL database (<code>DATABASE_URL</code>, e.g., Neon) in your Vercel Environment
+            Variables. Same-browser cancellations are preserved locally.
+          </div>
+        </div>
+      )}
 
       {/* Summary KPI Cards */}
       <div className="tm-summary-strip">

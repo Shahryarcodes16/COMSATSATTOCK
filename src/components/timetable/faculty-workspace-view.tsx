@@ -64,7 +64,7 @@ import {
 import { facultyUpdateLeadTimeFn } from "@/lib/faculty-server-fn";
 import {
   isClassCancelled,
-  addClassCancellation,
+  addClassCancellationAsync,
   removeClassCancellation,
   getClassCancellations,
 } from "@/lib/campus-pulse";
@@ -1819,32 +1819,39 @@ export function FacultyWorkspaceView() {
                   type="button"
                   className="btn primary tap"
                   style={{ background: "#e11d48", borderColor: "#e11d48", color: "#fff", fontWeight: 700 }}
-                  onClick={() => {
+                  onClick={async () => {
                     const subjName = subjects[cancelClassModal.subject] || "";
                     const bName = batches[cancelClassModal.batch] || "";
                     const rName = rooms[cancelClassModal.room] || "";
 
-                    addClassCancellation({
-                      day: cancelClassModal.day,
-                      slot: cancelClassModal.slot,
-                      batch: cancelClassModal.batch,
-                      batchName: bName,
-                      room: cancelClassModal.room,
-                      roomName: rName,
-                      teacher: cancelClassModal.teacher,
-                      teacherName: teacherName,
-                      subject: cancelClassModal.subject,
-                      subjectName: subjName,
-                      reason: cancellationReason.trim() || "Official commitment / emergency",
-                      cancelledByEmail: facultySession.profile.email,
-                    });
+                    const target = cancelClassModal;
+                    const reasonText =
+                      cancellationReason.trim() || "Official commitment / emergency";
+
                     setCancelClassModal(null);
                     setCancellationReason("");
+
+                    const syncRes = await addClassCancellationAsync({
+                      day: target.day,
+                      slot: target.slot,
+                      batch: target.batch,
+                      batchName: bName,
+                      room: target.room,
+                      roomName: rName,
+                      teacher: target.teacher,
+                      teacherName: teacherName,
+                      subject: target.subject,
+                      subjectName: subjName,
+                      reason: reasonText,
+                      cancelledByEmail: facultySession.profile.email,
+                    });
                     setCancellationsRevision((r) => r + 1);
                     setBookingSuccessNotice(
-                      `🚨 "${subjName}" for ${bName} has been cancelled. An alert message was automatically broadcast to all students, and ${rName} is now FREE across campus!`,
+                      syncRes.persistent
+                        ? `🚨 "${subjName}" for ${bName} has been cancelled and synced to cloud database across all student devices! ${rName} is now FREE.`
+                        : `🚨 "${subjName}" for ${bName} cancelled and ${rName} freed on this browser. Note: For cross-device delivery to other students' phones, configure DATABASE_URL (PostgreSQL) in Vercel Environment Variables.`,
                     );
-                    setTimeout(() => setBookingSuccessNotice(null), 8000);
+                    setTimeout(() => setBookingSuccessNotice(null), 9000);
                   }}
                 >
                   Confirm Cancellation, Alert Students & Free Room

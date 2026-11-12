@@ -7,11 +7,22 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ClassCancellationRecord } from "./timetable-types.ts";
 
+export interface CancellationsSyncResponse {
+  records: ClassCancellationRecord[];
+  persistent: boolean;
+}
+
+export interface AddCancellationResponse {
+  record: ClassCancellationRecord;
+  persistent: boolean;
+  dbSaved: boolean;
+}
+
 export const getAllActiveCancellationsServerFn = createServerFn({
   method: "GET",
-}).handler(async (): Promise<ClassCancellationRecord[]> => {
-  const { serverGetAllActiveCancellations } = await import("./cancellations.server.ts");
-  return await serverGetAllActiveCancellations();
+}).handler(async (): Promise<CancellationsSyncResponse> => {
+  const { serverGetCancellationsWithStatus } = await import("./cancellations.server.ts");
+  return await serverGetCancellationsWithStatus();
 });
 
 const AddCancellationSchema = z.object({
@@ -39,9 +50,9 @@ export const addClassCancellationServerFn = createServerFn({
   method: "POST",
 })
   .validator((d: unknown) => AddCancellationSchema.parse(d))
-  .handler(async ({ data }): Promise<ClassCancellationRecord> => {
-    const { serverAddClassCancellation } = await import("./cancellations.server.ts");
-    return await serverAddClassCancellation(data as ClassCancellationRecord);
+  .handler(async ({ data }): Promise<AddCancellationResponse> => {
+    const { serverAddClassCancellationWithStatus } = await import("./cancellations.server.ts");
+    return await serverAddClassCancellationWithStatus(data as ClassCancellationRecord);
   });
 
 export const removeClassCancellationServerFn = createServerFn({

@@ -4,11 +4,42 @@
  * so that students on all devices (mobile, laptop, desktop) immediately see cancellation alerts,
  * and room statuses are automatically freed across campus.
  */
-import { getSql } from "./db.ts";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { dbSource, getSql } from "./db.ts";
 import type { ClassCancellationRecord } from "./timetable-types.ts";
 
 let tableEnsured = false;
 const inMemoryFallback = new Map<string, ClassCancellationRecord>();
+const CANCELLATIONS_DISK_BACKUP = path.join(os.tmpdir(), "cui_class_cancellations_v1.json");
+
+function readDiskCancellations(): ClassCancellationRecord[] {
+  try {
+    if (fs.existsSync(CANCELLATIONS_DISK_BACKUP)) {
+      const parsed = JSON.parse(fs.readFileSync(CANCELLATIONS_DISK_BACKUP, "utf8"));
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch {
+    // Ignore disk read error
+  }
+  return [];
+}
+
+function writeDiskCancellations(records: ClassCancellationRecord[]) {
+  try {
+    fs.writeFileSync(CANCELLATIONS_DISK_BACKUP, JSON.stringify(records), "utf8");
+  } catch {
+    // Ignore disk write error
+  }
+}
+
+function hydrateFallbackFromDisk() {
+  if (inMemoryFallback.size > 0) return;
+  for (const r of readDiskCancellations()) {
+    inMemoryFallback.set(r.id, r);
+  }
+}
 
 export async function ensureCancellationsTable() {
   if (tableEnsured) return;
@@ -58,7 +89,7 @@ export async function serverGetAllActiveCancellations(): Promise<ClassCancellati
     );
 
     if (Array.isArray(rows)) {
-      return rows.map((r) => ({
+      const mapped = rows.map((r) => ({
         id: String(r.id),
         day: Number(r.day),
         slot: Number(r.slot),
@@ -78,20 +109,54 @@ export async function serverGetAllActiveCancellations(): Promise<ClassCancellati
         settledByMakeupId: r.settled_by_makeup_id ? String(r.settled_by_makeup_id) : undefined,
         status: (r.status as "active" | "settled") || "active",
       }));
+
+      // If running on PGLite without persistent Postgres, merge with tmp disk backup in case PGLite reset
+      if (dbSource !== "neon" && mapped.length === 0) {
+        hydrateFallbackFromDisk();
+        const diskActive = Array.from(inMemoryFallback.values()).filter((c) => c.status === "active");
+        if (diskActive.length > 0) return diskActive;
+      }
+
+      return mapped;
     }
   } catch (err) {
     console.error("[cancellations.server] Error fetching cancellations:", err);
   }
 
-  // In-memory fallback
+  hydrateFallbackFromDisk();
   return Array.from(inMemoryFallback.values()).filter((c) => c.status === "active");
+}
+
+export async function serverGetCancellationsWithStatus(): Promise<{
+  records: ClassCancellationRecord[];
+  persistent: boolean;
+}> {
+  const records = await serverGetAllActiveCancellations();
+  return {
+    records,
+    persistent: dbSource === "neon",
+  };
 }
 
 export async function serverAddClassCancellation(
   record: ClassCancellationRecord,
 ): Promise<ClassCancellationRecord> {
-  inMemoryFallback.set(record.id, record);
+  const res = await serverAddClassCancellationWithStatus(record);
+  return res.record;
+}
 
+export async function serverAddClassCancellationWithStatus(
+  record: ClassCancellationRecord,
+): Promise<{
+  record: ClassCancellationRecord;
+  persistent: boolean;
+  dbSaved: boolean;
+}> {
+  hydrateFallbackFromDisk();
+  inMemoryFallback.set(record.id, record);
+  writeDiskCancellations(Array.from(inMemoryFallback.values()));
+
+  let dbSaved = false;
   try {
     await ensureCancellationsTable();
     const sql = await getSql();
@@ -129,15 +194,22 @@ export async function serverAddClassCancellation(
         record.status,
       ],
     );
+    dbSaved = true;
   } catch (err) {
     console.error("[cancellations.server] Error inserting cancellation:", err);
   }
 
-  return record;
+  return {
+    record,
+    persistent: dbSource === "neon" && dbSaved,
+    dbSaved,
+  };
 }
 
 export async function serverRemoveClassCancellation(id: string): Promise<boolean> {
+  hydrateFallbackFromDisk();
   inMemoryFallback.delete(id);
+  writeDiskCancellations(Array.from(inMemoryFallback.values()));
 
   try {
     await ensureCancellationsTable();
@@ -154,10 +226,12 @@ export async function serverSettleClassCancellation(
   cancellationId: string,
   makeupId: string,
 ): Promise<boolean> {
+  hydrateFallbackFromDisk();
   const existing = inMemoryFallback.get(cancellationId);
   if (existing) {
     existing.status = "settled";
     existing.settledByMakeupId = makeupId;
+    writeDiskCancellations(Array.from(inMemoryFallback.values()));
   }
 
   try {

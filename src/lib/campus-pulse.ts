@@ -43,8 +43,14 @@ export const CANCELLATIONS_UPDATED_EVENT = "cui:class-cancellations-updated";
 
 let memoryCancellations: ClassCancellationRecord[] = [];
 let isSyncing = false;
+let lastKnownPersistent: boolean | null = null;
 const pendingAdds = new Map<string, ClassCancellationRecord>();
 const pendingRemovals = new Set<string>();
+const sessionRemovedIds = new Set<string>();
+
+export function isCancellationCloudPersistent(): boolean | null {
+  return lastKnownPersistent;
+}
 
 export function normalizeBatchLabel(name: string): string {
   return name.toLowerCase().replace(/\s+/g, "").trim();
@@ -98,26 +104,51 @@ export async function syncCancellationsFromServer(): Promise<ClassCancellationRe
     // Retry any pending local additions that have not yet finished syncing
     for (const [id, rec] of pendingAdds.entries()) {
       try {
-        await addClassCancellationServerFn({ data: rec });
+        const addRes = await addClassCancellationServerFn({ data: rec });
+        if (addRes && typeof addRes.persistent === "boolean") {
+          lastKnownPersistent = addRes.persistent;
+        }
         pendingAdds.delete(id);
       } catch {
         // Leave in pendingAdds for next sync cycle
       }
     }
 
-    const serverList = await getAllActiveCancellationsServerFn();
+    const syncRes = await getAllActiveCancellationsServerFn();
+    const serverList = Array.isArray(syncRes) ? syncRes : syncRes?.records;
+    const persistent = Array.isArray(syncRes) ? false : Boolean(syncRes?.persistent);
+    if (!Array.isArray(syncRes) && typeof syncRes?.persistent === "boolean") {
+      lastKnownPersistent = syncRes.persistent;
+    }
+
     if (Array.isArray(serverList)) {
       const mergedMap = new Map<string, ClassCancellationRecord>();
+
+      // If server is running ephemeral storage (no DATABASE_URL), preserve existing local records
+      // so a stateless serverless cold/different instance never erases cancellations on this device.
+      if (!persistent) {
+        for (const localItem of getClassCancellations()) {
+          if (
+            localItem.status === "active" &&
+            !pendingRemovals.has(localItem.id) &&
+            !sessionRemovedIds.has(localItem.id)
+          ) {
+            mergedMap.set(localItem.id, localItem);
+          }
+        }
+      }
+
       for (const item of serverList) {
-        if (!pendingRemovals.has(item.id)) {
+        if (!pendingRemovals.has(item.id) && !sessionRemovedIds.has(item.id)) {
           mergedMap.set(item.id, item);
         }
       }
       for (const [id, pending] of pendingAdds.entries()) {
-        if (!pendingRemovals.has(id)) {
+        if (!pendingRemovals.has(id) && !sessionRemovedIds.has(id)) {
           mergedMap.set(id, pending);
         }
       }
+
       const merged = Array.from(mergedMap.values());
       saveClassCancellations(merged);
       return merged;
@@ -152,11 +183,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-/**
- * Marks a scheduled class as cancelled by faculty.
- * Automatically persists to database, notifies student devices, and frees the venue.
- */
-export function addClassCancellation(params: {
+function createCancellationRecord(params: {
   day: number;
   slot: number;
   batch: number;
@@ -174,7 +201,6 @@ export function addClassCancellation(params: {
   const current = getClassCancellations();
   const now = new Date();
 
-  // Format today's date in PKT
   const formatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: CAMPUS_TIME_ZONE,
     year: "numeric",
@@ -187,7 +213,6 @@ export function addClassCancellation(params: {
 
   const targetDate = params.targetDate || defaultDate;
 
-  // Friendly date label
   const labelFormatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: CAMPUS_TIME_ZONE,
     weekday: "short",
@@ -231,10 +256,35 @@ export function addClassCancellation(params: {
   pendingAdds.set(record.id, record);
   saveClassCancellations(next);
 
-  // Sync to database
+  return record;
+}
+
+/**
+ * Marks a scheduled class as cancelled by faculty (synchronous local write + background sync).
+ */
+export function addClassCancellation(params: {
+  day: number;
+  slot: number;
+  batch: number;
+  batchName: string;
+  room: number;
+  roomName: string;
+  teacher: number;
+  teacherName: string;
+  subject: number;
+  subjectName: string;
+  targetDate?: string;
+  reason?: string;
+  cancelledByEmail?: string;
+}): ClassCancellationRecord {
+  const record = createCancellationRecord(params);
+
   if (typeof window !== "undefined") {
     addClassCancellationServerFn({ data: record })
-      .then(() => {
+      .then((res) => {
+        if (res && typeof res.persistent === "boolean") {
+          lastKnownPersistent = res.persistent;
+        }
         pendingAdds.delete(record.id);
       })
       .catch((err) => {
@@ -246,11 +296,48 @@ export function addClassCancellation(params: {
 }
 
 /**
+ * Marks a scheduled class as cancelled and awaits server persistence status.
+ */
+export async function addClassCancellationAsync(params: {
+  day: number;
+  slot: number;
+  batch: number;
+  batchName: string;
+  room: number;
+  roomName: string;
+  teacher: number;
+  teacherName: string;
+  subject: number;
+  subjectName: string;
+  targetDate?: string;
+  reason?: string;
+  cancelledByEmail?: string;
+}): Promise<{ record: ClassCancellationRecord; persistent: boolean; dbSaved: boolean }> {
+  const record = createCancellationRecord(params);
+
+  if (typeof window === "undefined") {
+    return { record, persistent: false, dbSaved: false };
+  }
+
+  try {
+    const res = await addClassCancellationServerFn({ data: record });
+    lastKnownPersistent = res.persistent;
+    pendingAdds.delete(record.id);
+    window.dispatchEvent(new CustomEvent(CANCELLATIONS_UPDATED_EVENT, { detail: getClassCancellations() }));
+    return res;
+  } catch (err) {
+    console.error("[campus-pulse] Failed to sync cancellation to server:", err);
+    return { record, persistent: false, dbSaved: false };
+  }
+}
+
+/**
  * Removes or undoes a class cancellation
  */
 export function removeClassCancellation(id: string): void {
   pendingAdds.delete(id);
   pendingRemovals.add(id);
+  sessionRemovedIds.add(id);
   const current = getClassCancellations();
   const next = current.filter((c) => c.id !== id);
   saveClassCancellations(next);
