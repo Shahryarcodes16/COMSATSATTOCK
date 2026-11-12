@@ -4583,26 +4583,61 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
+}
+
+.office-timeline-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .office-timeline-label {
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.office-timeline-sub-count {
+  font-size: 0.76rem;
+  color: var(--c-muted);
+}
+
+.office-swipe-hint {
+  display: none;
+  font-size: 0.72rem;
   font-weight: 600;
+  color: var(--c-accent);
+}
+
+.office-full-week-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  padding: 0.75rem 0.5rem;
+  background: color-mix(in srgb, var(--c-canvas) 60%, transparent);
+  border-radius: 0.85rem;
+  border: 1px solid var(--c-line);
 }
 
 .office-timeline-slots {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.5rem;
+  width: 100%;
 }
 
 .office-timeline-cell {
   border-radius: 0.75rem;
-  padding: 0.6rem 0.7rem;
+  padding: 0.6rem 0.65rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   border: 1px solid var(--c-line);
   min-height: 72px;
+  min-width: 0;
+  overflow: hidden;
   transition: all 0.2s ease;
 }
 
@@ -4651,6 +4686,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .office-teach-sub {
@@ -4666,6 +4703,17 @@
   font-size: 0.65rem;
   color: var(--c-accent);
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.office-teach-batch {
+  font-size: 0.62rem;
+  color: var(--c-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .office-teacher-actions {
@@ -4721,32 +4769,58 @@
   .office-stat-card {
     flex: 1;
   }
+  .office-swipe-hint {
+    display: inline-block;
+  }
+  .office-day-timeline {
+    width: 100%;
+    overflow: hidden;
+  }
   .office-timeline-slots {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0.25rem;
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
+    padding-bottom: 0.4rem;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
   }
   .office-timeline-cell {
-    padding: 0.4rem 0.25rem;
-    min-height: 58px;
-    border-radius: 0.5rem;
+    flex: 0 0 135px;
+    min-width: 135px;
+    scroll-snap-align: start;
+    padding: 0.55rem 0.6rem;
+    min-height: 72px;
+    border-radius: 0.65rem;
   }
   .office-free-tag {
-    display: none;
-  }
-  .office-free-badge {
-    font-size: 0.68rem;
-  }
-  .office-cell-slot {
-    font-size: 0.72rem;
-  }
-  .office-teach-sub {
+    display: inline-block !important;
     font-size: 0.62rem;
   }
-  .office-teach-room {
-    font-size: 0.58rem;
+  .office-free-badge {
+    font-size: 0.72rem;
+  }
+  .office-cell-slot {
+    font-size: 0.76rem;
   }
   .office-cell-time {
-    display: none;
+    display: inline-block !important;
+    font-size: 0.66rem;
+  }
+  .office-teach-sub {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .office-teach-room {
+    font-size: 0.64rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .office-notif-modal {
+    border-radius: 1rem;
   }
   .notif-modal {
     border-radius: 1rem;

@@ -10,6 +10,7 @@ import {
   timeLabel,
 } from "@/lib/schedule";
 import { getFacultyByTeacher } from "@/lib/faculty";
+import { isClassCancelled } from "@/lib/campus-pulse";
 
 export type OfficeSlotState = "free" | "teaching";
 
@@ -23,6 +24,7 @@ export interface TeacherSlotInfo {
   subjectName?: string;
   roomName?: string;
   batchName?: string;
+  isCancelled?: boolean;
 }
 
 export interface TeacherDayOfficeHours {
@@ -55,15 +57,18 @@ export interface TeacherOfficeProfile {
 }
 
 /**
- * Check if the teacher has any class during day and slot
+ * Check if the teacher has any class during day and slot, with cancellation detection
  */
 export function getTeacherClassAt(
   teacherId: number,
   day: number,
   slot: number,
-): ClassEntry | undefined {
+): { entry?: ClassEntry; isCancelled?: boolean } {
   const list = forTeacher(teacherId);
-  return list.find((e) => e.day === day && e.slot === slot);
+  const cls = list.find((e) => e.day === day && e.slot === slot);
+  if (!cls) return {};
+  const isCancelled = Boolean(isClassCancelled(cls.day, cls.slot, cls.teacher, cls.batch, cls.room));
+  return { entry: cls, isCancelled };
 }
 
 /**
@@ -89,10 +94,10 @@ export function getTeacherOfficeProfile(
     let teachCount = 0;
 
     for (let s = 0; s < 5; s++) {
-      const cls = getTeacherClassAt(teacherId, d, s);
+      const { entry: cls, isCancelled } = getTeacherClassAt(teacherId, d, s);
       const slotDef = SLOTS[s];
 
-      if (cls) {
+      if (cls && !isCancelled) {
         teachCount++;
         slots.push({
           slotIndex: s,
@@ -113,6 +118,10 @@ export function getTeacherOfficeProfile(
           start: slotDef.start,
           end: slotDef.end,
           state: "free",
+          isCancelled: Boolean(isCancelled),
+          subjectName: isCancelled && cls ? subjects[cls.subject] : undefined,
+          roomName: isCancelled && cls && cls.room >= 0 ? rooms[cls.room] : undefined,
+          batchName: isCancelled && cls ? batches[cls.batch] : undefined,
         });
       }
     }
