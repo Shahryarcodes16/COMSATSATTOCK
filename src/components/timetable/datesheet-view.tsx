@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Calendar,
   CalendarDays,
@@ -34,7 +35,7 @@ import {
 import { ExportDatesheetImage } from "@/components/timetable/datesheet-image-modal";
 
 export function DatesheetView() {
-  const { clock, now } = useDesk();
+  const { clock, now, goBack } = useDesk();
   const [selectedClass, setSelectedClass] = useState<string>("BCS-V");
   const [selectedDate, setSelectedDate] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
@@ -136,6 +137,28 @@ export function DatesheetView() {
     <div className="page datesheet-page stack">
       {/* Header Banner */}
       <div className="datesheet-hero">
+        {/* Top Back & Cross Action Bar */}
+        <div className="view-header-row">
+          <button
+            type="button"
+            className="btn tap view-back-btn"
+            onClick={() => goBack("today")}
+            aria-label="Back to Timetable"
+          >
+            <ArrowLeft size={16} aria-hidden />
+            <span>Back to Timetable</span>
+          </button>
+          <button
+            type="button"
+            className="icon-btn tap view-close-btn"
+            onClick={() => goBack("today")}
+            aria-label="Close Date Sheet"
+            title="Close Date Sheet and return to timetable"
+          >
+            <X size={18} aria-hidden />
+          </button>
+        </div>
+
         <div className="datesheet-hero-head">
           <div className="datesheet-badge">
             <CalendarDays size={16} aria-hidden />
@@ -443,6 +466,18 @@ export function DatesheetView() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Bottom Back to Timetable Button */}
+      <div className="datesheet-bottom-back-row">
+        <button
+          type="button"
+          className="btn tap view-back-btn"
+          onClick={() => goBack("today")}
+        >
+          <ArrowLeft size={16} aria-hidden />
+          <span>Back to Timetable</span>
+        </button>
       </div>
 
       {/* Repeater Course Selector Modal */}

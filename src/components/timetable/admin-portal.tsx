@@ -28,6 +28,7 @@ import {
   Upload,
   UserCheck,
   Users,
+  X,
 } from "lucide-react";
 import { useDesk } from "@/components/timetable/context";
 import {
@@ -229,6 +230,26 @@ export function AdminPortal() {
     return (
       <div className="page admin-login-page">
         <div className="admin-login-card">
+          <div className="view-header-row" style={{ marginBottom: "0.75rem" }}>
+            <button
+              type="button"
+              className="btn tap view-back-btn"
+              onClick={() => setView("today")}
+              aria-label="Back to Timetable"
+            >
+              <ArrowLeft size={16} aria-hidden />
+              <span>Back</span>
+            </button>
+            <button
+              type="button"
+              className="icon-btn tap view-close-btn"
+              onClick={() => setView("today")}
+              aria-label="Close Admin Portal"
+              title="Close and return to public timetable"
+            >
+              <X size={18} aria-hidden />
+            </button>
+          </div>
           <div className="admin-login-head">
             <div className="admin-shield-icon">
               <Lock size={28} aria-hidden />
@@ -358,6 +379,16 @@ export function AdminPortal() {
           >
             <LogOut size={16} aria-hidden />
             <span>Sign Out</span>
+          </button>
+
+          <button
+            type="button"
+            className="icon-btn tap view-close-btn"
+            onClick={() => setView("today")}
+            aria-label="Close Admin Portal"
+            title="Close Admin Portal and return to timetable"
+          >
+            <X size={18} aria-hidden />
           </button>
         </div>
       </div>

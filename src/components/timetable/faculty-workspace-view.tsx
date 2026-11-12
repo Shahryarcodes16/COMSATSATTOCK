@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
   BookOpen,
   Calendar,
   CalendarDays,
@@ -24,8 +27,6 @@ import {
   XCircle,
   Bell,
   ChevronRight,
-  AlertCircle,
-  AlertTriangle,
   ExternalLink,
 } from "lucide-react";
 import { useDesk } from "@/components/timetable/context";
@@ -71,7 +72,7 @@ import {
 } from "@/lib/campus-pulse";
 
 export function FacultyWorkspaceView() {
-  const { open, now, clock, makeupRevision } = useDesk();
+  const { open, now, clock, makeupRevision, goBack } = useDesk();
   const [facultySession, setFacultySession] = useState<FacultySession | null>(
     () => getActiveFacultySession(),
   );
@@ -340,7 +341,7 @@ export function FacultyWorkspaceView() {
   if (!facultySession) {
     return (
       <div className="faculty-workspace-gate">
-        <div className="faculty-workspace-card">
+        <div className="faculty-workspace-card stack">
           <GraduationCap size={48} color="#087f79" />
           <h2>Faculty Workspace & Teaching Desk</h2>
           <p>
@@ -348,6 +349,16 @@ export function FacultyWorkspaceView() {
             personalized teaching timetable, manage pre-class reminders, and discover free
             lecture halls and labs for makeup classes.
           </p>
+          <div style={{ marginTop: "1rem" }}>
+            <button
+              type="button"
+              className="btn tap view-back-btn"
+              onClick={() => goBack("today")}
+            >
+              <ArrowLeft size={16} aria-hidden />
+              <span>Back to Timetable</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -360,6 +371,28 @@ export function FacultyWorkspaceView() {
 
   return (
     <div className="faculty-workspace stack">
+      {/* Top Back & Close Row */}
+      <div className="view-header-row">
+        <button
+          type="button"
+          className="btn tap view-back-btn"
+          onClick={() => goBack("today")}
+          aria-label="Back to Timetable"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          <span>Back to Timetable</span>
+        </button>
+        <button
+          type="button"
+          className="icon-btn tap view-close-btn"
+          onClick={() => goBack("today")}
+          aria-label="Close Teaching Desk"
+          title="Close Teaching Desk and return to timetable"
+        >
+          <X size={18} aria-hidden />
+        </button>
+      </div>
+
       {/* Faculty Hero Banner */}
       <section className="faculty-hero-card">
         <div className="faculty-hero-main">

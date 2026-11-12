@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   ArrowUpRight,
   Bell,
   Briefcase,
@@ -17,6 +18,7 @@ import {
   Users,
   Zap,
   Flame,
+  X,
 } from "lucide-react";
 import { FacultyDirectory } from "@/components/timetable/faculty-directory";
 import { FacultyOfficeHours } from "@/components/timetable/teacher-office-hours";
@@ -1116,7 +1118,7 @@ export function FacultyView() {
 }
 
 export function BatchesView() {
-  const { batchId, setBatchId, day, setDay, clock, pinBatch, pinnedBatch } = useDesk();
+  const { batchId, setBatchId, day, setDay, clock, pinBatch, pinnedBatch, goBack } = useDesk();
   const [program, setProgram] = useState("All");
   const ids = batchesInProgram(program);
   const list = forBatch(batchId);
@@ -1128,6 +1130,17 @@ export function BatchesView() {
 
   return (
     <div className="page batches-page">
+      <div className="view-header-row mobile-only-flex">
+        <button
+          type="button"
+          className="btn tap view-back-btn"
+          onClick={() => goBack("today")}
+          aria-label="Back to Timetable"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          <span>Back to Timetable</span>
+        </button>
+      </div>
       <p className="print-batch-title">{batches[batchId]} · Timetable from 5 October 2026</p>
       <div className="panel-head">
         <div>
@@ -1263,7 +1276,7 @@ function HitGroup({
 }
 
 export function FindView() {
-  const { open, setView, setBatchId, day, slot } = useDesk();
+  const { open, setView, setBatchId, day, slot, goBack } = useDesk();
   const [query, setQuery] = useState("");
   const [meet, setMeet] = useState<"teachers" | "batch">("teachers");
   const [left, setLeft] = useState("");
@@ -1280,6 +1293,27 @@ export function FindView() {
 
   return (
     <div className="page search-page">
+      <div className="view-header-row">
+        <button
+          type="button"
+          className="btn tap view-back-btn"
+          onClick={() => goBack("today")}
+          aria-label="Back to Timetable"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          <span>Back to Timetable</span>
+        </button>
+        <button
+          type="button"
+          className="icon-btn tap view-close-btn"
+          onClick={() => goBack("today")}
+          aria-label="Close Search"
+          title="Close search and return to timetable"
+        >
+          <X size={18} aria-hidden />
+        </button>
+      </div>
+
       <div className="panel-head">
         <div>
           <p className="eyebrow">Everything on the timetable</p>

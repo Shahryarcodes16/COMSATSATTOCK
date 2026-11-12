@@ -112,7 +112,9 @@ type DeskApi = {
   setTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
   view: View;
+  previousView: View;
   setView: (view: View) => void;
+  goBack: (fallback?: View) => void;
   day: number;
   slot: number;
   following: boolean;
@@ -153,6 +155,8 @@ function urlSelection() {
 
 export function DeskProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
+  const [previousView, setPreviousView] = useState<View>("today");
+  const previousViewRef = useRef<View>("today");
   const [ready, setReady] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const [pick, setPick] = useState<{ day: number; slot: number } | null>(null);
@@ -304,11 +308,28 @@ export function DeskProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((theme: ThemeName) => {
     setPrefs((current) => ({ ...current, theme }));
   }, []);
-  const setView = useCallback((view: View) => {
-    setPrefs((current) => ({ ...current, view }));
+  const setView = useCallback((nextView: View) => {
+    setPrefs((current) => {
+      if (current.view !== nextView) {
+        previousViewRef.current = current.view;
+        setPreviousView(current.view);
+      }
+      return { ...current, view: nextView };
+    });
     setDetail(null);
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
+
+  const goBack = useCallback(
+    (fallback: View = "today") => {
+      const target =
+        previousViewRef.current && previousViewRef.current !== prefs.view
+          ? previousViewRef.current
+          : fallback;
+      setView(target);
+    },
+    [prefs.view, setView],
+  );
   const setDay = useCallback((nextDay: number) => {
     setPick((current) => ({
       day: nextDay,
@@ -353,7 +374,9 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       setTheme,
       toggleTheme,
       view: prefs.view,
+      previousView,
       setView,
+      goBack,
       day,
       slot,
       following: pick === null,
@@ -386,7 +409,9 @@ export function DeskProvider({ children }: { children: ReactNode }) {
       timetableRevision,
       setTheme,
       toggleTheme,
+      previousView,
       setView,
+      goBack,
       setDay,
       setSlot,
       backToNow,

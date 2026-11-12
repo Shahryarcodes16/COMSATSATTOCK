@@ -1,6 +1,7 @@
 import { useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import {
   Activity,
+  ArrowLeft,
   ArrowUpRight,
   CalendarCheck,
   CalendarDays,
@@ -16,6 +17,7 @@ import {
   Sparkles,
   Sun,
   Users,
+  X,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -256,7 +258,7 @@ export function Sidebar() {
 }
 
 export function Topbar() {
-  const { now, theme, toggleTheme, setView, view } = useDesk();
+  const { now, theme, toggleTheme, setView, view, goBack } = useDesk();
   const isSearchActive = view === "find";
   const datesheetActive = isDatesheetActive(now);
   const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
@@ -273,11 +275,24 @@ export function Topbar() {
 
   return (
     <header className="topbar">
-      <div>
-        <div className="mobile-brand">
-          <Brand />
+      <div className="topbar-left-group">
+        {view !== "today" && (
+          <button
+            type="button"
+            className="icon-btn tap topbar-back-btn"
+            onClick={() => goBack("today")}
+            aria-label="Back to Timetable"
+            title="Back to Timetable"
+          >
+            <ArrowLeft size={18} aria-hidden />
+          </button>
+        )}
+        <div className="topbar-brand-wrap">
+          <div className="mobile-brand">
+            <Brand />
+          </div>
+          <p className="hello">{greeting(now)}</p>
         </div>
-        <p className="hello">{greeting(now)}</p>
       </div>
       <div className="topbar-actions">
         {/* Datesheet quick pill button */}
@@ -285,12 +300,18 @@ export function Topbar() {
           <button
             type="button"
             className={`datesheet-topbar-pill tap ${view === "datesheet" ? "on" : ""}`}
-            onClick={() => setView("datesheet")}
-            title="Open Midterm Examination Date Sheet"
+            onClick={() => (view === "datesheet" ? goBack("today") : setView("datesheet"))}
+            title={view === "datesheet" ? "Close Datesheet and return" : "Open Midterm Examination Date Sheet"}
           >
             <span className="datesheet-pill-dot" />
             <span className="datesheet-pill-title">Date Sheet</span>
-            <span className="datesheet-pill-badge">Nov 5–12</span>
+            {view === "datesheet" ? (
+              <span className="datesheet-pill-badge" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                <X size={12} /> Close
+              </span>
+            ) : (
+              <span className="datesheet-pill-badge">Nov 5–12</span>
+            )}
           </button>
         )}
 
@@ -298,23 +319,27 @@ export function Topbar() {
         <button
           type="button"
           className={`topbar-search ${isSearchActive ? "on" : ""}`}
-          onClick={() => setView("find")}
+          onClick={() => (isSearchActive ? goBack("today") : setView("find"))}
         >
-          <Search size={17} aria-hidden />
-          <span>Search campus</span>
-          <ArrowUpRight size={15} aria-hidden />
+          {isSearchActive ? <X size={17} aria-hidden /> : <Search size={17} aria-hidden />}
+          <span>{isSearchActive ? "Close search" : "Search campus"}</span>
+          {isSearchActive ? <X size={15} aria-hidden /> : <ArrowUpRight size={15} aria-hidden />}
         </button>
 
         {/* Mobile search icon button */}
         <button
           type="button"
           className={`icon-btn tap topbar-mobile-search ${isSearchActive ? "on" : ""}`}
-          aria-label="Search campus courses, faculty, rooms, batches"
+          aria-label={isSearchActive ? "Close search and return to timetable" : "Search campus courses, faculty, rooms, batches"}
           aria-current={isSearchActive ? "page" : undefined}
-          onClick={() => setView("find")}
-          title="Search campus"
+          onClick={() => (isSearchActive ? goBack("today") : setView("find"))}
+          title={isSearchActive ? "Close search" : "Search campus"}
         >
-          <Search size={18} strokeWidth={1.8} aria-hidden />
+          {isSearchActive ? (
+            <X size={18} strokeWidth={2} aria-hidden />
+          ) : (
+            <Search size={18} strokeWidth={1.8} aria-hidden />
+          )}
         </button>
 
         {/* If faculty is logged in, show their official teaching desk pill */}
@@ -328,13 +353,21 @@ export function Topbar() {
         <button
           type="button"
           className={`icon-btn tap notices-topbar-btn ${view === "notices" ? "on" : ""}`}
-          aria-label={`Teacher Messages & Today's Cancelled Classes${messageCount > 0 ? ` (${messageCount} active)` : ""}`}
+          aria-label={
+            view === "notices"
+              ? "Close Teacher Messages"
+              : `Teacher Messages & Today's Cancelled Classes${messageCount > 0 ? ` (${messageCount} active)` : ""}`
+          }
           aria-current={view === "notices" ? "page" : undefined}
-          onClick={() => setView("notices")}
-          title="Teacher Messages & Today's Cancelled Classes"
+          onClick={() => (view === "notices" ? goBack("today") : setView("notices"))}
+          title={view === "notices" ? "Close Teacher Messages" : "Teacher Messages & Today's Cancelled Classes"}
         >
-          <Megaphone size={18} strokeWidth={1.8} aria-hidden />
-          {messageCount > 0 && <span className="notices-badge-count">{messageCount}</span>}
+          {view === "notices" ? (
+            <X size={18} strokeWidth={2} aria-hidden />
+          ) : (
+            <Megaphone size={18} strokeWidth={1.8} aria-hidden />
+          )}
+          {view !== "notices" && messageCount > 0 && <span className="notices-badge-count">{messageCount}</span>}
         </button>
 
         {/* Class Reminders */}

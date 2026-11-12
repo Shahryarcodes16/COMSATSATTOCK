@@ -4849,6 +4849,88 @@
 }
 
 /* ==========================================================================
+   Global View Navigation & Back / Close Options
+   ========================================================================== */
+
+.topbar-left-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-back-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  color: var(--c-ink);
+  flex-shrink: 0;
+}
+
+.view-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  width: 100%;
+}
+
+.view-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  color: var(--c-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.view-back-btn:hover {
+  background: var(--c-line);
+}
+
+.view-close-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  color: var(--c-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.view-close-btn:hover {
+  background: var(--c-line);
+}
+
+.datesheet-bottom-back-row,
+.tm-bottom-back-row {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem 0 0.5rem;
+  width: 100%;
+}
+
+.mobile-only-flex {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  .mobile-only-flex {
+    display: flex;
+  }
+}
+
+/* ==========================================================================
    Midterm Datesheet Styles (with 4 Nov -> 12 Nov shift & Repeater Support)
    ========================================================================== */
 

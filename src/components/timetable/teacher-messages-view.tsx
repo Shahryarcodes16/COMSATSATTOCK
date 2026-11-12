@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowUpRight,
   CalendarDays,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   Search,
   Sparkles,
   Users,
+  X,
 } from "lucide-react";
 import { useDesk } from "@/components/timetable/context";
 import {
@@ -65,7 +67,7 @@ function formatCancelledTime(iso: string): string {
 }
 
 export function TeacherMessagesView() {
-  const { now, pinnedBatch, batchId, setBatchId, setView, open } = useDesk();
+  const { now, pinnedBatch, batchId, setBatchId, setView, open, goBack } = useDesk();
   const [cancellations, setCancellations] = useState<ClassCancellationRecord[]>(() =>
     getClassCancellations().filter((c) => c.status === "active"),
   );
@@ -503,6 +505,27 @@ export function TeacherMessagesView() {
 
   return (
     <div className="page teacher-messages-page">
+      <div className="view-header-row">
+        <button
+          type="button"
+          className="btn tap view-back-btn"
+          onClick={() => goBack("today")}
+          aria-label="Back to Timetable"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          <span>Back to Timetable</span>
+        </button>
+        <button
+          type="button"
+          className="icon-btn tap view-close-btn"
+          onClick={() => goBack("today")}
+          aria-label="Close Teacher Messages"
+          title="Close messages and return to timetable"
+        >
+          <X size={18} aria-hidden />
+        </button>
+      </div>
+
       <div className="page-heading">
         <div>
           <p className="eyebrow">Faculty Broadcasts &amp; Live Alerts</p>
@@ -723,6 +746,18 @@ export function TeacherMessagesView() {
           )}
         </div>
       )}
+
+      {/* Bottom Back Button */}
+      <div className="tm-bottom-back-row">
+        <button
+          type="button"
+          className="btn tap view-back-btn"
+          onClick={() => goBack("today")}
+        >
+          <ArrowLeft size={16} aria-hidden />
+          <span>Back to Timetable</span>
+        </button>
+      </div>
     </div>
   );
 }
