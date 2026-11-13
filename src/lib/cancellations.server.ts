@@ -195,6 +195,11 @@ export async function serverAddClassCancellationWithStatus(
       ],
     );
     dbSaved = true;
+
+    // Broadcast Web Push to all subscribed phones (even if app is closed)
+    import("./push.server.ts")
+      .then((m) => m.broadcastCancellationPush(record))
+      .catch((e) => console.warn("[cancellations] Push broadcast error:", e));
   } catch (err) {
     console.error("[cancellations.server] Error inserting cancellation:", err);
   }

@@ -3,8 +3,10 @@ import {
   Bell,
   BellRing,
   BellOff,
+  Calendar,
   Check,
   Clock,
+  Download,
   Sparkles,
   Volume2,
   VolumeX,
@@ -26,8 +28,9 @@ import {
   markNotifiedToday,
 } from "@/lib/notifications";
 import { useDesk } from "@/components/timetable/context";
-import { SLOTS, batches, forBatch, forTeacher, rooms, subjects, teachers, getCampusMinutes } from "@/lib/schedule";
-import { loadCustomSchedule } from "@/lib/my-schedule";
+import { SLOTS, batches, forBatch, forTeacher, rooms, subjects, teachers, getCampusMinutes, type ClassEntry } from "@/lib/schedule";
+import { loadCustomSchedule, downloadIcsFile } from "@/lib/my-schedule";
+import { subscribeToWebPush, sendServerTestPush } from "@/lib/push-client";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
 import { getActiveStudentSession } from "@/lib/student";
 import { isClassCancelled, matchesStudentMakeupContext } from "@/lib/campus-pulse";
@@ -42,6 +45,15 @@ export function useClassNotificationScheduler() {
   useEffect(() => {
     if (!isNotificationSupported()) return;
     registerNotificationServiceWorker().catch(() => {});
+
+    // Ensure Web Push subscription is current with active batch on boot
+    const initialSettings = getStoredNotificationSettings();
+    if (initialSettings.enabled && Notification.permission === "granted") {
+      subscribeToWebPush({
+        batchId: pinnedBatch,
+        leadMinutes: initialSettings.leadMinutes,
+      }).catch(() => {});
+    }
 
     const checkAlarms = () => {
       const { dayIndex, minutes: currentCampusMinutes } = getCampusMinutes(now);
@@ -113,11 +125,17 @@ export function useClassNotificationScheduler() {
           .map(toClassEntry);
         todayClasses = [...customItems.filter((item) => item.day === dayIndex), ...makeupExtras];
       } else {
-        const targetBatch =
+        const rawBatch =
           pinnedBatch !== null
             ? pinnedBatch
             : (getActiveStudentSession()?.profile?.defaultBatch ?? null);
-        if (targetBatch !== null) {
+        const targetBatch =
+          rawBatch !== null
+            ? typeof rawBatch === "number"
+              ? rawBatch
+              : parseInt(String(rawBatch), 10)
+            : null;
+        if (targetBatch !== null && !isNaN(targetBatch)) {
           const baseClasses = forBatch(targetBatch).filter((e) => e.day === dayIndex);
           const makeupExtras = getActiveArrangedMakeupClasses(now ?? undefined)
             .filter((m) => m.day === dayIndex && m.batch === targetBatch)
@@ -218,7 +236,45 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
     getNotificationPermission(),
   );
   const [testSent, setTestSent] = useState(false);
+  const [calendarSynced, setCalendarSynced] = useState(false);
   const { pinnedBatch } = useDesk();
+
+  const handleExportBatchCalendar = () => {
+    let classesToExport: ClassEntry[] = [];
+    let calTitle = "CUI Attock Schedule";
+
+    if (settings.source === "custom") {
+      classesToExport = loadCustomSchedule();
+      calTitle = "My Custom Schedule";
+    } else {
+      const rawBatch =
+        pinnedBatch !== null
+          ? pinnedBatch
+          : (getActiveStudentSession()?.profile?.defaultBatch ?? null);
+      const targetBatch =
+        rawBatch !== null
+          ? typeof rawBatch === "number"
+            ? rawBatch
+            : parseInt(String(rawBatch), 10)
+          : null;
+      if (targetBatch !== null && !isNaN(targetBatch)) {
+        classesToExport = forBatch(targetBatch);
+        calTitle = `${batches[targetBatch]} Timetable`;
+      }
+    }
+
+    if (classesToExport.length === 0) {
+      alert("Please select or save your batch first to download calendar alarms.");
+      return;
+    }
+
+    downloadIcsFile(
+      classesToExport,
+      `${calTitle.toLowerCase().replace(/[^a-z0-9]/g, "-")}-alarms.ics`,
+    );
+    setCalendarSynced(true);
+    setTimeout(() => setCalendarSynced(false), 3500);
+  };
 
   const handleToggleEnable = async () => {
     if (!settings.enabled) {
@@ -233,6 +289,13 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
         setSettings(next);
         saveNotificationSettings(next);
         await registerNotificationServiceWorker();
+
+        // Subscribe to server-side Web Push so closed-app alerts work
+        subscribeToWebPush({
+          batchId: pinnedBatch,
+          leadMinutes: next.leadMinutes,
+        }).catch((err) => console.warn("Push subscription failed:", err));
+
         await sendSystemNotification("🔔 Class Reminders Activated", {
           body: `You will receive mobile alerts ${next.leadMinutes} mins before each lecture starts.`,
           playChime: next.sound,
@@ -271,10 +334,21 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
     }
     if (perm === "granted") {
       await registerNotificationServiceWorker();
+
+      // Ensure server push subscription is registered
+      subscribeToWebPush({
+        batchId: pinnedBatch,
+        leadMinutes: settings.leadMinutes,
+      }).catch(() => {});
+
       const sent = await sendSystemNotification("🔔 CUI Attock Timetable: Alert Active!", {
         body: `Testing ${settings.leadMinutes}m class reminder. Next lecture in Lab-03 with Dr. Muazzam Maqsood.`,
         playChime: settings.sound,
       });
+
+      // Dispatch server-side push test to verify delivery when browser is closed
+      sendServerTestPush().catch((err) => console.warn("Server test push err:", err));
+
       if (sent) {
         setTestSent(true);
         setTimeout(() => setTestSent(false), 3000);
@@ -412,13 +486,42 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
             </div>
           </div>
 
+          {/* Guaranteed Lock-Screen Alarms When App is Closed */}
+          <div className="notif-closed-app-card stack">
+            <div className="notif-closed-head">
+              <span className="notif-closed-icon">
+                <Calendar size={18} aria-hidden />
+              </span>
+              <div>
+                <b>Guaranteed Alarms When App is Closed</b>
+                <p className="fine quiet">
+                  Add full weekly timetable with automatic {settings.leadMinutes}m reminder alarms directly to your phone's Google or Apple Calendar.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`btn tap notif-cal-sync-btn ${calendarSynced ? "copied" : ""}`}
+              onClick={handleExportBatchCalendar}
+            >
+              {calendarSynced ? <Check size={16} aria-hidden /> : <Download size={16} aria-hidden />}
+              <span>
+                {calendarSynced
+                  ? "Calendar File Downloaded! Tap to Open"
+                  : "Add to Phone Calendar (Alarms Included)"}
+              </span>
+            </button>
+          </div>
+
           {/* Mobile tip */}
           <div className="notif-mobile-tip">
             <Smartphone size={16} aria-hidden />
             <div>
-              <b>Works on Android & iOS Lock Screens</b>
+              <b>Background Alerts &amp; Closed App Support</b>
               <p className="fine quiet">
-                Supports Android lock screen alerts, sound chimes & vibration. On iPhone, tap <b>Share ⎋ → Add to Home Screen</b> to receive lock-screen class alerts.
+                <b>1. Web Push Active:</b> Receives instant alerts for class cancellations &amp; make-ups even when this browser app is closed.
+                <br />
+                <b>2. Phone Calendar Sync:</b> Guarantees sound &amp; vibration lock-screen alarms for every lecture even if phone is offline or restarted.
               </p>
             </div>
           </div>

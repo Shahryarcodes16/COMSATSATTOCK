@@ -204,6 +204,11 @@ export async function serverAddMakeupClass(record: MakeupClassRecord): Promise<{
       ],
     );
     dbSaved = true;
+
+    // Broadcast Web Push to all subscribed phones (even if app is closed)
+    import("./push.server.ts")
+      .then((m) => m.broadcastMakeupPush(record))
+      .catch((e) => console.warn("[makeup] Push broadcast error:", e));
   } catch (err) {
     console.error("[makeup.server] Error inserting makeup class:", err);
   }
