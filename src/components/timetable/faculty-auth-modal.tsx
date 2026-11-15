@@ -78,8 +78,10 @@ export function FacultyAuthButton({ showLabel = false }: { showLabel?: boolean }
         type="button"
         className={`faculty-topbar-pill tap ${view === "faculty-desk" ? "on" : ""}`}
         onClick={() => setShowModal(true)}
-        title="Faculty Workspace & Settings"
+        title={`Faculty Portal: ${teacherName}`}
+        aria-label={`Faculty Portal: ${teacherName}`}
       >
+        <GraduationCap size={17} strokeWidth={1.8} className="faculty-pill-icon" aria-hidden />
         <span className="faculty-pill-badge">Faculty</span>
         <span className="faculty-pill-name">{teacherName}</span>
       </button>

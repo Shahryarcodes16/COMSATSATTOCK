@@ -69,9 +69,10 @@ export function StudentAuthButton({ showLabel = true }: { showLabel?: boolean })
         className={`student-topbar-pill tap ${session ? "logged-in" : ""}`}
         onClick={() => setIsModalOpen(true)}
         title={session ? `Signed in as ${session.profile.fullName} (${session.profile.regNo})` : "Student Sign In / Sign Up with University Email"}
+        aria-label={session ? `Signed in as ${session.profile.fullName} (${session.profile.regNo})` : "Student Sign In"}
       >
         <span className="student-pill-icon">
-          <GraduationCap size={16} aria-hidden />
+          <GraduationCap size={17} strokeWidth={1.8} aria-hidden />
         </span>
         {showLabel && (
           <span className="student-pill-label">
