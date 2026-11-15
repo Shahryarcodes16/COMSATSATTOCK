@@ -205,7 +205,7 @@ export function Sidebar() {
   if (isFacultyView) {
     desktopNav = [
       { id: "today" as View, label: "Today", icon: Clock },
-      { id: "faculty-desk" as View, label: "Teaching Desk", icon: GraduationCap },
+      { id: "faculty-desk" as View, label: "Weekly Grid", icon: GraduationCap },
       { id: "cancel-class" as View, label: "Cancel Class", icon: XCircle },
       { id: "makeup-class" as View, label: "Makeup Class", icon: Sparkles },
       { id: "notices" as View, label: "Teacher Messages", icon: Megaphone },
@@ -509,7 +509,7 @@ export function Dock() {
   const navItems = isFacultyView
     ? [
         { id: "today" as View, label: "Today", icon: Clock },
-        { id: "faculty-desk" as View, label: "Teaching", icon: CalendarDays },
+        { id: "faculty-desk" as View, label: "Weekly Grid", icon: CalendarDays },
         { id: "cancel-class" as View, label: "Cancel Class", icon: XCircle },
         { id: "makeup-class" as View, label: "Makeup Class", icon: Sparkles },
       ]

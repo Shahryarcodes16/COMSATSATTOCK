@@ -539,11 +539,13 @@ export function FacultyWorkspaceView({
           }}
         >
           <Clock size={16} />
-          <span className="tab-label-full">Today&apos;s Lectures</span>
-          <span className="tab-label-short">Today</span>
-          <span className="tab-badge">
-            {actualTodayClasses.length > 0 ? `${actualTodayClasses.length} Today` : "Today"}
+          <span className="tab-label-text">
+            <span className="tab-label-full">Today&apos;s Lectures</span>
+            <span className="tab-label-short">Today</span>
           </span>
+          {actualTodayClasses.length > 0 && (
+            <span className="tab-badge">{actualTodayClasses.length}</span>
+          )}
         </button>
 
         {/* Tab 2: Weekly Timetable (Proper Table Format) */}
@@ -558,9 +560,13 @@ export function FacultyWorkspaceView({
           }}
         >
           <Table size={16} />
-          <span className="tab-label-full">My Teaching Timetable</span>
-          <span className="tab-label-short">Weekly Grid</span>
-          <span className="tab-badge">{teacherClasses.length} Classes</span>
+          <span className="tab-label-text">
+            <span className="tab-label-full">Weekly Grid</span>
+            <span className="tab-label-short">Weekly Grid</span>
+          </span>
+          {teacherClasses.length > 0 && (
+            <span className="tab-badge">{teacherClasses.length}</span>
+          )}
         </button>
 
         {/* Tab 3: Cancel Class & Alerts */}
@@ -575,8 +581,10 @@ export function FacultyWorkspaceView({
           }}
         >
           <XCircle size={16} color={activeTab === "cancel" ? "currentColor" : "#e11d48"} />
-          <span className="tab-label-full">Cancel Class</span>
-          <span className="tab-label-short">Cancel</span>
+          <span className="tab-label-text">
+            <span className="tab-label-full">Cancel Class</span>
+            <span className="tab-label-short">Cancel</span>
+          </span>
           {teacherCancelledClasses.length > 0 && (
             <span className="tab-badge" style={{ background: "#e11d48", color: "#fff" }}>
               {teacherCancelledClasses.length}
@@ -584,7 +592,7 @@ export function FacultyWorkspaceView({
           )}
         </button>
 
-        {/* Tab 4: Smart Makeup & Lab Matcher */}
+        {/* Tab 4: Makeup Class */}
         <button
           type="button"
           role="tab"
@@ -596,10 +604,12 @@ export function FacultyWorkspaceView({
           }}
         >
           <Sparkles size={16} />
-          <span className="tab-label-full">Smart Makeup & Lab Matcher</span>
-          <span className="tab-label-short">Makeup Matcher</span>
-          {comparison && (
-            <span className="tab-badge">{comparison.bothFreeSlotsCount} Free</span>
+          <span className="tab-label-text">
+            <span className="tab-label-full">Makeup Class</span>
+            <span className="tab-label-short">Makeup</span>
+          </span>
+          {comparison && comparison.bothFreeSlotsCount > 0 && (
+            <span className="tab-badge">{comparison.bothFreeSlotsCount}</span>
           )}
         </button>
       </div>

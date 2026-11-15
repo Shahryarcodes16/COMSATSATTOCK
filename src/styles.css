@@ -1291,6 +1291,8 @@
     font-weight: 600;
     padding: 0.2rem 0.1rem;
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .dock-label {
@@ -7025,29 +7027,48 @@ select optgroup {
 
 /* Tabs */
 .faculty-workspace-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.35rem;
   background: color-mix(in srgb, var(--c-canvas) 80%, var(--c-paper));
   padding: 0.35rem;
   border-radius: var(--r-md);
   border: 1px solid var(--c-line);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .faculty-tab-pill {
-  flex: 1;
+  min-width: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.65rem 0.85rem;
+  gap: 0.35rem;
+  padding: 0.65rem 0.5rem;
   border-radius: calc(var(--r-md) - 0.25rem);
   border: none;
   background: transparent;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 600;
   color: var(--c-muted);
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.faculty-tab-pill svg {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.faculty-tab-pill .tab-label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -7063,12 +7084,14 @@ select optgroup {
 }
 
 .faculty-tab-pill .tab-badge {
+  flex-shrink: 0;
   font-size: 0.68rem;
   font-weight: 700;
-  padding: 0.15rem 0.45rem;
+  padding: 0.12rem 0.42rem;
   border-radius: 9999px;
   background: color-mix(in srgb, var(--c-accent) 15%, transparent);
   color: var(--c-accent);
+  line-height: 1;
 }
 
 .faculty-tab-pill.active .tab-badge {
@@ -8478,13 +8501,24 @@ article.mini.makeup-class .mini-label > span:first-child {
 }
 
 /* Responsive Breakpoints for Faculty Features */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .faculty-tab-pill .tab-label-full {
     display: none;
   }
   .faculty-tab-pill .tab-label-short {
     display: inline;
   }
+  .faculty-tab-pill .tab-badge {
+    display: none;
+  }
+  .faculty-tab-pill {
+    padding: 0.55rem 0.35rem;
+    font-size: 0.8rem;
+    gap: 0.25rem;
+  }
+}
+
+@media (max-width: 768px) {
   .faculty-hero-card {
     padding: 1.15rem 1.25rem;
   }
@@ -8516,8 +8550,13 @@ article.mini.makeup-class .mini-label > span:first-child {
     gap: 0.2rem;
   }
   .faculty-tab-pill {
-    padding: 0.5rem 0.4rem;
-    font-size: 0.78rem;
+    padding: 0.45rem 0.15rem;
+    font-size: 0.72rem;
+    gap: 0.2rem;
+  }
+  .faculty-tab-pill svg {
+    width: 13px;
+    height: 13px;
   }
   .faculty-tab-pill .tab-badge {
     display: none;
@@ -8532,6 +8571,17 @@ article.mini.makeup-class .mini-label > span:first-child {
   }
   .free-venues-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .faculty-tab-pill {
+    font-size: 0.67rem;
+    padding: 0.38rem 0.1rem;
+  }
+  .faculty-tab-pill svg {
+    width: 12px;
+    height: 12px;
   }
 }
 
