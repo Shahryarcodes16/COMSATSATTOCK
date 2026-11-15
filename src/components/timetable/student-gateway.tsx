@@ -20,7 +20,6 @@ import {
   Zap,
   Megaphone,
   Bell,
-  Star,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -570,12 +569,6 @@ export function StudentGateway({
                 <span className="gateway-feature-desc">Dedicated portal for faculty schedule management & notices.</span>
               </div>
             </div>
-          </div>
-
-          {/* Developer attribution note */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted, #64748b)" }}>
-            <Star size={14} color="#f59e0b" fill="#f59e0b" />
-            <span>Developed for CUI Attock Campus by <strong>Muhammad Shahryar</strong> (FA23-BCS-014)</span>
           </div>
         </div>
 
@@ -1489,6 +1482,11 @@ export function StudentGateway({
         </div>
       </div>
     </div>
+
+    {/* Subtle Page Footer */}
+    <footer className="student-gateway-page-footer">
+      <span>FORTIS · Developed by <strong>Muhammad Shahryar</strong> (FA23-BCS-014) · COMSATS Attock Campus</span>
+    </footer>
   </div>
 );
 }

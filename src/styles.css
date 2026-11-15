@@ -6520,11 +6520,27 @@
   min-height: 100vh;
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1.25rem;
   background: radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--c-accent) 12%, var(--c-canvas)), var(--c-canvas));
   box-sizing: border-box;
+}
+
+.student-gateway-page-footer {
+  margin-top: 2rem;
+  font-size: 0.78rem;
+  color: var(--muted, #64748b);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 600px) {
+  .student-gateway-page-footer {
+    margin-top: 1.5rem;
+    font-size: 0.72rem;
+  }
 }
 
 .student-gateway-container {
