@@ -441,26 +441,6 @@ export function TodayView() {
         <span className="term-badge">Timetable · 5 Oct 2026</span>
       </div>
 
-      <div className="campus-pulse-quick-bar teacher-messages-quick-bar">
-        <div className="quick-bar-left">
-          <Megaphone size={16} className="tm-quick-icon" aria-hidden />
-          <span>
-            <strong>Teacher Messages:</strong>{" "}
-            {todayBatchCancellations.length > 0
-              ? `${todayBatchCancellations.length} cancelled class notice${todayBatchCancellations.length > 1 ? "s" : ""} for ${pinnedBatchName} today`
-              : `${cancellations.filter((c) => c.status === "active").length} active class cancellation${cancellations.filter((c) => c.status === "active").length === 1 ? "" : "s"} & instructor alerts`}
-          </span>
-        </div>
-        <button
-          type="button"
-          className="btn secondary sm tap"
-          onClick={() => setView("notices")}
-        >
-          <Megaphone size={13} />
-          <span>Open Teacher Messages</span>
-        </button>
-      </div>
-
       {isDatesheetActive(now) && (
         <section className="datesheet-today-banner" aria-label="Midterm Examination Notice">
           <div className="datesheet-today-banner-content">
