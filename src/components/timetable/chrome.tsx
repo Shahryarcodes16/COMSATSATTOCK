@@ -18,6 +18,7 @@ import {
   Sun,
   Users,
   X,
+  XCircle,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -197,19 +198,32 @@ export function Sidebar() {
     };
   }, []);
 
-  let desktopNav = datesheetActive
-    ? [
-        ...BASE_DESKTOP_NAV.slice(0, 2),
-        { id: "datesheet" as View, label: "Date Sheet", icon: CalendarDays },
-        ...BASE_DESKTOP_NAV.slice(2),
-      ]
-    : BASE_DESKTOP_NAV;
+  const isFacultyView = facultyActive || view === "faculty-desk" || view === "cancel-class" || view === "makeup-class";
 
-  if (facultyActive) {
+  let desktopNav: { id: View; label: string; icon: typeof Clock }[];
+
+  if (isFacultyView) {
     desktopNav = [
+      { id: "today" as View, label: "Today", icon: Clock },
       { id: "faculty-desk" as View, label: "Teaching Desk", icon: GraduationCap },
-      ...desktopNav,
+      { id: "cancel-class" as View, label: "Cancel Class", icon: XCircle },
+      { id: "makeup-class" as View, label: "Makeup Class", icon: Sparkles },
+      { id: "notices" as View, label: "Teacher Messages", icon: Megaphone },
+      { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
+      { id: "custom" as View, label: "My Schedule", icon: CalendarCheck },
+      { id: "find" as View, label: "Search", icon: Search },
     ];
+    if (datesheetActive) {
+      desktopNav.splice(2, 0, { id: "datesheet" as View, label: "Date Sheet", icon: CalendarDays });
+    }
+  } else {
+    desktopNav = datesheetActive
+      ? [
+          ...BASE_DESKTOP_NAV.slice(0, 2),
+          { id: "datesheet" as View, label: "Date Sheet", icon: CalendarDays },
+          ...BASE_DESKTOP_NAV.slice(2),
+        ]
+      : BASE_DESKTOP_NAV;
   }
 
   return (
@@ -490,13 +504,14 @@ export function Dock() {
     };
   }, []);
 
-  const navItems = facultyActive
+  const isFacultyView = facultyActive || view === "faculty-desk" || view === "cancel-class" || view === "makeup-class";
+
+  const navItems = isFacultyView
     ? [
         { id: "today" as View, label: "Today", icon: Clock },
-        { id: "faculty-desk" as View, label: "Teaching", icon: CalendarCheck },
-        { id: "rooms" as View, label: "Rooms", icon: DoorOpen },
-        { id: "faculty" as View, label: "Faculty", icon: GraduationCap },
-        { id: "batches" as View, label: "Batches", icon: Users },
+        { id: "faculty-desk" as View, label: "Teaching", icon: CalendarDays },
+        { id: "cancel-class" as View, label: "Cancel Class", icon: XCircle },
+        { id: "makeup-class" as View, label: "Makeup Class", icon: Sparkles },
       ]
     : MOBILE_NAV;
 

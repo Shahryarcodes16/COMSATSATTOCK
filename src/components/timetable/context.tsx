@@ -31,7 +31,9 @@ export type View =
   | "admin"
   | "faculty-desk"
   | "pulse"
-  | "notices";
+  | "notices"
+  | "cancel-class"
+  | "makeup-class";
 export type ThemeName = "paper" | "ink" | "midnight";
 
 export type Detail =
@@ -62,6 +64,8 @@ const VIEWS: View[] = [
   "faculty-desk",
   "pulse",
   "notices",
+  "cancel-class",
+  "makeup-class",
 ];
 
 const defaultBatch = Math.max(

@@ -17,6 +17,7 @@ import {
   Layers,
   List,
   MapPin,
+  RefreshCw,
   Search,
   Share2,
   Sparkles,
@@ -71,16 +72,26 @@ import {
   getClassCancellations,
 } from "@/lib/campus-pulse";
 
-export function FacultyWorkspaceView() {
-  const { open, now, clock, makeupRevision, goBack } = useDesk();
+export function FacultyWorkspaceView({
+  activeSection,
+}: {
+  activeSection?: "today" | "table" | "makeup" | "cancel";
+} = {}) {
+  const { open, now, clock, makeupRevision, goBack, setView, view } = useDesk();
   const [facultySession, setFacultySession] = useState<FacultySession | null>(
     () => getActiveFacultySession(),
   );
 
-  // Tabs: Today's Lectures | Weekly Timetable (Table) | Smart Makeup & Lab Matcher
-  const [activeTab, setActiveTab] = useState<"today" | "table" | "makeup">(
-    () => (clock.dayIndex !== null && clock.dayIndex >= 0 && clock.dayIndex < 5 ? "today" : "table"),
+  // Tabs: Today's Lectures | Weekly Timetable (Table) | Smart Makeup & Lab Matcher | Cancel Class
+  const [activeTab, setActiveTab] = useState<"today" | "table" | "makeup" | "cancel">(
+    () => activeSection || (clock.dayIndex !== null && clock.dayIndex >= 0 && clock.dayIndex < 5 ? "today" : "table"),
   );
+
+  useEffect(() => {
+    if (activeSection) {
+      setActiveTab(activeSection);
+    }
+  }, [activeSection]);
 
   // Cancellation Modal & Revision State
   const [cancelClassModal, setCancelClassModal] = useState<ClassEntry | null>(null);
@@ -167,6 +178,14 @@ export function FacultyWorkspaceView() {
     return getArrangedMakeupClasses().filter((m) => m.teacher === teacherId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teacherId, makeupRevision]);
+
+  // Cancelled classes by this faculty member
+  const teacherCancelledClasses = useMemo(() => {
+    if (teacherId === null || teacherId === undefined) return [];
+    return getClassCancellations().filter(
+      (c) => c.status === "active" && c.teacher === teacherId,
+    );
+  }, [teacherId, cancellationsRevision]);
 
   // Classes for the selected day in Today's tab
   const todayDayClasses = useMemo(() => {
@@ -514,7 +533,10 @@ export function FacultyWorkspaceView() {
           role="tab"
           aria-selected={activeTab === "today"}
           className={`faculty-tab-pill ${activeTab === "today" ? "active" : ""}`}
-          onClick={() => setActiveTab("today")}
+          onClick={() => {
+            setActiveTab("today");
+            setView("faculty-desk");
+          }}
         >
           <Clock size={16} />
           <span className="tab-label-full">Today&apos;s Lectures</span>
@@ -530,7 +552,10 @@ export function FacultyWorkspaceView() {
           role="tab"
           aria-selected={activeTab === "table"}
           className={`faculty-tab-pill ${activeTab === "table" ? "active" : ""}`}
-          onClick={() => setActiveTab("table")}
+          onClick={() => {
+            setActiveTab("table");
+            setView("faculty-desk");
+          }}
         >
           <Table size={16} />
           <span className="tab-label-full">My Teaching Timetable</span>
@@ -538,13 +563,37 @@ export function FacultyWorkspaceView() {
           <span className="tab-badge">{teacherClasses.length} Classes</span>
         </button>
 
-        {/* Tab 3: Smart Makeup & Lab Matcher */}
+        {/* Tab 3: Cancel Class & Alerts */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "cancel"}
+          className={`faculty-tab-pill ${activeTab === "cancel" ? "active" : ""}`}
+          onClick={() => {
+            setActiveTab("cancel");
+            setView("cancel-class");
+          }}
+        >
+          <XCircle size={16} color={activeTab === "cancel" ? "currentColor" : "#e11d48"} />
+          <span className="tab-label-full">Cancel Class</span>
+          <span className="tab-label-short">Cancel</span>
+          {teacherCancelledClasses.length > 0 && (
+            <span className="tab-badge" style={{ background: "#e11d48", color: "#fff" }}>
+              {teacherCancelledClasses.length}
+            </span>
+          )}
+        </button>
+
+        {/* Tab 4: Smart Makeup & Lab Matcher */}
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === "makeup"}
           className={`faculty-tab-pill ${activeTab === "makeup" ? "active" : ""}`}
-          onClick={() => setActiveTab("makeup")}
+          onClick={() => {
+            setActiveTab("makeup");
+            setView("makeup-class");
+          }}
         >
           <Sparkles size={16} />
           <span className="tab-label-full">Smart Makeup & Lab Matcher</span>
@@ -1780,6 +1829,236 @@ export function FacultyWorkspaceView() {
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {/* =========================================================================
+          TAB: CANCEL CLASS & ALERTS MANAGEMENT
+          ========================================================================= */}
+      {activeTab === "cancel" && (
+        <section className="faculty-cancel-section stack">
+          <div className="faculty-day-summary-card" style={{ borderLeft: "4px solid #e11d48" }}>
+            <div>
+              <h3 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <XCircle size={20} color="#e11d48" />
+                <span>Cancel a Lecture & Alert Students</span>
+              </h3>
+              <p className="quiet">
+                Cancel any lecture to broadcast an instant cancellation notice to all students of that batch, free up the venue across campus, and log it to your makeup debt ledger.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn primary tap"
+              style={{ background: "#e11d48", borderColor: "#e11d48", color: "#fff", fontWeight: 700 }}
+              onClick={() => {
+                const firstClass =
+                  todayDayClasses.find(
+                    (c) => !isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room),
+                  ) ||
+                  teacherClasses.find(
+                    (c) => !isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room),
+                  ) ||
+                  teacherClasses[0];
+                if (firstClass) setCancelClassModal(firstClass);
+              }}
+            >
+              <AlertTriangle size={15} />
+              <span>Cancel a Lecture Now</span>
+            </button>
+          </div>
+
+          {/* Active Cancelled Classes by this teacher */}
+          {teacherCancelledClasses.length > 0 && (
+            <div className="active-makeups-banner stack" style={{ borderLeft: "4px solid #e11d48" }}>
+              <div className="active-makeups-head">
+                <div className="active-makeups-title">
+                  <XCircle size={18} color="#e11d48" />
+                  <strong style={{ color: "#e11d48" }}>Your Cancelled Lectures ({teacherCancelledClasses.length})</strong>
+                </div>
+                <span className="active-makeups-note">
+                  Students see these notices live on their timetables. You can restore a class anytime or schedule a make-up session.
+                </span>
+              </div>
+
+              <div className="active-makeups-grid">
+                {teacherCancelledClasses.map((item) => (
+                  <div key={item.id} className="active-makeup-card" style={{ borderColor: "rgba(225, 29, 72, 0.3)" }}>
+                    <div className="active-makeup-info">
+                      <div className="active-makeup-header-row">
+                        <span className="makeup-live-pill" style={{ background: "#e11d48", color: "#fff" }}>
+                          CANCELLED
+                        </span>
+                        <span className="active-makeup-room">{item.roomName}</span>
+                      </div>
+                      <div className="active-makeup-time">
+                        {DAYS[item.day]} · Slot {item.slot + 1} ({SLOTS[item.slot]?.start} – {SLOTS[item.slot]?.end})
+                      </div>
+                      <h4 className="active-makeup-subject">{item.subjectName}</h4>
+                      <div className="active-makeup-badges">
+                        <span className="makeup-badge batch">{item.batchName}</span>
+                      </div>
+                      {item.reason && <p className="active-makeup-memo">Reason: {item.reason}</p>}
+                    </div>
+
+                    <div className="active-makeup-actions">
+                      <button
+                        type="button"
+                        className="btn secondary sm tap"
+                        onClick={() => {
+                          removeClassCancellation(item.id);
+                          setCancellationsRevision((r) => r + 1);
+                          setBookingSuccessNotice(`Restored ${item.subjectName} (${item.batchName}) back to scheduled timetable.`);
+                          setTimeout(() => setBookingSuccessNotice(null), 5000);
+                        }}
+                        title="Restore this lecture back to scheduled"
+                      >
+                        <RefreshCw size={13} />
+                        <span>Undo / Restore</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn solid sm tap"
+                        style={{ background: "var(--c-accent)", color: "#fff" }}
+                        onClick={() => {
+                          setSelectedBatchId(item.batch);
+                          setActiveTab("makeup");
+                          setView("makeup-class");
+                        }}
+                      >
+                        <Sparkles size={13} />
+                        <span>Arrange Make-up</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Schedule Day Selector to browse and cancel any upcoming lecture */}
+          <div className="stack" style={{ gap: "0.85rem" }}>
+            <div className="faculty-day-selector-bar">
+              <span className="selector-title">
+                <Calendar size={15} />
+                <span>Select Day:</span>
+              </span>
+              <div className="faculty-day-pills">
+                {DAYS.map((dayName, idx) => {
+                  const dayClasses = teacherClasses.filter((c) => c.day === idx);
+                  const isSelected = selectedDay === idx;
+                  const dayCancels = teacherCancelledClasses.filter((c) => c.day === idx).length;
+                  return (
+                    <button
+                      key={dayName}
+                      type="button"
+                      className={`day-pill ${isSelected ? "selected" : ""}`}
+                      onClick={() => setSelectedDay(idx)}
+                    >
+                      <span className="day-name">{DAY_SHORT[idx]}</span>
+                      <span className="day-count">({dayClasses.length})</span>
+                      {dayCancels > 0 && <span className="today-dot" style={{ background: "#e11d48" }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="faculty-today-cards-grid">
+              {teacherClasses
+                .filter((c) => c.day === selectedDay)
+                .map((c, idx) => {
+                  const isCancelled = isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room);
+                  const matchingCancel = isCancelled
+                    ? getClassCancellations().find(
+                        (cancel) =>
+                          cancel.day === c.day &&
+                          cancel.slot === c.slot &&
+                          cancel.teacher === c.teacher &&
+                          cancel.batch === c.batch,
+                      )
+                    : null;
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`faculty-lecture-card ${isCancelled ? "cancelled-card" : ""}`}
+                      style={isCancelled ? { borderLeft: "4px solid #e11d48", opacity: 0.85 } : {}}
+                    >
+                      <div className="lecture-card-head">
+                        <span className="slot-badge">
+                          Slot {c.slot + 1} · {SLOTS[c.slot]?.start} – {SLOTS[c.slot]?.end}
+                        </span>
+                        {isCancelled ? (
+                          <span className="live-pill" style={{ background: "#e11d48", color: "#fff" }}>
+                            CANCELLED
+                          </span>
+                        ) : (
+                          <span className="room-pill">
+                            <DoorOpen size={12} />
+                            <span>{rooms[c.room]}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="lecture-subject">{subjects[c.subject]}</h4>
+                      <div className="lecture-meta">
+                        <span className="batch-tag">{batches[c.batch]}</span>
+                        <span className="venue-tag">{rooms[c.room]}</span>
+                      </div>
+
+                      {matchingCancel && (
+                        <p className="fine" style={{ color: "#e11d48", margin: "0.4rem 0 0" }}>
+                          Reason: {matchingCancel.reason}
+                        </p>
+                      )}
+
+                      <div style={{ marginTop: "0.85rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {isCancelled ? (
+                          <button
+                            type="button"
+                            className="btn secondary sm tap"
+                            onClick={() => {
+                              if (matchingCancel) {
+                                removeClassCancellation(matchingCancel.id);
+                                setCancellationsRevision((r) => r + 1);
+                                setBookingSuccessNotice("✅ Class restored. Room and schedule are active again.");
+                                setTimeout(() => setBookingSuccessNotice(null), 5000);
+                              }
+                            }}
+                          >
+                            <RefreshCw size={13} />
+                            <span>Restore Class</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn secondary sm tap"
+                            style={{ color: "#e11d48", borderColor: "rgba(225, 29, 72, 0.3)" }}
+                            onClick={() => setCancelClassModal(c)}
+                          >
+                            <XCircle size={13} />
+                            <span>Cancel This Lecture</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn secondary sm tap"
+                          onClick={() => {
+                            setSelectedBatchId(c.batch);
+                            setActiveTab("makeup");
+                            setView("makeup-class");
+                          }}
+                        >
+                          <Sparkles size={13} />
+                          <span>Find Makeup Slot</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
         </section>
       )}
 

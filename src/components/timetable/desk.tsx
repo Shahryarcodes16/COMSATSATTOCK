@@ -123,8 +123,8 @@ function Frame() {
             <div hidden={view !== "datesheet"}>
               <DatesheetView />
             </div>
-            <div hidden={view !== "faculty-desk"}>
-              <FacultyWorkspaceView />
+            <div hidden={view !== "faculty-desk" && view !== "cancel-class" && view !== "makeup-class"}>
+              <FacultyWorkspaceView activeSection={view === "cancel-class" ? "cancel" : view === "makeup-class" ? "makeup" : view === "faculty-desk" ? "table" : undefined} />
             </div>
             <div hidden={view !== "notices"}>
               <TeacherMessagesView />
