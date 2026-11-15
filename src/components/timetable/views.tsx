@@ -441,21 +441,6 @@ export function TodayView() {
         <span className="term-badge">Timetable · 5 Oct 2026</span>
       </div>
 
-      <div className="campus-pulse-quick-bar">
-        <div className="quick-bar-left">
-          <span className="live-dot-pulse" />
-          <span><strong>Campus Pulse:</strong> Real-time lecture status, active instructors & free room telemetry</span>
-        </div>
-        <button
-          type="button"
-          className="btn secondary sm tap"
-          onClick={() => setView("pulse")}
-        >
-          <Activity size={13} />
-          <span>View Live Pulse</span>
-        </button>
-      </div>
-
       <div className="campus-pulse-quick-bar teacher-messages-quick-bar">
         <div className="quick-bar-left">
           <Megaphone size={16} className="tm-quick-icon" aria-hidden />
