@@ -335,13 +335,17 @@ export function LiveSyncModal({ isOpen, onClose, initialBatch }: LiveSyncModalPr
                         href={syncData?.appleCalendarUrl || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center sm:flex-col justify-center gap-2 group text-center"
+                        className="p-3 rounded-xl border border-border bg-card hover:border-zinc-500/50 hover:bg-zinc-500/5 transition-all flex items-center sm:flex-col justify-center gap-2 group text-center"
                       >
-                        <div className="w-9 h-9 rounded-lg bg-zinc-800 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                          🍏
+                        <div className="w-9 h-9 rounded-lg bg-black text-white flex items-center justify-center p-1.5 shadow-sm overflow-hidden border border-white/10 shrink-0">
+                          <img
+                            src="/apple-calendar-logo.png"
+                            alt="Apple Logo"
+                            className="w-full h-full object-contain"
+                          />
                         </div>
                         <div className="text-left sm:text-center">
-                          <div className="text-xs font-bold group-hover:text-primary transition-colors flex items-center gap-1 justify-center">
+                          <div className="text-xs font-bold group-hover:text-foreground transition-colors flex items-center gap-1 justify-center">
                             Apple Calendar
                             <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
@@ -356,8 +360,19 @@ export function LiveSyncModal({ isOpen, onClose, initialBatch }: LiveSyncModalPr
                         rel="noopener noreferrer"
                         className="p-3 rounded-xl border border-border bg-card hover:border-blue-500/50 hover:bg-blue-500/5 transition-all flex items-center sm:flex-col justify-center gap-2 group text-center"
                       >
-                        <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                          📅
+                        <div className="w-9 h-9 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center p-1.5 shadow-sm border border-blue-500/20 shrink-0">
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="4" width="18" height="18" rx="3" fill="#4285F4"/>
+                            <rect x="7" y="2" width="2" height="4" rx="1" fill="#EA4335"/>
+                            <rect x="15" y="2" width="2" height="4" rx="1" fill="#EA4335"/>
+                            <path d="M3 9H21" stroke="white" strokeWidth="1.5"/>
+                            <circle cx="8" cy="13" r="1.2" fill="white"/>
+                            <circle cx="12" cy="13" r="1.2" fill="white"/>
+                            <circle cx="16" cy="13" r="1.2" fill="white"/>
+                            <circle cx="8" cy="17" r="1.2" fill="white"/>
+                            <circle cx="12" cy="17" r="1.2" fill="white"/>
+                            <circle cx="16" cy="17" r="1.2" fill="white"/>
+                          </svg>
                         </div>
                         <div className="text-left sm:text-center">
                           <div className="text-xs font-bold group-hover:text-blue-500 transition-colors flex items-center gap-1 justify-center">
@@ -375,8 +390,11 @@ export function LiveSyncModal({ isOpen, onClose, initialBatch }: LiveSyncModalPr
                         rel="noopener noreferrer"
                         className="p-3 rounded-xl border border-border bg-card hover:border-sky-500/50 hover:bg-sky-500/5 transition-all flex items-center sm:flex-col justify-center gap-2 group text-center"
                       >
-                        <div className="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                          📧
+                        <div className="w-9 h-9 rounded-lg bg-[#0078D4]/10 text-[#0078D4] flex items-center justify-center p-1.5 shadow-sm border border-[#0078D4]/20 shrink-0">
+                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="4" width="18" height="16" rx="2" fill="#0078D4"/>
+                            <path d="M3 7L12 13L21 7" stroke="white" strokeWidth="1.5"/>
+                          </svg>
                         </div>
                         <div className="text-left sm:text-center">
                           <div className="text-xs font-bold group-hover:text-sky-500 transition-colors flex items-center gap-1 justify-center">
@@ -507,9 +525,15 @@ export function LiveSyncModal({ isOpen, onClose, initialBatch }: LiveSyncModalPr
                       href={batchSyncData.appleCalendarUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 group text-sm font-semibold"
+                      className="p-3 rounded-xl border border-border bg-card hover:border-zinc-500/50 hover:bg-zinc-500/5 transition-all flex items-center justify-center gap-2.5 group text-sm font-semibold"
                     >
-                      <span>🍏</span>
+                      <div className="w-5 h-5 rounded-md bg-black text-white flex items-center justify-center p-0.5 border border-white/10 shrink-0">
+                        <img
+                          src="/apple-calendar-logo.png"
+                          alt="Apple"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
                       <span>Subscribe in Apple Calendar</span>
                       <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
                     </a>
@@ -518,9 +542,14 @@ export function LiveSyncModal({ isOpen, onClose, initialBatch }: LiveSyncModalPr
                       href={batchSyncData.googleCalendarUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-3 rounded-xl border border-border bg-card hover:border-blue-500/50 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 group text-sm font-semibold"
+                      className="p-3 rounded-xl border border-border bg-card hover:border-blue-500/50 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2.5 group text-sm font-semibold"
                     >
-                      <span>📅</span>
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="4" width="18" height="18" rx="3" fill="#4285F4"/>
+                        <rect x="7" y="2" width="2" height="4" rx="1" fill="#EA4335"/>
+                        <rect x="15" y="2" width="2" height="4" rx="1" fill="#EA4335"/>
+                        <path d="M3 9H21" stroke="white" strokeWidth="1.5"/>
+                      </svg>
                       <span>Add to Google Calendar</span>
                       <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100" />
                     </a>
