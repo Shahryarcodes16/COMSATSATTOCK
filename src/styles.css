@@ -6722,31 +6722,6 @@
   flex-direction: column;
 }
 
-.gateway-guest-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: var(--r-md, 0.75rem);
-  border: 1px dashed color-mix(in srgb, var(--c-accent) 45%, var(--c-line));
-  background: color-mix(in srgb, var(--c-accent) 6%, transparent);
-  color: var(--c-accent);
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 0.65rem;
-}
-
-.gateway-guest-btn:hover {
-  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
-  border-style: solid;
-  border-color: var(--c-accent);
-  transform: translateY(-1px);
-}
-
 .student-gateway-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -21,7 +21,6 @@ import {
   Megaphone,
   Bell,
   Star,
-  Compass,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -217,27 +216,6 @@ export function StudentGateway({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleContinueAsGuest = () => {
-    const guestSession: StudentSession = {
-      profile: {
-        id: "guest",
-        email: "guest@cuiatk.edu.pk",
-        fullName: "Campus Guest",
-        session: "FA",
-        year: "23",
-        programCode: "bcs",
-        rollNumber: "guest",
-        defaultBatch: null,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-      },
-      token: "guest-token",
-      signedInAt: new Date().toISOString(),
-    };
-    setStudentSession(guestSession, false);
-    onAuthenticated(guestSession);
   };
 
   const handleRequestVerificationCode = async (e: React.FormEvent) => {
@@ -1496,22 +1474,6 @@ export function StudentGateway({
           )}
         </>
       )}
-
-          {/* Guest Explorer Access Button */}
-          <div style={{ padding: "0.25rem 1.5rem 1.25rem", borderTop: "1px dashed var(--c-line)", marginTop: "0.75rem" }}>
-            <button
-              type="button"
-              className="gateway-guest-btn tap"
-              onClick={handleContinueAsGuest}
-              title="Quick view without signing in"
-            >
-              <Compass size={17} />
-              <span>Explore Timetable as Guest →</span>
-            </button>
-            <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--muted, #64748b)", margin: "0.4rem 0 0" }}>
-              Instant view of public batch timetables, teacher schedules & room radar
-            </p>
-          </div>
 
           {/* Admin Portal Switcher */}
           <div className="student-gateway-footer">
