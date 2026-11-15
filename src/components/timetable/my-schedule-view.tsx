@@ -28,6 +28,10 @@ import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal
 import { WeekGrid } from "@/components/timetable/week-grid";
 import { ZeroClashView } from "@/components/timetable/zero-clash-view";
 import { LiveSyncModal } from "@/components/timetable/live-sync-modal";
+import { QuickShareModal } from "@/components/timetable/quick-share-modal";
+import { QuickShareImportModal } from "@/components/timetable/quick-share-import-modal";
+import { DayRadar } from "@/components/timetable/day-radar";
+import { decodeScheduleFromShareString } from "@/lib/quick-share";
 import {
   DAYS,
   SLOTS,
@@ -64,6 +68,12 @@ export function MyScheduleView() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
   const [isLiveSyncModalOpen, setIsLiveSyncModalOpen] = useState(false);
+  const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
+  const [incomingShare, setIncomingShare] = useState<{
+    entries: ClassEntry[];
+    senderName?: string;
+    batchName?: string;
+  } | null>(null);
   const [copiedText, setCopiedText] = useState(false);
   const [, setCancelRevision] = useState(0);
   const [makeupRev, setMakeupRev] = useState(0);
@@ -71,6 +81,23 @@ export function MyScheduleView() {
   // Load from localStorage on mount and subscribe to cancellation & make-up updates
   useEffect(() => {
     setSchedule(loadCustomSchedule());
+
+    // Check for incoming QuickShare link parameter (?share=... or ?s=...)
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const shareCode = params.get("share") || params.get("s");
+        if (shareCode) {
+          const decoded = decodeScheduleFromShareString(shareCode);
+          if (decoded && decoded.entries.length > 0) {
+            setIncomingShare(decoded);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to decode quick share parameter", e);
+      }
+    }
+
     const handleCancelUpdate = () => setCancelRevision((r) => r + 1);
     const handleMakeupUpdate = () => setMakeupRev((r) => r + 1);
     const handleStudentUpdate = () =>
@@ -247,6 +274,17 @@ export function MyScheduleView() {
           <span>FORTIS LiveSync</span>
         </button>
 
+        <button
+          type="button"
+          className="btn tap zero-clash-toolbar-btn"
+          onClick={() => setIsQuickShareOpen(true)}
+          title="Share your schedule via 1-click WhatsApp link or QR code"
+          style={{ borderColor: "var(--c-accent)", color: "var(--c-accent)" }}
+        >
+          <Share2 size={16} aria-hidden />
+          <span>FORTIS QuickShare</span>
+        </button>
+
         {schedule.length > 0 ? (
           <>
             <ExportScheduleImage title="My Custom Schedule" list={schedule} />
@@ -307,6 +345,16 @@ export function MyScheduleView() {
           </div>
         </div>
       ) : null}
+
+      {/* FORTIS DayRadar: Live Animated Progress Bar & Daily Class Stream */}
+      {effectiveSchedule.length > 0 && (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <DayRadar
+            schedule={effectiveSchedule}
+            onOpenClass={(entry) => open({ type: "room", id: entry.room })}
+          />
+        </div>
+      )}
 
       {/* Main Tabs */}
       {schedule.length > 0 ? (
@@ -667,6 +715,26 @@ export function MyScheduleView() {
         isOpen={isLiveSyncModalOpen}
         onClose={() => setIsLiveSyncModalOpen(false)}
         initialBatch={studentBatch || pinnedBatch || undefined}
+      />
+
+      {/* MODAL 4: FORTIS QuickShare Export Modal */}
+      <QuickShareModal
+        isOpen={isQuickShareOpen}
+        onClose={() => setIsQuickShareOpen(false)}
+        schedule={schedule}
+      />
+
+      {/* MODAL 5: FORTIS QuickShare Incoming Import Preview Modal */}
+      <QuickShareImportModal
+        isOpen={Boolean(incomingShare)}
+        onClose={() => setIncomingShare(null)}
+        sharedEntries={incomingShare?.entries || []}
+        senderName={incomingShare?.senderName}
+        batchName={incomingShare?.batchName}
+        onImportComplete={() => {
+          setSchedule(loadCustomSchedule());
+          setIncomingShare(null);
+        }}
       />
     </div>
   );

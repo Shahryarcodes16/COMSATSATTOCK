@@ -33,9 +33,19 @@ export function Desk() {
 }
 
 function Frame() {
-  const { view, detail } = useDesk();
+  const { view, setView, detail } = useDesk();
   const [studentSession, setStudentSession] = useState<StudentSession | null>(() => getActiveStudentSession());
   const [facultySession, setFacultySession] = useState<FacultySession | null>(() => getActiveFacultySession());
+
+  useEffect(() => {
+    // If incoming link contains a QuickShare code, automatically switch to My Schedule view
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("share") || params.has("s")) {
+        setView("custom");
+      }
+    }
+  }, [setView]);
 
   useEffect(() => {
     // Keep sessions strictly in sync with client storage & broadcast updates

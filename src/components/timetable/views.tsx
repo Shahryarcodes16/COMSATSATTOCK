@@ -33,6 +33,7 @@ import { FreeRoomsRadar } from "@/components/timetable/room-radar";
 import { RoomUtilizationHeatmap } from "@/components/timetable/room-heatmap";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { LiveSyncModal } from "@/components/timetable/live-sync-modal";
+import { DayRadar } from "@/components/timetable/day-radar";
 import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
@@ -776,6 +777,14 @@ export function TodayView() {
                   </div>
                 </div>
               )}
+
+              <div style={{ marginBottom: "0.75rem" }}>
+                <DayRadar
+                  schedule={mine}
+                  initialDay={day}
+                  onOpenClass={(entry) => open({ type: "room", id: entry.room })}
+                />
+              </div>
 
               <ClassList list={mine} day={day} who="batch" />
               <button
