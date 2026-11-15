@@ -24,6 +24,7 @@ import {
   Flame,
   X,
   XCircle,
+  Radio,
 } from "lucide-react";
 import { FacultyDirectory } from "@/components/timetable/faculty-directory";
 import { FacultyOfficeHours } from "@/components/timetable/teacher-office-hours";
@@ -31,6 +32,7 @@ import { NotificationBellButton } from "@/components/timetable/notification-moda
 import { FreeRoomsRadar } from "@/components/timetable/room-radar";
 import { RoomUtilizationHeatmap } from "@/components/timetable/room-heatmap";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
+import { LiveSyncModal } from "@/components/timetable/live-sync-modal";
 import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
@@ -1335,6 +1337,7 @@ export function FacultyView() {
 export function BatchesView() {
   const { batchId, setBatchId, day, setDay, clock, pinBatch, pinnedBatch, goBack } = useDesk();
   const [program, setProgram] = useState("All");
+  const [isLiveSyncOpen, setIsLiveSyncOpen] = useState(false);
   const ids = batchesInProgram(program);
   const list = forBatch(batchId);
 
@@ -1444,11 +1447,27 @@ export function BatchesView() {
       <div className="row-actions noprint">
         <ExportScheduleImage title={batches[batchId]} list={list} />
         <CopySchedule key={batchId} title={batches[batchId]} list={list} />
+        <button
+          type="button"
+          className="btn tap"
+          onClick={() => setIsLiveSyncOpen(true)}
+          title="Subscribe to this batch schedule via Live WebCal"
+          style={{ borderColor: "var(--c-emerald, #10b981)", color: "var(--c-emerald, #10b981)", fontWeight: 600 }}
+        >
+          <Radio size={16} aria-hidden className="animate-pulse" />
+          <span>LiveSync Feed</span>
+        </button>
         <button type="button" className="btn tap" onClick={() => window.print()}>
           <Printer size={16} aria-hidden />
           Print
         </button>
       </div>
+
+      <LiveSyncModal
+        isOpen={isLiveSyncOpen}
+        onClose={() => setIsLiveSyncOpen(false)}
+        initialBatch={batches[batchId]}
+      />
     </div>
   );
 }

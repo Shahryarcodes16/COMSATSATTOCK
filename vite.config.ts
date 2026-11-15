@@ -142,6 +142,76 @@ function authPopupPlugin(): Plugin {
   };
 }
 
+/**
+ * FORTIS LiveSync dev-server middleware for /api/calendar/sync/*
+ */
+function calendarSyncDevPlugin(): Plugin {
+  return {
+    name: "fortis:calendar-sync",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        try {
+          const rawUrl = req.url ?? "";
+          const pathOnly = rawUrl.split("?", 1)[0] ?? "";
+          if (!pathOnly.startsWith("/api/calendar/sync")) {
+            next();
+            return;
+          }
+          const method = (req.method ?? "GET").toUpperCase();
+          if (method !== "GET" && method !== "HEAD") {
+            res.statusCode = 405;
+            res.setHeader("content-type", "text/plain; charset=utf-8");
+            res.end("Method Not Allowed");
+            return;
+          }
+
+          const host = String(
+            req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost:8080",
+          );
+          const proto = String(
+            req.headers["x-forwarded-proto"] ??
+              ((req.socket as { encrypted?: boolean } | undefined)?.encrypted ? "https" : "http"),
+          );
+          const requestHeaders = new Headers();
+          for (const [key, value] of Object.entries(req.headers)) {
+            if (value === undefined) continue;
+            if (Array.isArray(value)) {
+              for (const v of value) requestHeaders.append(key, v);
+            } else {
+              requestHeaders.set(key, value);
+            }
+          }
+
+          const request = new Request(`${proto}://${host}${rawUrl}`, {
+            method,
+            headers: requestHeaders,
+          });
+
+          const mod = (await server.ssrLoadModule("/src/lib/calendar-sync.server.ts")) as {
+            handleCalendarSyncRequest: (req: Request) => Promise<Response>;
+          };
+          const response = await mod.handleCalendarSyncRequest(request);
+
+          res.statusCode = response.status;
+          response.headers.forEach((value, key) => {
+            res.setHeader(key, value);
+          });
+          const body = Buffer.from(await response.arrayBuffer());
+          res.end(body);
+        } catch (err) {
+          console.error("[fortis:calendar-sync] Dev sync failed:", err);
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader("content-type", "text/plain; charset=utf-8");
+            res.end("Calendar sync failed");
+          }
+        }
+      });
+    },
+  };
+}
+
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
@@ -161,6 +231,8 @@ export default defineConfig(({ command, isPreview }) => ({
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
     authPopupPlugin(),
+    // LiveSync WebCal endpoint for development
+    calendarSyncDevPlugin(),
     // Dev-only /__app-env, read by scripts/check-auth-invariant.mjs.
     appEnvPlugin(),
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.

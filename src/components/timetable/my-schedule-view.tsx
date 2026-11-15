@@ -19,6 +19,7 @@ import {
   Users,
   X,
   Sparkles,
+  Radio,
 } from "lucide-react";
 import { useDesk } from "@/components/timetable/context";
 import { Segment } from "@/components/timetable/chrome";
@@ -26,6 +27,7 @@ import { CopySchedule } from "@/components/timetable/copy-schedule";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { WeekGrid } from "@/components/timetable/week-grid";
 import { ZeroClashView } from "@/components/timetable/zero-clash-view";
+import { LiveSyncModal } from "@/components/timetable/live-sync-modal";
 import {
   DAYS,
   SLOTS,
@@ -61,6 +63,7 @@ export function MyScheduleView() {
   const [viewTab, setViewTab] = useState<"week" | "today" | "courses" | "zeroclash">("week");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
+  const [isLiveSyncModalOpen, setIsLiveSyncModalOpen] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [, setCancelRevision] = useState(0);
   const [makeupRev, setMakeupRev] = useState(0);
@@ -231,6 +234,17 @@ export function MyScheduleView() {
         >
           <Sparkles size={16} aria-hidden />
           <span>FORTIS ZeroClash</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn tap zero-clash-toolbar-btn"
+          onClick={() => setIsLiveSyncModalOpen(true)}
+          title="Dynamic WebCal Cloud Sync for Apple Calendar, Google Calendar & Outlook"
+          style={{ borderColor: "var(--c-emerald, #10b981)", color: "var(--c-emerald, #10b981)" }}
+        >
+          <Radio size={16} className="animate-pulse" aria-hidden />
+          <span>FORTIS LiveSync</span>
         </button>
 
         {schedule.length > 0 ? (
@@ -613,10 +627,19 @@ export function MyScheduleView() {
               <Plus size={18} aria-hidden />
               <span>Add Specific Courses</span>
             </button>
+            <button
+              type="button"
+              className="btn tap btn-lg"
+              onClick={() => setIsLiveSyncModalOpen(true)}
+              style={{ borderColor: "var(--c-emerald, #10b981)", color: "var(--c-emerald, #10b981)" }}
+            >
+              <Radio size={18} className="animate-pulse" aria-hidden />
+              <span>FORTIS LiveSync</span>
+            </button>
           </div>
 
           <p className="fine quiet">
-            💡 Tip: Use <strong>FORTIS ZeroClash</strong> to automatically solve timetable clashes when picking repeat courses or electives!
+            💡 Tip: Use <strong>FORTIS ZeroClash</strong> to automatically solve timetable clashes, or <strong>FORTIS LiveSync</strong> to subscribe directly in Apple & Google Calendar!
           </p>
         </div>
       )}
@@ -638,6 +661,13 @@ export function MyScheduleView() {
           alreadyAddedKeys={new Set(schedule.map(getEntryKey))}
         />
       ) : null}
+
+      {/* MODAL 3: FORTIS LiveSync Modal */}
+      <LiveSyncModal
+        isOpen={isLiveSyncModalOpen}
+        onClose={() => setIsLiveSyncModalOpen(false)}
+        initialBatch={studentBatch || pinnedBatch || undefined}
+      />
     </div>
   );
 }
