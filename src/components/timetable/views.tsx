@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Bell,
   Briefcase,
+  Calendar,
   CalendarDays,
   Clock,
   DoorOpen,
@@ -14,11 +15,15 @@ import {
   Megaphone,
   Pin,
   Printer,
+  RefreshCw,
   Search,
+  Sparkles,
+  Table,
   Users,
   Zap,
   Flame,
   X,
+  XCircle,
 } from "lucide-react";
 import { FacultyDirectory } from "@/components/timetable/faculty-directory";
 import { FacultyOfficeHours } from "@/components/timetable/teacher-office-hours";
@@ -29,7 +34,7 @@ import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal
 import { getFacultyEmail } from "@/lib/faculty";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 import { isDatesheetActive } from "@/lib/datesheet";
-import { batchesMatch, isClassCancelled, getClassCancellations } from "@/lib/campus-pulse";
+import { batchesMatch, isClassCancelled, getClassCancellations, removeClassCancellation } from "@/lib/campus-pulse";
 import { getActiveArrangedMakeupClasses } from "@/lib/makeup-classes";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
@@ -46,6 +51,7 @@ import {
   batchLoad,
   clockFace,
   DAYS,
+  DAY_SHORT,
   SLOTS,
   rangeLabel,
   forBatch,
@@ -91,6 +97,7 @@ export function TodayView() {
     clock,
     ready,
     day,
+    setDay,
     slot,
     pinnedBatch,
     pinBatch,
@@ -179,6 +186,249 @@ export function TodayView() {
         (m.batch === pinnedBatch || batchesMatch(batches[m.batch] || "", pinnedBatchName)),
     );
   }, [makeups, day, pinnedBatch, pinnedBatchName]);
+
+  // For faculty accounts: Today view ONLY displays their lectures and nothing else
+  if (teacherId !== null) {
+    const teacherName =
+      facultySession?.profile?.timetableName ||
+      facultySession?.profile?.fullName ||
+      (teacherId !== null ? teachers[teacherId] : "");
+    const department = facultySession?.profile?.department || "Academic Faculty";
+
+    return (
+      <div className="page today-page faculty-today-focused stack">
+        {/* Focused Header */}
+        <div className="page-heading">
+          <div>
+            <p className="eyebrow">Faculty Teaching Portal · Attock Campus</p>
+            <h1 className="page-title">
+              {day === clock.dayIndex ? "Today's Lectures" : `${DAYS[day]}'s Lectures`}
+            </h1>
+            <p className="quiet">
+              {teacherName} · {department}
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+            <span className="term-badge">
+              {DAYS[day]} · {day === clock.dayIndex ? "Today" : DAY_SHORT[day]}
+            </span>
+            <button
+              type="button"
+              className="btn sm tap"
+              onClick={() => setView("faculty-desk")}
+              title="Open full weekly teaching desk"
+            >
+              <Table size={14} />
+              <span>Full Week Grid</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Day Selector Navigation Pills */}
+        <div className="faculty-day-selector-bar">
+          <span className="selector-title">
+            <Calendar size={15} />
+            <span>Select Day:</span>
+          </span>
+          <div className="faculty-day-pills">
+            {DAYS.map((dayName, idx) => {
+              const count = teacherClasses.filter((c) => c.day === idx).length;
+              const isToday = clock.dayIndex === idx;
+              const isSelected = day === idx;
+              return (
+                <button
+                  key={dayName}
+                  type="button"
+                  className={`day-pill ${isSelected ? "selected" : ""} ${isToday ? "today-highlight" : ""}`}
+                  onClick={() => setDay(idx)}
+                >
+                  <span className="day-name">{isToday ? "Today" : DAY_SHORT[idx]}</span>
+                  <span className="day-count">({count})</span>
+                  {isToday && <span className="today-dot" title="Today" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Day Status Summary */}
+        <div className="faculty-day-summary-card">
+          <div>
+            <h3>
+              {day === clock.dayIndex ? "Today's Teaching Schedule" : `${DAYS[day]}'s Schedule`}
+            </h3>
+            <p className="quiet">
+              {teacherTodayClasses.length === 0
+                ? `No lectures scheduled for ${DAYS[day]}. Enjoy your preparation time!`
+                : `${teacherTodayClasses.length} lecture${teacherTodayClasses.length === 1 ? "" : "s"} scheduled for ${DAYS[day]}.`}
+            </p>
+          </div>
+          {day === clock.dayIndex && clock.liveSlot !== null && (
+            <div className="live-status-chip">
+              <span className="live-pulse-dot" />
+              <span>Slot {clock.liveSlot + 1} ({SLOTS[clock.liveSlot].start} - {SLOTS[clock.liveSlot].end})</span>
+            </div>
+          )}
+        </div>
+
+        {/* Lectures List */}
+        {teacherTodayClasses.length === 0 ? (
+          <div className="empty-state stack">
+            <CalendarDays size={36} aria-hidden color="var(--c-accent)" />
+            <h3>Free Day — No Lectures Scheduled</h3>
+            <p className="quiet">
+              You have no scheduled lectures on {DAYS[day]}.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap", marginTop: "0.5rem" }}>
+              <button
+                type="button"
+                className="btn tap"
+                onClick={() => setView("faculty-desk")}
+              >
+                <Table size={15} />
+                <span>View Weekly Grid</span>
+              </button>
+              <button
+                type="button"
+                className="btn solid tap"
+                onClick={() => setView("makeup-class")}
+              >
+                <Sparkles size={15} />
+                <span>Arrange Makeup Class</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="faculty-today-cards-grid">
+            {teacherTodayClasses.map((c, idx) => {
+              const slotInfo = SLOTS[c.slot];
+              const isLive = clock.dayIndex === day && clock.liveSlot === c.slot;
+              const isCancelled = isClassCancelled(c.day, c.slot, c.teacher, c.batch, c.room);
+              const matchingCancel = isCancelled
+                ? cancellations.find(
+                    (cancel) =>
+                      cancel.day === c.day &&
+                      cancel.slot === c.slot &&
+                      cancel.teacher === c.teacher &&
+                      cancel.batch === c.batch,
+                  )
+                : null;
+
+              return (
+                <div
+                  key={`faculty-lecture-${idx}`}
+                  className={`faculty-lecture-card ${isLive && !isCancelled ? "live-card" : ""} ${isCancelled ? "cancelled-card" : ""}`}
+                  style={
+                    isCancelled
+                      ? { borderLeft: "4px solid #e11d48", opacity: 0.88 }
+                      : isLive
+                        ? { borderLeft: "4px solid #10b981" }
+                        : undefined
+                  }
+                >
+                  <div className="lecture-card-head">
+                    <span className="slot-badge">
+                      Slot {c.slot + 1} · {slotInfo?.start} – {slotInfo?.end}
+                    </span>
+                    {isCancelled ? (
+                      <span className="live-pill" style={{ background: "#e11d48", color: "#fff" }}>
+                        CANCELLED
+                      </span>
+                    ) : isLive ? (
+                      <span className="live-pill">
+                        <span className="live-pulse-dot" /> LIVE NOW
+                      </span>
+                    ) : c.isMakeup ? (
+                      <span className="live-pill" style={{ background: "var(--c-accent)", color: "#fff" }}>
+                        ⭐ MAKE-UP
+                      </span>
+                    ) : (
+                      <span className="room-pill">
+                        <DoorOpen size={12} />
+                        <span>{rooms[c.room]}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <h3
+                    className="lecture-subject"
+                    style={{ textDecoration: isCancelled ? "line-through" : undefined }}
+                  >
+                    {subjects[c.subject]}
+                  </h3>
+
+                  <div className="lecture-meta">
+                    <button
+                      type="button"
+                      className="chip sm tap"
+                      onClick={() => open({ type: "batch", id: c.batch })}
+                      title="View batch schedule"
+                    >
+                      <Users size={12} />
+                      <span>{batches[c.batch]}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="chip sm tap"
+                      onClick={() => open({ type: "room", id: c.room })}
+                      title="View room schedule"
+                    >
+                      <DoorOpen size={12} />
+                      <span>{rooms[c.room]}</span>
+                    </button>
+                  </div>
+
+                  {matchingCancel && (
+                    <div style={{ marginTop: "0.5rem", padding: "0.45rem 0.65rem", background: "rgba(225, 29, 72, 0.08)", borderRadius: "var(--r-sm)", border: "1px solid rgba(225, 29, 72, 0.2)" }}>
+                      <p className="fine" style={{ color: "#e11d48", margin: 0, fontWeight: 600 }}>
+                        Cancellation notice sent to students: &ldquo;{matchingCancel.reason}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="lecture-card-actions" style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {isCancelled ? (
+                      <button
+                        type="button"
+                        className="btn secondary sm tap"
+                        onClick={() => {
+                          if (matchingCancel) {
+                            removeClassCancellation(matchingCancel.id);
+                            setCancellations(getClassCancellations());
+                          }
+                        }}
+                      >
+                        <RefreshCw size={13} />
+                        <span>Undo / Restore Lecture</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn secondary sm tap"
+                        style={{ color: "#e11d48", borderColor: "rgba(225, 29, 72, 0.3)" }}
+                        onClick={() => setView("cancel-class")}
+                      >
+                        <XCircle size={13} />
+                        <span>Cancel Class</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn secondary sm tap"
+                      onClick={() => setView("makeup-class")}
+                    >
+                      <Sparkles size={13} />
+                      <span>Arrange Makeup</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="page today-page">
