@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import webpush from "web-push";
+import { setVapidDetails, sendNotification } from "web-push";
 import { getSql } from "./db.ts";
 import { batches, rooms, subjects, teachers } from "./schedule.ts";
 import type { ClassCancellationRecord } from "./timetable-types.ts";
@@ -24,7 +24,7 @@ export const VAPID_PRIVATE_KEY =
 export const VAPID_SUBJECT = "mailto:admin@attock.comsats.edu.pk";
 
 try {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 } catch (e) {
   console.warn("[push.server] VAPID configuration error:", e);
 }
@@ -206,7 +206,7 @@ export async function sendWebPush(
   });
 
   try {
-    await webpush.sendNotification(pushSubscription, notificationPayload, {
+    await sendNotification(pushSubscription, notificationPayload, {
       TTL: 86400, // 24 hours
       urgency: "high",
     });
