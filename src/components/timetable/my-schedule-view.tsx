@@ -25,6 +25,7 @@ import { Segment } from "@/components/timetable/chrome";
 import { CopySchedule } from "@/components/timetable/copy-schedule";
 import { ExportScheduleImage } from "@/components/timetable/schedule-image-modal";
 import { WeekGrid } from "@/components/timetable/week-grid";
+import { ZeroClashView } from "@/components/timetable/zero-clash-view";
 import {
   DAYS,
   SLOTS,
@@ -57,7 +58,7 @@ export function MyScheduleView() {
   const [studentBatch, setStudentBatch] = useState<string | null>(
     () => getActiveStudentSession()?.profile?.defaultBatch || null,
   );
-  const [viewTab, setViewTab] = useState<"week" | "today" | "courses">("week");
+  const [viewTab, setViewTab] = useState<"week" | "today" | "courses" | "zeroclash">("week");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddClassModalOpen, setIsAddClassModalOpen] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
@@ -221,6 +222,17 @@ export function MyScheduleView() {
           <span>Add Custom Class</span>
         </button>
 
+        <button
+          type="button"
+          className={`btn tap zero-clash-toolbar-btn ${viewTab === "zeroclash" ? "active" : ""}`}
+          onClick={() => setViewTab(viewTab === "zeroclash" ? "week" : "zeroclash")}
+          title="Resolve repeat and elective course clashes"
+          style={{ borderColor: "var(--c-accent)", color: "var(--c-accent)" }}
+        >
+          <Sparkles size={16} aria-hidden />
+          <span>FORTIS ZeroClash</span>
+        </button>
+
         {schedule.length > 0 ? (
           <>
             <ExportScheduleImage title="My Custom Schedule" list={schedule} />
@@ -268,13 +280,24 @@ export function MyScheduleView() {
               </li>
             ))}
           </ul>
+          <div style={{ marginTop: "0.85rem" }}>
+            <button
+              type="button"
+              className="btn solid tap"
+              onClick={() => setViewTab("zeroclash")}
+              style={{ fontSize: "0.84rem", padding: "0.45rem 0.95rem", display: "inline-flex", alignItems: "center", gap: 6, background: "var(--c-accent)", color: "#fff" }}
+            >
+              <Sparkles size={15} />
+              <span>Fix All Clashes with FORTIS ZeroClash →</span>
+            </button>
+          </div>
         </div>
       ) : null}
 
       {/* Main Tabs */}
       {schedule.length > 0 ? (
         <>
-          <div className="faculty-view-tabs tabs-3" role="tablist" aria-label="Schedule views">
+          <div className="faculty-view-tabs tabs-4" role="tablist" aria-label="Schedule views">
             <button
               type="button"
               role="tab"
@@ -308,7 +331,23 @@ export function MyScheduleView() {
               <span className="tab-label-full">My Courses ({uniqueSubjects.size})</span>
               <span className="tab-label-short">Courses ({uniqueSubjects.size})</span>
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewTab === "zeroclash"}
+              className={viewTab === "zeroclash" ? "tab-btn tab-btn-active tap" : "tab-btn tap"}
+              onClick={() => setViewTab("zeroclash")}
+            >
+              <Sparkles size={16} aria-hidden />
+              <span className="tab-label-full">FORTIS ZeroClash</span>
+              <span className="tab-label-short">ZeroClash</span>
+            </button>
           </div>
+
+          {/* TAB: FORTIS ZeroClash View */}
+          {viewTab === "zeroclash" ? (
+            <ZeroClashView onAppliedSchedule={() => setViewTab("week")} />
+          ) : null}
 
           {/* TAB 1: Week Grid */}
           {viewTab === "week" ? (
@@ -535,6 +574,8 @@ export function MyScheduleView() {
             </div>
           ) : null}
         </>
+      ) : viewTab === "zeroclash" ? (
+        <ZeroClashView onAppliedSchedule={() => setViewTab("week")} />
       ) : (
         /* Empty State */
         <div className="my-schedule-empty-state">
@@ -550,10 +591,19 @@ export function MyScheduleView() {
             <button
               type="button"
               className="btn solid tap btn-lg"
-              onClick={() => setIsImportModalOpen(true)}
+              onClick={() => setViewTab("zeroclash")}
+              style={{ background: "var(--c-accent)", color: "#fff" }}
             >
               <Sparkles size={18} aria-hidden />
-              <span>Import Entire Batch / Section</span>
+              <span>Auto-Build with FORTIS ZeroClash</span>
+            </button>
+            <button
+              type="button"
+              className="btn tap btn-lg"
+              onClick={() => setIsImportModalOpen(true)}
+            >
+              <Calendar size={18} aria-hidden />
+              <span>Import Entire Batch</span>
             </button>
             <button
               type="button"
@@ -566,7 +616,7 @@ export function MyScheduleView() {
           </div>
 
           <p className="fine quiet">
-            💡 Tip: You can import your base section with 1 click, then add repeat subjects or electives from other sections!
+            💡 Tip: Use <strong>FORTIS ZeroClash</strong> to automatically solve timetable clashes when picking repeat courses or electives!
           </p>
         </div>
       )}
