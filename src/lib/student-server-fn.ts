@@ -133,3 +133,29 @@ export const studentSignOutFn = createServerFn({ method: "POST" })
     await clearSessionCookie();
     return { success: true };
   });
+
+const StudentDeleteAccountSchema = z.object({
+  email: z.string().email(),
+});
+
+/**
+ * Server Function: Student Delete Account
+ * Permanently deletes student account from PostgreSQL database, disk backup, and memory
+ */
+export const studentDeleteAccountFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => StudentDeleteAccountSchema.parse(data))
+  .handler(
+    async ({
+      data,
+    }): Promise<{ success: boolean; message?: string; error?: string }> => {
+      try {
+        const { serverStudentDeleteAccount } = await import("./student.server.ts");
+        return await serverStudentDeleteAccount(data.email);
+      } catch (err: any) {
+        return {
+          success: false,
+          error: err?.message || "Failed to delete student account.",
+        };
+      }
+    },
+  );

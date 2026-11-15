@@ -20,6 +20,8 @@ import {
   BookOpen,
   KeyRound,
   Send,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -28,6 +30,7 @@ import {
   getActiveStudentSession,
   setStudentSession,
   clearStudentSession,
+  removeStudentFromVault,
   PROGRAM_MAP,
   type StudentSession,
   type ParsedStudentEmail,
@@ -37,6 +40,8 @@ import {
   studentRequestVerificationCodeFn,
   studentVerifyAndSignUpFn,
   studentUpdateBatchFn,
+  studentDeleteAccountFn,
+  studentSignOutFn,
 } from "@/lib/student-server-fn";
 import { useDesk } from "@/components/timetable/context";
 import { batches } from "@/lib/schedule";
@@ -335,9 +340,31 @@ export function StudentAuthModal({
     }
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleSignOut = () => {
     clearStudentSession();
+    studentSignOutFn().catch(() => {});
     onSessionChange(null);
+    onClose();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!session) return;
+    setIsDeleting(true);
+    setError("");
+    try {
+      await studentDeleteAccountFn({ data: { email: session.profile.email } });
+    } catch (err: any) {
+      console.warn("Server delete warning:", err);
+    }
+    removeStudentFromVault(session.profile.email);
+    clearStudentSession();
+    studentSignOutFn().catch(() => {});
+    onSessionChange(null);
+    setIsDeleting(false);
+    setConfirmDelete(false);
     onClose();
   };
 
@@ -521,6 +548,74 @@ export function StudentAuthModal({
                   <LogOut size={16} aria-hidden />
                   <span>Sign Out of Account</span>
                 </button>
+
+                {/* Permanent Delete Student Account Option */}
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="btn secondary tap"
+                    onClick={() => setConfirmDelete(true)}
+                    style={{
+                      justifyContent: "center",
+                      color: "#dc2626",
+                      borderColor: "color-mix(in srgb, #dc2626 30%, transparent)",
+                      marginTop: 2,
+                      fontSize: "0.82rem",
+                    }}
+                  >
+                    <Trash2 size={15} aria-hidden />
+                    <span>Delete Student Account</span>
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      border: "1px solid rgba(225, 29, 72, 0.4)",
+                      background: "rgba(225, 29, 72, 0.08)",
+                      borderRadius: "0.75rem",
+                      padding: "0.85rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.6rem",
+                      marginTop: 6,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#e11d48", fontWeight: 700, fontSize: "0.85rem" }}>
+                      <AlertTriangle size={18} />
+                      <span>Permanently Delete Student Account?</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--c-muted)", lineHeight: 1.4 }}>
+                      This will permanently remove your student profile, saved section, and login credentials from the server and this device. This action cannot be undone.
+                    </p>
+                    <div style={{ display: "flex", gap: "8px", marginTop: 4 }}>
+                      <button
+                        type="button"
+                        className="btn tap"
+                        onClick={() => setConfirmDelete(false)}
+                        disabled={isDeleting}
+                        style={{ flex: 1, justifyContent: "center", fontSize: "0.8rem" }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="btn solid tap"
+                        onClick={handleDeleteAccount}
+                        disabled={isDeleting}
+                        style={{
+                          flex: 1,
+                          justifyContent: "center",
+                          background: "#dc2626",
+                          borderColor: "#dc2626",
+                          color: "#fff",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

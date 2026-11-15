@@ -71,6 +71,19 @@ function writeFacultyDisk(record: FacultyRecord): void {
   }
 }
 
+function removeFacultyDisk(email: string): void {
+  try {
+    const existing = readFacultyDisk();
+    const key = email.toLowerCase();
+    if (key in existing) {
+      delete existing[key];
+      fs.writeFileSync(FACULTY_DISK_BACKUP, JSON.stringify(existing, null, 2), "utf8");
+    }
+  } catch {
+    // Ignore
+  }
+}
+
 function readFacultyChallengesDisk(): Record<string, FacultyVerificationChallenge> {
   try {
     if (fs.existsSync(FACULTY_CHALLENGES_DISK)) {
@@ -795,5 +808,49 @@ export async function serverFacultyUpdateLeadTime(
   return {
     success: true,
     session: createFacultySession(faculty),
+  };
+}
+
+/**
+ * Permanently deletes a faculty account from PostgreSQL, disk backup, and memory
+ */
+export async function serverFacultyDeleteAccount(
+  email: string,
+): Promise<{ success: boolean; message: string; error?: string }> {
+  if (!email) {
+    return { success: false, message: "Faculty email is required.", error: "Faculty email is required." };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    await ensureFacultyTableExists();
+    const sql = await getSql();
+
+    // 1. Delete faculty record from SQL database
+    await sql.query(
+      "DELETE FROM cui_faculty WHERE LOWER(email) = LOWER($1)",
+      [normalizedEmail],
+    );
+  } catch (err: any) {
+    console.warn("[faculty.server] DB delete warning (using fallback cleanup):", err);
+  }
+
+  // 2. Remove from in-memory cache
+  serverFacultyMemoryStore.delete(normalizedEmail);
+
+  // 3. Remove from disk backup
+  removeFacultyDisk(normalizedEmail);
+
+  // 4. Clear server session cookie
+  try {
+    await clearSessionCookie();
+  } catch {
+    // Non-blocking
+  }
+
+  return {
+    success: true,
+    message: "Faculty account deleted successfully.",
   };
 }

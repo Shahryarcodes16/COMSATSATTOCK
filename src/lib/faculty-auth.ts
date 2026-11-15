@@ -167,3 +167,20 @@ export function getLocalFacultyAccount(email: string): LocalRegisteredFaculty | 
   const vault = getLocalFacultyAccounts();
   return vault[email.trim().toLowerCase()] || null;
 }
+
+/**
+ * Permanently removes a faculty account from this device's local vault
+ */
+export function removeLocalFacultyAccount(email: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const vault = getLocalFacultyAccounts();
+    const key = email.trim().toLowerCase();
+    if (key in vault) {
+      delete vault[key];
+      localStorage.setItem(FACULTY_ACCOUNTS_VAULT_KEY, JSON.stringify(vault));
+    }
+  } catch (err) {
+    console.error("Failed to remove faculty account from local vault", err);
+  }
+}

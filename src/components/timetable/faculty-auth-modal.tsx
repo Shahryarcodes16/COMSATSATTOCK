@@ -8,14 +8,17 @@ import {
   Calendar,
   Building,
   X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getActiveFacultySession,
   clearFacultySession,
+  removeLocalFacultyAccount,
   type FacultySession,
 } from "@/lib/faculty-auth";
 import { useDesk } from "@/components/timetable/context";
-import { facultyUpdateLeadTimeFn } from "@/lib/faculty-server-fn";
+import { facultyUpdateLeadTimeFn, facultyDeleteAccountFn, facultySignOutFn } from "@/lib/faculty-server-fn";
 
 export function FacultyAuthButton({ showLabel = false }: { showLabel?: boolean }) {
   const { setView, view } = useDesk();
@@ -63,8 +66,29 @@ export function FacultyAuthButton({ showLabel = false }: { showLabel?: boolean }
     }
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleSignOut = () => {
     clearFacultySession();
+    facultySignOutFn().catch(() => {});
+    setShowModal(false);
+    setView("today");
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!facultySession) return;
+    setIsDeleting(true);
+    try {
+      await facultyDeleteAccountFn({ data: { email: facultySession.profile.email } });
+    } catch (err) {
+      console.warn("Faculty delete server warning:", err);
+    }
+    removeLocalFacultyAccount(facultySession.profile.email);
+    clearFacultySession();
+    facultySignOutFn().catch(() => {});
+    setIsDeleting(false);
+    setConfirmDelete(false);
     setShowModal(false);
     setView("today");
   };
@@ -187,12 +211,78 @@ export function FacultyAuthButton({ showLabel = false }: { showLabel?: boolean }
               <button
                 type="button"
                 className="btn secondary tap"
-                style={{ justifyContent: "center", color: "#dc2626", borderColor: "color-mix(in srgb, #dc2626 30%, transparent)" }}
+                style={{ justifyContent: "center", color: "var(--c-text)", borderColor: "var(--c-line)" }}
                 onClick={handleSignOut}
               >
                 <LogOut size={16} />
                 <span>Sign Out of Faculty Account</span>
               </button>
+
+              {/* Permanent Delete Faculty Account Option */}
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className="btn secondary tap"
+                  style={{
+                    justifyContent: "center",
+                    color: "#dc2626",
+                    borderColor: "color-mix(in srgb, #dc2626 30%, transparent)",
+                    fontSize: "0.82rem",
+                  }}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 size={15} />
+                  <span>Delete Faculty Account</span>
+                </button>
+              ) : (
+                <div
+                  style={{
+                    border: "1px solid rgba(220, 38, 38, 0.4)",
+                    background: "rgba(220, 38, 38, 0.08)",
+                    borderRadius: "0.75rem",
+                    padding: "0.85rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.6rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#dc2626", fontWeight: 700, fontSize: "0.85rem" }}>
+                    <AlertTriangle size={18} />
+                    <span>Permanently Delete Faculty Account?</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--c-muted)", lineHeight: 1.4 }}>
+                    This will permanently remove your faculty account and login credentials from the server and this device. You will need to verify your university email again to sign up in the future.
+                  </p>
+                  <div style={{ display: "flex", gap: "8px", marginTop: 4 }}>
+                    <button
+                      type="button"
+                      className="btn tap"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={isDeleting}
+                      style={{ flex: 1, justifyContent: "center", fontSize: "0.8rem" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn solid tap"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        background: "#dc2626",
+                        borderColor: "#dc2626",
+                        color: "#fff",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

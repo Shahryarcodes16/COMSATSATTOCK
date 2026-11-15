@@ -129,3 +129,29 @@ export const facultySignOutFn = createServerFn({ method: "POST" })
     await clearSessionCookie();
     return { success: true };
   });
+
+const FacultyDeleteAccountSchema = z.object({
+  email: z.string().email(),
+});
+
+/**
+ * Server Function: Faculty Delete Account
+ * Permanently deletes faculty account from PostgreSQL database, disk backup, and memory
+ */
+export const facultyDeleteAccountFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => FacultyDeleteAccountSchema.parse(data))
+  .handler(
+    async ({
+      data,
+    }): Promise<{ success: boolean; message?: string; error?: string }> => {
+      try {
+        const { serverFacultyDeleteAccount } = await import("./faculty.server.ts");
+        return await serverFacultyDeleteAccount(data.email);
+      } catch (err: any) {
+        return {
+          success: false,
+          error: err?.message || "Failed to delete faculty account.",
+        };
+      }
+    },
+  );

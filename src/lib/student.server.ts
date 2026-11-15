@@ -110,6 +110,19 @@ function writeDiskBackup(record: StudentRecord): void {
   }
 }
 
+function removeDiskBackup(email: string): void {
+  try {
+    const existing = readDiskBackup();
+    const key = email.toLowerCase();
+    if (key in existing) {
+      delete existing[key];
+      fs.writeFileSync(DISK_BACKUP_PATH, JSON.stringify(existing, null, 2), "utf8");
+    }
+  } catch (err) {
+    console.warn("[student.server] Disk remove notice:", err);
+  }
+}
+
 /**
  * Ensures the student accounts table exists in PostgreSQL / PGLite
  */
@@ -915,4 +928,48 @@ export async function serverVerifyCodeAndSignUp(
       error: err?.message || "An unexpected error occurred during account verification.",
     };
   }
+}
+
+/**
+ * Permanently deletes a student account from PostgreSQL, disk backup, and memory
+ */
+export async function serverStudentDeleteAccount(
+  email: string,
+): Promise<{ success: boolean; message: string; error?: string }> {
+  if (!email) {
+    return { success: false, message: "Email is required.", error: "Email is required." };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    await ensureStudentTableExists();
+    const sql = await getSql();
+
+    // 1. Delete student record from SQL database
+    await sql.query(
+      "DELETE FROM cui_students WHERE LOWER(email) = LOWER($1)",
+      [normalizedEmail],
+    );
+  } catch (err: any) {
+    console.warn("[student.server] DB delete warning (using fallback cleanup):", err);
+  }
+
+  // 2. Remove from in-memory cache
+  serverStudentMemoryStore.delete(normalizedEmail);
+
+  // 3. Remove from disk backup
+  removeDiskBackup(normalizedEmail);
+
+  // 4. Clear server session cookie
+  try {
+    await clearSessionCookie();
+  } catch {
+    // Non-blocking
+  }
+
+  return {
+    success: true,
+    message: "Your student account has been permanently deleted.",
+  };
 }

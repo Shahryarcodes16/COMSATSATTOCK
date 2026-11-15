@@ -280,6 +280,23 @@ export function getLocalRegisteredAccount(email: string): LocalRegisteredStudent
 }
 
 /**
+ * Permanently removes a student account from this device's local vault
+ */
+export function removeStudentFromVault(email: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const vault = getLocalRegisteredAccounts();
+    const key = email.trim().toLowerCase();
+    if (key in vault) {
+      delete vault[key];
+      localStorage.setItem(STUDENT_ACCOUNTS_VAULT_KEY, JSON.stringify(vault));
+    }
+  } catch (err) {
+    console.error("Failed to remove student account from local vault", err);
+  }
+}
+
+/**
  * Verifies password on client using Web Crypto API PBKDF2/SHA-512
  * Exactly identical to Node.js crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512')
  */
