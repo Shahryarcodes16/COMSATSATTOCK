@@ -493,9 +493,6 @@ export function StudentGateway({
                   COMSATS UNIVERSITY ISLAMABAD
                   <span className="student-gateway-campus-tag">ATTOCK CAMPUS</span>
                 </span>
-                <div style={{ fontSize: "0.75rem", color: "var(--muted, #64748b)", fontWeight: 600, letterSpacing: "0.04em", marginTop: "0.15rem" }}>
-                  DEPARTMENT OF COMPUTER SCIENCE & ACADEMICS
-                </div>
               </div>
             </div>
 
