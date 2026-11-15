@@ -8,6 +8,7 @@ import {
   Clock,
   DoorOpen,
   GraduationCap,
+  Info,
   Lock,
   Mail,
   Megaphone,
@@ -133,6 +134,7 @@ const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "faculty", label: "Faculty", icon: GraduationCap },
   { id: "batches", label: "Batches", icon: Users },
   { id: "find", label: "Search", icon: Search },
+  { id: "about" as View, label: "About & Support", icon: Info },
 ];
 
 // Mobile dock shows primary schedule & campus views with clean single-line labels
@@ -145,21 +147,27 @@ const MOBILE_NAV: { id: View; label: string; icon: typeof Clock }[] = [
 ];
 
 export function Brand() {
-  const { setView } = useDesk();
+  const { setView, view, goBack } = useDesk();
+  const isAbout = view === "about";
+
   return (
     <div
-      className="brand tap"
-      onClick={() => setView("today")}
-      aria-label={APP_NAME}
+      className={`brand tap ${isAbout ? "brand-active" : ""}`}
+      onClick={() => (isAbout ? goBack("today") : setView("about"))}
+      aria-label="About FORTIS & Support"
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          setView("today");
+          if (isAbout) {
+            goBack("today");
+          } else {
+            setView("about");
+          }
         }
       }}
-      title="FORTIS: Faculty · Office Hours · Room Radar · Timetable · Instant Alerts · Schedule"
+      title="About FORTIS & Support — Muhammad Shahryar (FA23-BCS-014)"
     >
       <img className="crest fortis-crest" src={crest} alt="FORTIS — CUI Attock App" />
       <div className="brand-copy">
@@ -212,6 +220,7 @@ export function Sidebar() {
       { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
       { id: "custom" as View, label: "My Schedule", icon: CalendarCheck },
       { id: "find" as View, label: "Search", icon: Search },
+      { id: "about" as View, label: "About & Support", icon: Info },
     ];
     if (datesheetActive) {
       desktopNav.splice(2, 0, { id: "datesheet" as View, label: "Date Sheet", icon: CalendarDays });
@@ -411,6 +420,22 @@ export function Topbar() {
         {/* Class Reminders */}
         <NotificationBellButton />
 
+        {/* About & Support Portal */}
+        <button
+          type="button"
+          className={`icon-btn tap about-topbar-btn ${view === "about" ? "on" : ""}`}
+          aria-label={view === "about" ? "Close About & Support" : "About FORTIS & Support"}
+          aria-current={view === "about" ? "page" : undefined}
+          onClick={() => (view === "about" ? goBack("today") : setView("about"))}
+          title={view === "about" ? "Close About & Support" : "About FORTIS & Developer Support (Muhammad Shahryar)"}
+        >
+          {view === "about" ? (
+            <X size={18} strokeWidth={2} aria-hidden />
+          ) : (
+            <Info size={18} strokeWidth={1.8} aria-hidden />
+          )}
+        </button>
+
         {/* Theme toggle: Paper (Light) -> Ink (Slate Dark) -> Midnight (OLED Pitch Black) */}
         <button
           type="button"
@@ -454,10 +479,40 @@ export function CampusFooter() {
   return (
     <footer className="campus-footer">
       <div>
-        <p>Developed by {DEVELOPER_NAME}</p>
-        <p className="fine">Attock Campus · {CAMPUS_TIME_LABEL}</p>
+        <p>
+          FORTIS · Developed by{" "}
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setView("about")}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              font: "inherit",
+              fontWeight: 700,
+              color: "var(--c-accent)",
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+            title="About Developer & Support"
+          >
+            Muhammad Shahryar
+          </button>{" "}
+          (FA23-BCS-014)
+        </p>
+        <p className="fine">COMSATS Attock Campus · © Muhammad Shahryar. All rights reserved.</p>
       </div>
       <div className="campus-footer-contacts">
+        <button
+          type="button"
+          className={`btn tap ${view === "about" ? "solid" : ""}`}
+          onClick={() => setView("about")}
+          title="About FORTIS & Developer Support"
+        >
+          <Info size={15} aria-hidden />
+          <span>About &amp; Support</span>
+        </button>
         <button
           type="button"
           className={`btn tap campus-footer-admin-btn ${view === "admin" ? "solid" : ""}`}
@@ -465,23 +520,23 @@ export function CampusFooter() {
           title="Campus Administrator Control Center"
         >
           <Lock size={15} aria-hidden />
-          <span>Admin Portal</span>
+          <span>Admin</span>
         </button>
         <a
           className="btn tap"
           href={DEVELOPER_EMAIL_HREF}
-          aria-label={`Email developer ${DEVELOPER_NAME} at ${DEVELOPER_EMAIL}`}
+          aria-label={`Email developer Muhammad Shahryar at ${DEVELOPER_EMAIL}`}
         >
           <Mail size={16} aria-hidden />
-          {DEVELOPER_EMAIL}
+          <span>Email</span>
         </a>
         <a
           className="btn tap"
           href={DEVELOPER_PHONE_HREF}
-          aria-label={`Call developer ${DEVELOPER_NAME} at ${DEVELOPER_PHONE}`}
+          aria-label={`Call developer Muhammad Shahryar at ${DEVELOPER_PHONE}`}
         >
           <Phone size={16} aria-hidden />
-          {DEVELOPER_PHONE}
+          <span>Call</span>
         </a>
       </div>
     </footer>

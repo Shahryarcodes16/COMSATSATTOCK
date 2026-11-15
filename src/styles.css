@@ -11298,3 +11298,529 @@ article.mini.makeup-class .mini-label > span:first-child {
     padding: 0.95rem 1rem;
   }
 }
+
+/* ============================================================== */
+/* --- About FORTIS & Developer Support Page (Muhammad Shahryar) --- */
+/* ============================================================== */
+.about-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding-bottom: 3.5rem;
+  gap: 1.5rem;
+}
+
+.about-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.about-pill-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 28%, transparent);
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+}
+
+.about-hero-card {
+  padding: 1.75rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c-accent) 8%, var(--c-paper)), var(--c-paper));
+  border: 1px solid var(--c-line);
+  position: relative;
+  overflow: hidden;
+}
+
+.about-hero-card::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 180px;
+  height: 180px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.about-hero-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.about-hero-crest {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1.15rem;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--c-accent) 35%, transparent);
+}
+
+.about-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.about-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.about-brand-title {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--c-ink);
+}
+
+.about-badge-campus {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: var(--c-brass, #d97706);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.about-hero-tagline {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--c-muted);
+}
+
+.about-acronym-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.acronym-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--r-sm);
+  background: var(--c-canvas);
+  border: 1px solid var(--c-line);
+  color: var(--c-muted);
+}
+
+.acronym-chip b {
+  color: var(--c-accent);
+  font-weight: 800;
+}
+
+/* Developer Profile Card */
+.developer-profile-card {
+  padding: 1.75rem;
+  border: 1px solid var(--c-line);
+  background: var(--c-paper);
+}
+
+.developer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.35rem;
+}
+
+.developer-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.developer-avatar {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 1.15rem;
+  background: linear-gradient(135deg, var(--c-accent), #0284c7);
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(8, 127, 121, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.developer-verified-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--c-paper);
+  border-radius: 9999px;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.developer-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.developer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.2rem;
+}
+
+.developer-name-row h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--c-ink);
+}
+
+.developer-role-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  color: var(--c-accent);
+}
+
+.developer-sub {
+  margin: 0 0 0.15rem;
+  font-size: 0.88rem;
+  color: var(--c-muted);
+}
+
+.developer-institution {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--c-muted);
+  font-weight: 500;
+}
+
+.developer-mission-box {
+  background: color-mix(in srgb, var(--c-accent) 6%, var(--c-canvas));
+  border-left: 4px solid var(--c-accent);
+  padding: 1.15rem 1.35rem;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  margin-bottom: 1.5rem;
+}
+
+.mission-quote {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--c-ink);
+  font-style: italic;
+}
+
+.mission-author {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--c-accent);
+}
+
+/* Contact & Action Cards Grid */
+.developer-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.dev-action-card {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  padding: 1rem 1.15rem;
+  background: var(--c-canvas);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.dev-action-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--c-accent);
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.12);
+}
+
+.action-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.whatsapp-icon {
+  background: rgba(37, 211, 102, 0.12);
+  color: #25d366;
+}
+
+.email-icon {
+  background: rgba(234, 67, 53, 0.12);
+  color: #ea4335;
+}
+
+.instagram-icon {
+  background: rgba(225, 48, 108, 0.12);
+  color: #e1306c;
+}
+
+.action-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.action-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-muted);
+}
+
+.action-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--c-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-sub {
+  font-size: 0.74rem;
+  color: var(--c-muted);
+}
+
+.action-arrow {
+  color: var(--c-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.dev-action-card:hover .action-arrow {
+  transform: translateX(3px) translateY(-3px);
+  color: var(--c-accent);
+}
+
+.copy-helper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--c-line);
+}
+
+.copy-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+/* Features Grid */
+.about-features-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.feature-card {
+  padding: 1.25rem;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--c-accent);
+}
+
+.feature-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feature-icon-wrap {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  color: var(--c-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-acro-badge {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--c-accent);
+  background: var(--c-canvas);
+  border: 1px solid var(--c-line);
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.feature-card p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Support Banner Card */
+.support-banner-card {
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  background: color-mix(in srgb, var(--c-accent) 6%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
+}
+
+.support-banner-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.support-banner-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.support-banner-info h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.support-banner-info p {
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.support-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+/* About Footer Panel */
+.about-footer-panel {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  border-top: 1px solid var(--c-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.copyright-line {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--c-ink);
+}
+
+@media (max-width: 640px) {
+  .about-hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .about-hero-crest {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .about-brand-title {
+    font-size: 1.8rem;
+  }
+
+  .developer-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.85rem;
+  }
+
+  .developer-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .support-banner-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

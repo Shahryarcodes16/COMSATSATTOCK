@@ -11,8 +11,14 @@ export const APP_ACRONYM_ITEMS = [
 ];
 export const CAMPUS_TIME_ZONE = "Asia/Karachi";
 export const CAMPUS_TIME_LABEL = "Islamabad time (PKT · UTC+5)";
-export const DEVELOPER_NAME = "Shahryar";
+export const DEVELOPER_NAME = "Muhammad Shahryar";
+export const DEVELOPER_REG_NO = "FA23-BCS-014";
 export const DEVELOPER_EMAIL = "fa23-bcs-014@cuiatk.edu.pk";
 export const DEVELOPER_EMAIL_HREF = "mailto:fa23-bcs-014@cuiatk.edu.pk";
 export const DEVELOPER_PHONE = "03124855645";
 export const DEVELOPER_PHONE_HREF = "tel:+923124855645";
+export const DEVELOPER_WHATSAPP = "03124855645";
+export const DEVELOPER_WHATSAPP_HREF = "https://wa.me/923124855645";
+export const DEVELOPER_INSTAGRAM = "Shahryar.sherri";
+export const DEVELOPER_INSTAGRAM_URL = "https://www.instagram.com/shahryar.sherri/";
+export const DEVELOPER_COPYRIGHT = "© Muhammad Shahryar. All rights reserved.";

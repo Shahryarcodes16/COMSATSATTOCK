@@ -18,6 +18,7 @@ import { DetailSheet } from "@/components/timetable/sheet";
 import { useClassNotificationScheduler } from "@/components/timetable/notification-modal";
 import { StudentGateway } from "@/components/timetable/student-gateway";
 import { FacultyWorkspaceView } from "@/components/timetable/faculty-workspace-view";
+import { AboutSupportView } from "@/components/timetable/about-support-view";
 import { getActiveStudentSession, type StudentSession } from "@/lib/student";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 
@@ -128,6 +129,9 @@ function Frame() {
             </div>
             <div hidden={view !== "notices"}>
               <TeacherMessagesView />
+            </div>
+            <div hidden={view !== "about"}>
+              <AboutSupportView />
             </div>
           </main>
           <CampusFooter />

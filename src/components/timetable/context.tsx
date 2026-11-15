@@ -33,7 +33,8 @@ export type View =
   | "pulse"
   | "notices"
   | "cancel-class"
-  | "makeup-class";
+  | "makeup-class"
+  | "about";
 export type ThemeName = "paper" | "ink" | "midnight";
 
 export type Detail =
