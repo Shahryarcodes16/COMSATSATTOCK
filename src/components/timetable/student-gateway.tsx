@@ -17,6 +17,11 @@ import {
   Clock,
   Building2,
   Users,
+  Zap,
+  Megaphone,
+  Bell,
+  Star,
+  Compass,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -62,7 +67,7 @@ export function StudentGateway({
   const [portalType, setPortalType] = useState<"student" | "faculty">("student");
 
   // Student mode
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
+  const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [signupStage, setSignupStage] = useState<"details" | "verify">("details");
   const [verificationCode, setVerificationCode] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -78,7 +83,7 @@ export function StudentGateway({
   const [showPassword, setShowPassword] = useState(false);
 
   // Faculty mode
-  const [facultyMode, setFacultyMode] = useState<"signup" | "signin">("signup");
+  const [facultyMode, setFacultyMode] = useState<"signup" | "signin">("signin");
   const [facultyStage, setFacultyStage] = useState<"details" | "verify">("details");
   const [facultyEmail, setFacultyEmail] = useState("");
   const [facultyName, setFacultyName] = useState("");
@@ -212,6 +217,27 @@ export function StudentGateway({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleContinueAsGuest = () => {
+    const guestSession: StudentSession = {
+      profile: {
+        id: "guest",
+        email: "guest@cuiatk.edu.pk",
+        fullName: "Campus Guest",
+        session: "FA",
+        year: "23",
+        programCode: "bcs",
+        rollNumber: "guest",
+        defaultBatch: null,
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      },
+      token: "guest-token",
+      signedInAt: new Date().toISOString(),
+    };
+    setStudentSession(guestSession, false);
+    onAuthenticated(guestSession);
   };
 
   const handleRequestVerificationCode = async (e: React.FormEvent) => {
@@ -480,101 +506,166 @@ export function StudentGateway({
   return (
     <div className="student-gateway-screen">
       <div className="student-gateway-container">
-        {/* Branding Hero */}
-        <div className="student-gateway-brand">
-          <img className="student-gateway-crest" src={crest} alt="COMSATS Attock Crest" />
-          <div className="student-gateway-titles">
-            <span className="student-gateway-sub">COMSATS UNIVERSITY ISLAMABAD • ATTOCK CAMPUS</span>
-            <h1>Campus Timetable & Examination Portal</h1>
-            <p className="student-gateway-desc">
-              Please sign up with your official university email to unlock your personalized lecture schedule, room radar, and midterm datesheet.
-            </p>
+        {/* Left Column: Branding Hero & 6 Core Features Showcase */}
+        <div className="student-gateway-hero">
+          <div className="student-gateway-brand">
+            <div className="student-gateway-crest-wrap">
+              <img className="student-gateway-crest" src={crest} alt="COMSATS Attock Crest" />
+              <div>
+                <span className="student-gateway-sub">
+                  COMSATS UNIVERSITY ISLAMABAD
+                  <span className="student-gateway-campus-tag">ATTOCK CAMPUS</span>
+                </span>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted, #64748b)", fontWeight: 600, letterSpacing: "0.04em", marginTop: "0.15rem" }}>
+                  DEPARTMENT OF COMPUTER SCIENCE & ACADEMICS
+                </div>
+              </div>
+            </div>
+
+            <div className="student-gateway-titles">
+              <h1>FORTIS</h1>
+              <p className="student-gateway-tagline">Smart Campus Timetable & Academic Companion</p>
+              <p className="student-gateway-desc">
+                The official timetable network for COMSATS University Islamabad, Attock Campus. Real-time class schedules, live room radar, teacher broadcasts, and collision-free makeup coordination in one unified system.
+              </p>
+            </div>
+          </div>
+
+          {/* Core Features Showcase Grid */}
+          <div className="gateway-features-grid">
+            <div className="gateway-feature-card">
+              <div className="gateway-feature-icon">
+                <Clock size={20} />
+              </div>
+              <div className="gateway-feature-text">
+                <span className="gateway-feature-title">Smart Timetables</span>
+                <span className="gateway-feature-desc">Live section & faculty schedules with real-time lecture counters.</span>
+              </div>
+            </div>
+
+            <div className="gateway-feature-card">
+              <div className="gateway-feature-icon">
+                <Building2 size={20} />
+              </div>
+              <div className="gateway-feature-text">
+                <span className="gateway-feature-title">Free Room Radar</span>
+                <span className="gateway-feature-desc">Scan empty lecture halls & labs instantly across campus.</span>
+              </div>
+            </div>
+
+            <div className="gateway-feature-card">
+              <div className="gateway-feature-icon">
+                <Megaphone size={20} />
+              </div>
+              <div className="gateway-feature-text">
+                <span className="gateway-feature-title">Teacher Broadcasts</span>
+                <span className="gateway-feature-desc">Direct alerts on cancelled classes, room shifts & updates.</span>
+              </div>
+            </div>
+
+            <div className="gateway-feature-card">
+              <div className="gateway-feature-icon">
+                <Zap size={20} />
+              </div>
+              <div className="gateway-feature-text">
+                <span className="gateway-feature-title">Makeup & Reschedule</span>
+                <span className="gateway-feature-desc">Find clash-free mutual free slots for batches & rooms.</span>
+              </div>
+            </div>
+
+            <div className="gateway-feature-card">
+              <div className="gateway-feature-icon">
+                <Bell size={20} />
+              </div>
+              <div className="gateway-feature-text">
+                <span className="gateway-feature-title">Lecture Reminders</span>
+                <span className="gateway-feature-desc">Automated alerts 15 minutes before class with venue numbers.</span>
+              </div>
+            </div>
+
+            <div className="gateway-feature-card">
+              <div className="gateway-feature-icon">
+                <GraduationCap size={20} />
+              </div>
+              <div className="gateway-feature-text">
+                <span className="gateway-feature-title">Faculty Teaching Desk</span>
+                <span className="gateway-feature-desc">Dedicated portal for faculty schedule management & notices.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Developer attribution note */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", fontSize: "0.8rem", color: "var(--muted, #64748b)" }}>
+            <Star size={14} color="#f59e0b" fill="#f59e0b" />
+            <span>Developed for CUI Attock Campus by <strong>Muhammad Shahryar</strong> (FA23-BCS-014)</span>
           </div>
         </div>
 
-        {/* Feature Highlights Pills */}
-        <div className="student-gateway-perks">
-          <div className="perk-pill">
-            <Clock size={16} color="#087f79" />
-            <span>Real-Time Lectures</span>
-          </div>
-          <div className="perk-pill">
-            <CalendarDays size={16} color="#087f79" />
-            <span>Midterm Datesheet</span>
-          </div>
-          <div className="perk-pill">
-            <Building2 size={16} color="#087f79" />
-            <span>Free Room Radar</span>
-          </div>
-          <div className="perk-pill">
-            <Users size={16} color="#087f79" />
-            <span>Faculty Directory</span>
-          </div>
-        </div>
-
-        {/* Role Switcher: Student vs Faculty */}
-        <div className="gateway-role-switcher" role="tablist" aria-label="Portal Selection">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={portalType === "student"}
-            className={`role-switcher-btn ${portalType === "student" ? "active" : ""}`}
-            onClick={() => {
-              setPortalType("student");
-              setError("");
-              setSuccessMsg("");
-            }}
-          >
-            <User size={16} />
-            <span>Student Portal</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={portalType === "faculty"}
-            className={`role-switcher-btn ${portalType === "faculty" ? "active" : ""}`}
-            onClick={() => {
-              setPortalType("faculty");
-              setError("");
-              setSuccessMsg("");
-            }}
-          >
-            <GraduationCap size={16} />
-            <span>Faculty Portal</span>
-          </button>
-        </div>
-
-        {/* Auth Card */}
-        <div className="student-gateway-card">
-          {portalType === "student" ? (
-            <>
-              {/* Tabs */}
-          <div className="student-gateway-tabs">
+        {/* Right Column: Portal Switcher & Auth Card */}
+        <div className="student-gateway-auth-wrap">
+          {/* Role Switcher: Student vs Faculty */}
+          <div className="gateway-role-switcher" role="tablist" aria-label="Portal Selection">
             <button
               type="button"
-              className={`gateway-tab-btn ${mode === "signup" ? "active" : ""}`}
+              role="tab"
+              aria-selected={portalType === "student"}
+              className={`role-switcher-btn ${portalType === "student" ? "active" : ""}`}
               onClick={() => {
-                setMode("signup");
+                setPortalType("student");
                 setError("");
                 setSuccessMsg("");
               }}
             >
-              <Sparkles size={16} />
-              <span>Create Student Account</span>
+              <User size={16} />
+              <span>Student Portal</span>
             </button>
             <button
               type="button"
-              className={`gateway-tab-btn ${mode === "signin" ? "active" : ""}`}
+              role="tab"
+              aria-selected={portalType === "faculty"}
+              className={`role-switcher-btn ${portalType === "faculty" ? "active" : ""}`}
               onClick={() => {
-                setMode("signin");
+                setPortalType("faculty");
                 setError("");
                 setSuccessMsg("");
               }}
             >
-              <ShieldCheck size={16} />
-              <span>Student Sign In</span>
+              <GraduationCap size={16} />
+              <span>Faculty Portal</span>
             </button>
           </div>
+
+          {/* Auth Card */}
+          <div className="student-gateway-card">
+            {portalType === "student" ? (
+              <>
+                {/* Tabs: Sign In first, Create Account second */}
+                <div className="student-gateway-tabs">
+                  <button
+                    type="button"
+                    className={`gateway-tab-btn ${mode === "signin" ? "active" : ""}`}
+                    onClick={() => {
+                      setMode("signin");
+                      setError("");
+                      setSuccessMsg("");
+                    }}
+                  >
+                    <ShieldCheck size={16} />
+                    <span>Student Sign In</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`gateway-tab-btn ${mode === "signup" ? "active" : ""}`}
+                    onClick={() => {
+                      setMode("signup");
+                      setError("");
+                      setSuccessMsg("");
+                    }}
+                  >
+                    <Sparkles size={16} />
+                    <span>Create Account</span>
+                  </button>
+                </div>
 
           {/* Feedback Banners */}
           {error && (
@@ -953,20 +1044,8 @@ export function StudentGateway({
       ) : (
         /* =================== FACULTY PORTAL =================== */
         <>
-          {/* Faculty Tabs */}
+          {/* Faculty Tabs: Sign In first, Register second */}
           <div className="student-gateway-tabs">
-            <button
-              type="button"
-              className={`gateway-tab-btn ${facultyMode === "signup" ? "active" : ""}`}
-              onClick={() => {
-                setFacultyMode("signup");
-                setError("");
-                setSuccessMsg("");
-              }}
-            >
-              <Sparkles size={16} />
-              <span>Create Faculty Account</span>
-            </button>
             <button
               type="button"
               className={`gateway-tab-btn ${facultyMode === "signin" ? "active" : ""}`}
@@ -978,6 +1057,18 @@ export function StudentGateway({
             >
               <ShieldCheck size={16} />
               <span>Faculty Sign In</span>
+            </button>
+            <button
+              type="button"
+              className={`gateway-tab-btn ${facultyMode === "signup" ? "active" : ""}`}
+              onClick={() => {
+                setFacultyMode("signup");
+                setError("");
+                setSuccessMsg("");
+              }}
+            >
+              <Sparkles size={16} />
+              <span>Register Faculty</span>
             </button>
           </div>
 
@@ -1406,6 +1497,22 @@ export function StudentGateway({
         </>
       )}
 
+          {/* Guest Explorer Access Button */}
+          <div style={{ padding: "0.25rem 1.5rem 1.25rem", borderTop: "1px dashed var(--c-line)", marginTop: "0.75rem" }}>
+            <button
+              type="button"
+              className="gateway-guest-btn tap"
+              onClick={handleContinueAsGuest}
+              title="Quick view without signing in"
+            >
+              <Compass size={17} />
+              <span>Explore Timetable as Guest →</span>
+            </button>
+            <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--muted, #64748b)", margin: "0.4rem 0 0" }}>
+              Instant view of public batch timetables, teacher schedules & room radar
+            </p>
+          </div>
+
           {/* Admin Portal Switcher */}
           <div className="student-gateway-footer">
             <button
@@ -1420,5 +1527,6 @@ export function StudentGateway({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -6522,78 +6522,193 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1rem;
-  background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--c-accent) 8%, var(--c-canvas)), var(--c-canvas));
+  padding: 2.5rem 1.25rem;
+  background: radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--c-accent) 12%, var(--c-canvas)), var(--c-canvas));
+  box-sizing: border-box;
 }
 
 .student-gateway-container {
   width: 100%;
-  max-width: 580px;
+  max-width: 1080px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.25rem;
+  align-items: center;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .student-gateway-container {
+    grid-template-columns: 1.15fr 1fr;
+    gap: 3.5rem;
+    align-items: flex-start;
+    padding: 1.5rem 0;
+  }
+}
+
+.student-gateway-hero {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
+  align-items: flex-start;
+  text-align: left;
+  gap: 1.25rem;
+}
+
+@media (max-width: 899px) {
+  .student-gateway-hero {
+    align-items: center;
+    text-align: center;
+  }
 }
 
 .student-gateway-brand {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+@media (max-width: 899px) {
+  .student-gateway-brand {
+    align-items: center;
+  }
+}
+
+.student-gateway-crest-wrap {
+  display: flex;
   align-items: center;
-  text-align: center;
   gap: 0.85rem;
 }
 
 .student-gateway-crest {
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.14));
 }
 
 .student-gateway-titles h1 {
-  margin: 0.25rem 0 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  margin: 0.35rem 0 0.25rem;
+  font-size: 2.35rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
   color: var(--c-ink);
+  line-height: 1.1;
 }
 
 .student-gateway-sub {
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-weight: 800;
+  letter-spacing: 0.14em;
   color: var(--c-accent);
-  display: block;
+  display: inline-block;
+  text-transform: uppercase;
+}
+
+.student-gateway-campus-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  background: var(--c-accent);
+  padding: 0.12rem 0.45rem;
+  border-radius: 9999px;
+  display: inline-block;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.student-gateway-auth-wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.student-gateway-tagline {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--c-accent);
+  letter-spacing: -0.01em;
 }
 
 .student-gateway-desc {
-  margin: 0 auto;
-  max-width: 460px;
-  font-size: 0.88rem;
+  margin: 0;
+  max-width: 520px;
+  font-size: 0.92rem;
   color: var(--muted, #64748b);
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
-.student-gateway-perks {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem;
+/* Core Features Showcase Grid */
+.gateway-features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
   width: 100%;
+  margin-top: 0.5rem;
 }
 
-.perk-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
+@media (max-width: 520px) {
+  .gateway-features-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+}
+
+.gateway-feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 0.95rem;
   background: color-mix(in srgb, var(--c-paper) 75%, transparent);
-  border: 1px solid var(--c-line);
-  border-radius: 9999px;
-  font-size: 0.78rem;
-  font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--c-accent) 15%, var(--c-line));
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gateway-feature-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--c-accent);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+}
+
+.gateway-feature-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  color: var(--c-accent);
+}
+
+.gateway-feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  text-align: left;
+}
+
+.gateway-feature-title {
+  font-size: 0.84rem;
+  font-weight: 700;
   color: var(--c-ink);
-  backdrop-filter: blur(8px);
+  letter-spacing: -0.01em;
+}
+
+.gateway-feature-desc {
+  font-size: 0.75rem;
+  color: var(--muted, #64748b);
+  line-height: 1.35;
+  margin: 0;
 }
 
 .student-gateway-card {
@@ -6605,6 +6720,31 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.gateway-guest-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md, 0.75rem);
+  border: 1px dashed color-mix(in srgb, var(--c-accent) 45%, var(--c-line));
+  background: color-mix(in srgb, var(--c-accent) 6%, transparent);
+  color: var(--c-accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 0.65rem;
+}
+
+.gateway-guest-btn:hover {
+  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  border-style: solid;
+  border-color: var(--c-accent);
+  transform: translateY(-1px);
 }
 
 .student-gateway-tabs {
