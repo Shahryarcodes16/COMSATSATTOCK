@@ -15,6 +15,9 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       { name: "application-name", content: "FORTIS" },
       { name: "apple-mobile-web-app-title", content: "FORTIS" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "mobile-web-app-capable", content: "yes" },
       {
         name: "description",
         content:
@@ -33,7 +36,10 @@ export const Route = createRootRoute({
       },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/crest.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+      { rel: "apple-touch-icon", sizes: "192x192", href: "/pwa-192x192.png" },
+      { rel: "apple-touch-icon", sizes: "512x512", href: "/pwa-512x512.png" },
     ],
     scripts: [{ children: THEME_BOOT }, { children: PRELOAD_RECOVERY }],
   }),

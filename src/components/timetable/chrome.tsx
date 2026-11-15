@@ -35,6 +35,7 @@ import { DAY_SHORT, DAYS, SLOTS, greeting, rangeLabel, timeLabel, type ClockInfo
 import { isDatesheetActive } from "@/lib/datesheet";
 import { useDesk, type View } from "@/components/timetable/context";
 import { NotificationBellButton } from "@/components/timetable/notification-modal";
+import { PwaInstallTopbarButton } from "@/components/timetable/pwa-offline-engine";
 import { StudentAuthButton } from "@/components/timetable/student-auth-modal";
 import { FacultyAuthButton } from "@/components/timetable/faculty-auth-modal";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
@@ -416,6 +417,9 @@ export function Topbar() {
           )}
           {view !== "notices" && messageCount > 0 && <span className="notices-badge-count">{messageCount}</span>}
         </button>
+
+        {/* PWA 1-Tap Native Install Button */}
+        <PwaInstallTopbarButton />
 
         {/* Class Reminders */}
         <NotificationBellButton />

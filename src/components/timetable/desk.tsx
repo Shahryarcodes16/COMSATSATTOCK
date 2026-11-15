@@ -19,12 +19,14 @@ import { useClassNotificationScheduler } from "@/components/timetable/notificati
 import { StudentGateway } from "@/components/timetable/student-gateway";
 import { FacultyWorkspaceView } from "@/components/timetable/faculty-workspace-view";
 import { AboutSupportView } from "@/components/timetable/about-support-view";
+import { PwaOfflineEngine } from "@/components/timetable/pwa-offline-engine";
 import { getActiveStudentSession, type StudentSession } from "@/lib/student";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
 
 export function Desk() {
   return (
     <DeskProvider>
+      <PwaOfflineEngine />
       <Frame />
     </DeskProvider>
   );

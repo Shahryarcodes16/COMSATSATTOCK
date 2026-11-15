@@ -1,23 +1,31 @@
 {
   "name": "FORTIS — CUI Attock App",
   "short_name": "FORTIS",
-  "description": "FORTIS: Faculty directory, Office hours, Room radar, Timetable, Instant alerts, Schedule of exams",
+  "description": "Smart Timetable, Free Room Radar, Teacher Messages & Academic Companion for COMSATS University Islamabad, Attock Campus.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#132e3d",
   "theme_color": "#087f79",
+  "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "/__grok/icon-180.png",
+      "src": "/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/crest.png",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -25,7 +33,30 @@
       "src": "/crest.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today's Schedule",
+      "short_name": "Today",
+      "description": "View today's lectures",
+      "url": "/?view=today",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Free Room Radar",
+      "short_name": "Rooms",
+      "description": "Find empty classrooms and labs",
+      "url": "/?view=rooms",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Teacher Messages",
+      "short_name": "Notices",
+      "description": "Cancelled and makeup classes",
+      "url": "/?view=notices",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     }
   ]
 }
