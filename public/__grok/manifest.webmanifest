@@ -1,7 +1,7 @@
 {
-  "name": "CUI Attock Campus Timetable",
-  "short_name": "CUI Attock",
-  "description": "COMSATS University Islamabad, Attock Campus Timetable and Faculty Directory",
+  "name": "FORTIS — CUI Attock App",
+  "short_name": "FORTIS",
+  "description": "FORTIS: Faculty directory, Office hours, Room radar, Timetable, Instant alerts, Schedule of exams",
   "id": "/",
   "start_url": "/",
   "scope": "/",

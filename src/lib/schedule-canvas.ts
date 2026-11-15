@@ -365,7 +365,7 @@ export async function renderScheduleToCanvas(
     ctx.fillStyle = textSecondary;
     ctx.font = "18px system-ui, -apple-system, sans-serif";
     ctx.fillText(
-      "Generated with CUI Attock Campus Timetable · Developer: Shahryar",
+      "Generated with FORTIS · CUI Attock App · Developer: Shahryar",
       width / 2,
       height - 45,
     );
@@ -401,7 +401,7 @@ export async function renderScheduleToCanvas(
     ctx.font = "15px system-ui, -apple-system, sans-serif";
     ctx.textAlign = "right";
     ctx.fillText(subtitle || "Timetable from 5 Oct 2026", width - 60, y + 42);
-    ctx.fillText("Created with CUI Attock App", width - 60, y + 72);
+    ctx.fillText("Created with FORTIS · CUI Attock App", width - 60, y + 72);
     ctx.textAlign = "left";
 
     // Grid Layout (5 columns for Mon..Fri, 5 rows for Slots)

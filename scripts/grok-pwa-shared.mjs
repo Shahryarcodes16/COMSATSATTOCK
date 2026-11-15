@@ -6,8 +6,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const DEFAULT_APP_NAME = "CUI Attock Campus Timetable";
-export const DEFAULT_SHORT_NAME = "CUI Attock";
+export const DEFAULT_APP_NAME = "FORTIS — CUI Attock App";
+export const DEFAULT_SHORT_NAME = "FORTIS";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
 export const OG_SITE_REL_PATH = "src/lib/og/site.json";
 

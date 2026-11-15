@@ -13,12 +13,12 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: APP_NAME },
-      { name: "application-name", content: "CUI Attock" },
-      { name: "apple-mobile-web-app-title", content: APP_NAME },
+      { name: "application-name", content: "FORTIS" },
+      { name: "apple-mobile-web-app-title", content: "FORTIS" },
       {
         name: "description",
         content:
-          "COMSATS University Islamabad, Attock Campus timetable from 5 October 2026. Free rooms, free faculty, and batch schedules.",
+          "FORTIS: Faculty directory, Office hours, Room radar, Timetable, Instant alerts, Schedule of exams for COMSATS University Islamabad, Attock Campus.",
       },
       { name: "theme-color", content: "#087f79" },
     ],

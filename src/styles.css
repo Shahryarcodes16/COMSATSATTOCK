@@ -148,10 +148,73 @@
     width: 3rem;
     height: 3rem;
     flex: none;
-    border-radius: 999px;
-    background: #fff;
+    border-radius: 0.75rem;
+    background: transparent;
     object-fit: cover;
-    box-shadow: var(--shadow);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  }
+
+  .fortis-crest {
+    border-radius: 0.75rem !important;
+    background: transparent !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .fortis-crest:hover {
+    transform: scale(1.04);
+    box-shadow: 0 6px 18px rgba(8, 127, 121, 0.3) !important;
+  }
+
+  .brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .brand-header-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .brand-badge {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 0.12rem 0.4rem;
+    border-radius: 0.3rem;
+    background: color-mix(in srgb, #f59e0b 16%, transparent);
+    color: #d97706;
+    border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  :root[data-theme="ink"] .brand-badge,
+  :root[data-theme="midnight"] .brand-badge {
+    color: #fbbf24;
+    background: color-mix(in srgb, #f59e0b 22%, transparent);
+    border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+  }
+
+  .brand-acronym-row {
+    margin: 0;
+    font-size: 0.65rem !important;
+    color: var(--c-muted);
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+  }
+
+  .acro-hit {
+    font-weight: 800;
+    color: #d97706;
+  }
+
+  :root[data-theme="ink"] .acro-hit,
+  :root[data-theme="midnight"] .acro-hit {
+    color: #fbbf24;
   }
 
   .eyebrow {
@@ -167,9 +230,10 @@
     margin: 0;
     font-family: var(--f-serif);
     font-size: 1.35rem;
-    font-weight: 650;
+    font-weight: 800;
     line-height: 1.1;
     letter-spacing: -0.02em;
+    color: var(--c-ink);
   }
 
   .side-nav {
@@ -1560,24 +1624,26 @@
     gap: 0;
   }
   .sidebar .brand {
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
   }
   .sidebar .eyebrow {
     color: var(--c-nav-muted);
     font-size: 0.6875rem;
   }
   .brand-name {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     font-weight: 800;
-    line-height: 1.35;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
   }
   .sidebar .brand-name {
     color: var(--c-nav-text);
   }
   .sidebar .crest {
-    width: 2.65rem;
-    height: 2.65rem;
-    box-shadow: none;
+    width: 2.85rem;
+    height: 2.85rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
   .nav-label {
     color: var(--c-nav-muted);
@@ -2243,8 +2309,24 @@
   .page {
     gap: 1.15rem;
   }
-  .brand-name {
-    font-size: 0.9375rem;
+  .brand-acronym-row {
+    display: none !important;
+  }
+  .brand-header-row {
+    gap: 0.35rem;
+  }
+  .mobile-brand .brand-name {
+    font-size: 1.15rem !important;
+    font-weight: 800;
+  }
+  .mobile-brand .brand-badge {
+    font-size: 0.58rem !important;
+    padding: 0.1rem 0.35rem !important;
+  }
+  .mobile-brand .crest {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.65rem !important;
   }
   .page-title {
     font-size: 1.75rem;

@@ -1,6 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="CUI Attock">
-  <rect width="32" height="32" rx="7" fill="#1E4D3C"/>
-  <path fill="#EFEAE1" d="M7.2 22.4h17.6v2.4a.9.9 0 0 1-.9.9H8.1a.9.9 0 0 1-.9-.9v-2.4z"/>
-  <path fill="#EFEAE1" d="M8.1 22.6C8.4 14.4 11.5 9.4 16 9.4s7.6 5 7.9 13.2H8.1z"/>
-  <rect x="14.55" y="11.2" width="2.9" height="11.4" rx=".5" fill="#8D6A32"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FORTIS">
+  <defs>
+    <linearGradient id="fortis-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0e2837"/>
+      <stop offset="100%" stop-color="#087f79"/>
+    </linearGradient>
+    <linearGradient id="roof-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#9a3412"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Base matching App Theme -->
+  <rect width="64" height="64" rx="14" fill="url(#fortis-bg)"/>
+
+  <!-- Academic Block Building Facade -->
+  <!-- Main Wall -->
+  <rect x="10" y="26" width="44" height="26" rx="1" fill="#fdfaf4"/>
+
+  <!-- Roof Trim / Cornice -->
+  <rect x="8" y="24" width="48" height="3" rx="0.5" fill="url(#roof-grad)"/>
+  <rect x="12" y="21" width="40" height="3" rx="0.5" fill="#fdfaf4"/>
+  <rect x="10" y="20" width="44" height="2" fill="url(#roof-grad)"/>
+
+  <!-- Center Tower/Arch -->
+  <rect x="27" y="15" width="10" height="9" fill="#fdfaf4"/>
+  <rect x="26" y="14" width="12" height="2" fill="url(#roof-grad)"/>
+  <rect x="29" y="17" width="6" height="5" rx="1" fill="#d97706"/>
+
+  <!-- Center Entrance Column / Glass Feature -->
+  <rect x="28" y="24" width="8" height="28" fill="#134e4a"/>
+  <!-- Front Doorway -->
+  <rect x="30" y="44" width="4" height="8" rx="0.5" fill="#042f2e"/>
+
+  <!-- Green Window Columns (Signature Campus Block Architecture) -->
+  <!-- Left Side Columns -->
+  <rect x="13" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="16" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="19" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="22" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="25" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+
+  <!-- Right Side Columns -->
+  <rect x="37" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="40" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="43" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="46" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+  <rect x="49" y="28" width="2" height="20" rx="1" fill="#15803d"/>
+
+  <!-- Front Green Lawn Curved Base -->
+  <ellipse cx="32" cy="54" rx="27" ry="5" fill="#16a34a"/>
+  <!-- Pathway to Entrance -->
+  <polygon points="30,52 34,52 36,57 28,57" fill="#fef08a"/>
+
+  <!-- Decorative Pine Trees -->
+  <polygon points="26,45 28,51 24,51" fill="#065f46"/>
+  <polygon points="38,45 40,51 36,51" fill="#065f46"/>
+
+  <!-- Notification Bell Alert Badge in Top Right -->
+  <circle cx="50" cy="14" r="8.5" fill="#ffffff" filter="drop-shadow(0 2px 3px rgba(0,0,0,0.3))"/>
+  <!-- Blue Bell Icon -->
+  <path d="M50 9.5c-2 0-3.5 1.5-3.5 3.5v2.2l-1 1.2v.6h9v-.6l-1-1.2V13c0-2-1.5-3.5-3.5-3.5zm-1 8c0 .55.45 1 1 1s1-.45 1-1h-2z" fill="#0284c7"/>
+  <!-- Active Red Notification Dot -->
+  <circle cx="55.5" cy="8.5" r="2.2" fill="#ef4444"/>
 </svg>

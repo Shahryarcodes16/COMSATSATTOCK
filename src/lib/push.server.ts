@@ -347,7 +347,7 @@ export async function sendTestPushToEndpoint(endpoint: string): Promise<boolean>
   if (!sub) return false;
 
   return sendWebPush(sub, {
-    title: "🔔 CUI Attock Background Push Active!",
+    title: "🔔 FORTIS Background Push Active!",
     body: "Success! Real-time alerts will reach your phone lock screen even when this app is completely closed.",
     tag: "test-bg-push",
     data: { url: "/" },

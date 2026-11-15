@@ -341,7 +341,7 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
         leadMinutes: settings.leadMinutes,
       }).catch(() => {});
 
-      const sent = await sendSystemNotification("🔔 CUI Attock Timetable: Alert Active!", {
+      const sent = await sendSystemNotification("🔔 FORTIS: Class Alert Active!", {
         body: `Testing ${settings.leadMinutes}m class reminder. Next lecture in Lab-03 with Dr. Muazzam Maqsood.`,
         playChime: settings.sound,
       });

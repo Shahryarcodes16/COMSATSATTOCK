@@ -1,4 +1,14 @@
-export const APP_NAME = "CUI Attock Campus Timetable";
+export const APP_NAME = "FORTIS — CUI Attock App";
+export const APP_SHORT_NAME = "FORTIS";
+export const APP_TAGLINE = "CUI · ATK · APP";
+export const APP_ACRONYM_ITEMS = [
+  { letter: "F", label: "Faculty directory" },
+  { letter: "O", label: "Office hours" },
+  { letter: "R", label: "Room radar" },
+  { letter: "T", label: "Timetable" },
+  { letter: "I", label: "Instant alerts" },
+  { letter: "S", label: "Schedule of exams" },
+];
 export const CAMPUS_TIME_ZONE = "Asia/Karachi";
 export const CAMPUS_TIME_LABEL = "Islamabad time (PKT · UTC+5)";
 export const DEVELOPER_NAME = "Shahryar";

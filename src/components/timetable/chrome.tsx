@@ -144,12 +144,36 @@ const MOBILE_NAV: { id: View; label: string; icon: typeof Clock }[] = [
 ];
 
 export function Brand() {
+  const { setView } = useDesk();
   return (
-    <div className="brand" aria-label={APP_NAME}>
-      <img className="crest" src={crest} alt="COMSATS University Islamabad, Attock Campus" />
-      <div>
-        <p className="eyebrow">CUI Attock</p>
-        <p className="brand-name">Campus Timetable</p>
+    <div
+      className="brand tap"
+      onClick={() => setView("today")}
+      aria-label={APP_NAME}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setView("today");
+        }
+      }}
+      title="FORTIS: Faculty · Office Hours · Room Radar · Timetable · Instant Alerts · Schedule"
+    >
+      <img className="crest fortis-crest" src={crest} alt="FORTIS — CUI Attock App" />
+      <div className="brand-copy">
+        <div className="brand-header-row">
+          <p className="brand-name">FORTIS</p>
+          <span className="brand-badge">CUI · ATK · APP</span>
+        </div>
+        <p className="brand-acronym-row fine">
+          <span className="acro-hit">F</span>aculty ·{" "}
+          <span className="acro-hit">O</span>ffice ·{" "}
+          <span className="acro-hit">R</span>ooms ·{" "}
+          <span className="acro-hit">T</span>imetable ·{" "}
+          <span className="acro-hit">I</span>nstant alerts ·{" "}
+          <span className="acro-hit">S</span>chedule
+        </p>
       </div>
     </div>
   );
