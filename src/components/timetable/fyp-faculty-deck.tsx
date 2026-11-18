@@ -1,6 +1,8 @@
 import { useEffect, useState, useTransition } from "react";
 import {
   AlertCircle,
+  ArrowLeft,
+  BookOpen,
   Briefcase,
   CheckCircle2,
   Clock,
@@ -21,6 +23,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
+import { FypWorkspaceHub } from "./fyp-workspace-hub";
 import type {
   FypFacultySettings,
   FypGroupRecord,
@@ -42,6 +45,7 @@ export function FypFacultyDeck() {
   const [activeTab, setActiveTab] = useState<"requests" | "groups" | "settings">("requests");
   const [pendingRequests, setPendingRequests] = useState<FypSupervisorRequest[]>([]);
   const [acceptedGroups, setAcceptedGroups] = useState<FypGroupRecord[]>([]);
+  const [selectedWorkspaceGroup, setSelectedWorkspaceGroup] = useState<FypGroupRecord | null>(null);
   const [settings, setSettings] = useState<FypFacultySettings | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -460,12 +464,32 @@ export function FypFacultyDeck() {
       {/* TAB 2: ACTIVE SUPERVISED GROUPS */}
       {activeTab === "groups" && (
         <section className="stack" style={{ gap: "1rem" }}>
-          {acceptedGroups.length === 0 ? (
+          {selectedWorkspaceGroup ? (
+            <div className="stack" style={{ gap: "1rem" }}>
+              <button
+                type="button"
+                className="btn secondary tap"
+                onClick={() => setSelectedWorkspaceGroup(null)}
+                style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+              >
+                <ArrowLeft size={15} />
+                <span>Back to Supervised Groups List</span>
+              </button>
+
+              <FypWorkspaceHub
+                group={selectedWorkspaceGroup}
+                role="supervisor"
+                currentUserName={settings?.teacherName || "Supervisor"}
+                supervisorId={teacherId}
+                onRefreshGroup={loadDeck}
+              />
+            </div>
+          ) : acceptedGroups.length === 0 ? (
             <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
               <Users size={36} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
               <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Active Supervised Groups</h4>
               <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
-                Once you accept student proposals, they will appear here along with their milestone progress.
+                Once you accept student proposals, they will appear here along with their milestone progress and meeting minutes.
               </p>
             </div>
           ) : (
@@ -481,7 +505,7 @@ export function FypFacultyDeck() {
                   gap: "0.75rem",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
                   <div>
                     <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
                       <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
@@ -495,6 +519,16 @@ export function FypFacultyDeck() {
                       {group.title}
                     </h3>
                   </div>
+
+                  <button
+                    type="button"
+                    className="btn primary tap"
+                    onClick={() => setSelectedWorkspaceGroup(group)}
+                    style={{ fontSize: "0.85rem", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+                  >
+                    <BookOpen size={14} />
+                    <span>Open Supervision Workspace</span>
+                  </button>
                 </div>
 
                 <p style={{ fontSize: "0.88rem", color: "var(--muted)", margin: "0.25rem 0", lineHeight: 1.5 }}>

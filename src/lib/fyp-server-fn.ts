@@ -140,3 +140,167 @@ export const getAllFypGroupsCoordinatorServerFn = createServerFn({
   const [groups, requests] = await Promise.all([serverGetAllFypGroups(), serverGetAllRequests()]);
   return { groups, requests };
 });
+
+/**
+ * =========================================================================
+ * PHASE 2 SERVER FUNCTIONS: MILESTONES, MEETINGS, AND DOCUMENTS
+ * =========================================================================
+ */
+
+export const getGroupMilestonesServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetGroupMilestones } = await import("./fyp.server.ts");
+    const milestones = await serverGetGroupMilestones(data.groupId);
+    return { milestones };
+  });
+
+const SubmitMilestoneSchema = z.object({
+  groupId: z.string().min(1),
+  milestoneId: z.string().min(1),
+  documentUrl: z.string().min(1),
+  fileName: z.string().min(1),
+  changeSummary: z.string().optional(),
+  submittedBy: z.string().min(1),
+});
+
+export const submitMilestoneServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => SubmitMilestoneSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverSubmitMilestone } = await import("./fyp.server.ts");
+    const milestone = await serverSubmitMilestone(data);
+    return { success: true, milestone };
+  });
+
+const ReviewMilestoneSchema = z.object({
+  milestoneId: z.string().min(1),
+  supervisorId: z.number().int().positive(),
+  decision: z.enum(["approved", "revision_requested"]),
+  feedback: z.string().optional(),
+});
+
+export const reviewMilestoneServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => ReviewMilestoneSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverReviewMilestone } = await import("./fyp.server.ts");
+    const milestone = await serverReviewMilestone(data);
+    return { success: true, milestone };
+  });
+
+export const getGroupProgressSummaryServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetGroupProgressSummary } = await import("./fyp.server.ts");
+    const summary = await serverGetGroupProgressSummary(data.groupId);
+    return { summary };
+  });
+
+export const getGroupMeetingLogsServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetMeetingLogs } = await import("./fyp.server.ts");
+    const meetingLogs = await serverGetMeetingLogs(data.groupId);
+    return { meetingLogs };
+  });
+
+const CreateMeetingLogSchema = z.object({
+  groupId: z.string().min(1),
+  meetingDate: z.string().min(1),
+  scheduledBy: z.enum(["student", "supervisor"]),
+  schedulerName: z.string().min(1),
+  attendees: z.array(z.string()),
+  discussionPoints: z.string().min(5, "Please write discussion points"),
+  actionItems: z.string().min(3, "Please write action items"),
+  nextMeetingDate: z.string().optional(),
+});
+
+export const createMeetingLogServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => CreateMeetingLogSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverCreateMeetingLog } = await import("./fyp.server.ts");
+    const meetingLog = await serverCreateMeetingLog(data);
+    return { success: true, meetingLog };
+  });
+
+const ConfirmMeetingLogSchema = z.object({
+  logId: z.string().min(1),
+  supervisorId: z.number().int().positive(),
+  notes: z.string().optional(),
+});
+
+export const confirmMeetingLogServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => ConfirmMeetingLogSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverConfirmMeetingLog } = await import("./fyp.server.ts");
+    const meetingLog = await serverConfirmMeetingLog(data);
+    return { success: true, meetingLog };
+  });
+
+export const getGroupDocumentsServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetDocuments } = await import("./fyp.server.ts");
+    const documents = await serverGetDocuments(data.groupId);
+    return { documents };
+  });
+
+const UploadDocumentSchema = z.object({
+  groupId: z.string().min(1),
+  category: z.enum([
+    "proposal",
+    "srs",
+    "design",
+    "slides",
+    "code_repository",
+    "final_report",
+    "other",
+  ]),
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  documentUrl: z.string().min(1, "URL or link is required"),
+  uploadedBy: z.string().min(1),
+  fileSizeLabel: z.string().optional(),
+});
+
+export const uploadGroupDocumentServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => UploadDocumentSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverUploadDocument } = await import("./fyp.server.ts");
+    const document = await serverUploadDocument(data);
+    return { success: true, document };
+  });
+
+const AddDocumentCommentSchema = z.object({
+  documentId: z.string().min(1),
+  authorName: z.string().min(1),
+  authorRole: z.enum(["supervisor", "student"]),
+  text: z.string().min(1, "Comment text is required"),
+});
+
+export const addDocumentCommentServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => AddDocumentCommentSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverAddDocumentComment } = await import("./fyp.server.ts");
+    const document = await serverAddDocumentComment(data);
+    return { success: true, document };
+  });
+

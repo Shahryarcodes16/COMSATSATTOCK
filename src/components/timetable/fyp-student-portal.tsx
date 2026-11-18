@@ -23,6 +23,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { getActiveStudentSession } from "@/lib/student";
+import { FypWorkspaceHub } from "./fyp-workspace-hub";
 import type {
   FypDomain,
   FypGroupRecord,
@@ -526,25 +527,14 @@ export function FypStudentPortal() {
             </div>
           </div>
 
-          {/* Supervisor Status Banner */}
+          {/* Phase 2: Active Supervision Workspace */}
           {isGroupSupervised ? (
-            <div
-              className="card"
-              style={{
-                padding: "1.5rem",
-                textAlign: "center",
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(99, 102, 241, 0.04))",
-                borderColor: "rgba(16, 185, 129, 0.3)",
-              }}
-            >
-              <Award size={40} color="#10b981" style={{ margin: "0 auto 0.75rem" }} />
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>
-                Supervised by {group.supervisorName}
-              </h3>
-              <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0.4rem auto 0", maxWidth: "480px" }}>
-                Your group has been successfully accepted for 6th-semester supervision. The group membership and title are now locked.
-              </p>
-            </div>
+            <FypWorkspaceHub
+              group={group}
+              role="student"
+              currentUserName={student.fullName}
+              onRefreshGroup={loadData}
+            />
           ) : (
             <>
               {/* Requests Status Trackers */}

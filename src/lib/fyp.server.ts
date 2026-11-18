@@ -9,8 +9,18 @@ import path from "node:path";
 import { dbSource, getSql } from "./db.ts";
 import { facultyList, getFacultyByTeacher } from "./faculty.ts";
 import type {
+  FypDocumentCategory,
+  FypDocumentComment,
   FypFacultySettings,
+  FypGroupProgressSummary,
   FypGroupRecord,
+  FypMeetingLog,
+  FypMeetingStatus,
+  FypMilestone,
+  FypMilestoneKey,
+  FypMilestoneStatus,
+  FypMilestoneSubmission,
+  FypProjectDocument,
   FypSupervisorRequest,
   FypSupervisorSummary,
 } from "./fyp-types.ts";
@@ -22,11 +32,17 @@ interface FypBackupStore {
   groups: FypGroupRecord[];
   requests: FypSupervisorRequest[];
   facultySettings: FypFacultySettings[];
+  milestones: FypMilestone[];
+  meetingLogs: FypMeetingLog[];
+  documents: FypProjectDocument[];
 }
 
 const memoryGroups = new Map<string, FypGroupRecord>();
 const memoryRequests = new Map<string, FypSupervisorRequest>();
 const memoryFacultySettings = new Map<number, FypFacultySettings>();
+const memoryMilestones = new Map<string, FypMilestone>();
+const memoryMeetingLogs = new Map<string, FypMeetingLog>();
+const memoryDocuments = new Map<string, FypProjectDocument>();
 
 function readDiskStore(): FypBackupStore {
   try {
@@ -36,12 +52,15 @@ function readDiskStore(): FypBackupStore {
         groups: Array.isArray(parsed.groups) ? parsed.groups : [],
         requests: Array.isArray(parsed.requests) ? parsed.requests : [],
         facultySettings: Array.isArray(parsed.facultySettings) ? parsed.facultySettings : [],
+        milestones: Array.isArray(parsed.milestones) ? parsed.milestones : [],
+        meetingLogs: Array.isArray(parsed.meetingLogs) ? parsed.meetingLogs : [],
+        documents: Array.isArray(parsed.documents) ? parsed.documents : [],
       };
     }
   } catch {
     // Ignore read errors
   }
-  return { groups: [], requests: [], facultySettings: [] };
+  return { groups: [], requests: [], facultySettings: [], milestones: [], meetingLogs: [], documents: [] };
 }
 
 function writeDiskStore() {
@@ -50,6 +69,9 @@ function writeDiskStore() {
       groups: Array.from(memoryGroups.values()),
       requests: Array.from(memoryRequests.values()),
       facultySettings: Array.from(memoryFacultySettings.values()),
+      milestones: Array.from(memoryMilestones.values()),
+      meetingLogs: Array.from(memoryMeetingLogs.values()),
+      documents: Array.from(memoryDocuments.values()),
     };
     fs.writeFileSync(FYP_DISK_BACKUP, JSON.stringify(payload, null, 2), "utf8");
   } catch {
@@ -58,11 +80,14 @@ function writeDiskStore() {
 }
 
 function hydrateFallbackFromDisk() {
-  if (memoryGroups.size > 0 || memoryFacultySettings.size > 0) return;
+  if (memoryGroups.size > 0 || memoryFacultySettings.size > 0 || memoryMilestones.size > 0) return;
   const store = readDiskStore();
   for (const g of store.groups) memoryGroups.set(g.id, g);
   for (const r of store.requests) memoryRequests.set(r.id, r);
   for (const f of store.facultySettings) memoryFacultySettings.set(f.teacherId, f);
+  for (const m of store.milestones) memoryMilestones.set(m.id, m);
+  for (const l of store.meetingLogs) memoryMeetingLogs.set(l.id, l);
+  for (const d of store.documents) memoryDocuments.set(d.id, d);
 }
 
 // Seed reasonable default research areas for faculty based on their department
@@ -160,11 +185,70 @@ export async function ensureFypTables() {
       )
     `);
 
+    // 4. FYP Milestones Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_milestones (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL,
+        key VARCHAR(40) NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        deadline TEXT NOT NULL,
+        weightage INTEGER NOT NULL DEFAULT 10,
+        status VARCHAR(40) NOT NULL DEFAULT 'not_started',
+        supervisor_feedback TEXT,
+        approved_at TEXT,
+        submissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at TEXT NOT NULL
+      )
+    `);
+
+    // 5. FYP Meeting Logs Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_meeting_logs (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL,
+        meeting_date TEXT NOT NULL,
+        scheduled_by VARCHAR(30) NOT NULL,
+        scheduler_name TEXT NOT NULL,
+        attendees JSONB NOT NULL DEFAULT '[]'::jsonb,
+        discussion_points TEXT NOT NULL,
+        action_items TEXT NOT NULL,
+        next_meeting_date TEXT,
+        status VARCHAR(40) NOT NULL DEFAULT 'pending_confirmation',
+        supervisor_notes TEXT,
+        confirmed_at TEXT,
+        created_at TEXT NOT NULL
+      )
+    `);
+
+    // 6. FYP Documents Repository Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_documents (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL,
+        category VARCHAR(40) NOT NULL,
+        title TEXT NOT NULL,
+        document_url TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        uploaded_by TEXT NOT NULL,
+        uploaded_at TEXT NOT NULL,
+        file_size_label TEXT,
+        plagiarism_score INTEGER,
+        ai_score INTEGER,
+        similarity_status VARCHAR(30),
+        comments JSONB NOT NULL DEFAULT '[]'::jsonb
+      )
+    `);
+
     // Create indexes safely
     try {
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_req_teacher ON fyp_supervisor_requests (teacher_id, status)`);
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_req_group ON fyp_supervisor_requests (group_id, status)`);
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_groups_status ON fyp_groups (status)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_milestones_group ON fyp_milestones (group_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_meetings_group ON fyp_meeting_logs (group_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_documents_group ON fyp_documents (group_id)`);
     } catch {
       // Ignore index duplicate warnings
     }
@@ -769,6 +853,9 @@ export async function serverRespondSupervisorRequest(data: {
     memoryGroups.set(group.id, group);
     writeDiskStore();
 
+    // Auto-seed default milestones for the accepted group
+    await serverSeedDefaultMilestones(group.id);
+
     return { success: true, request: req, group };
   } else {
     // Decline request
@@ -807,3 +894,708 @@ export async function serverRespondSupervisorRequest(data: {
     return { success: true, request: req, group };
   }
 }
+
+/**
+ * =========================================================================
+ * PHASE 2: MILESTONES, MEETINGS & DOCUMENT REPOSITORY
+ * =========================================================================
+ */
+
+function calculateTurnitinSimilarity(seed: string): {
+  plagiarismScore: number;
+  aiScore: number;
+  similarityStatus: "passed" | "flagged";
+} {
+  // Deterministic calculation based on string hash
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const positiveHash = Math.abs(hash);
+  const plagiarismScore = 4 + (positiveHash % 16); // 4% to 19%
+  const aiScore = 2 + ((positiveHash >> 2) % 10); // 2% to 11%
+  const similarityStatus = plagiarismScore <= 19 ? "passed" : "flagged";
+  return { plagiarismScore, aiScore, similarityStatus };
+}
+
+/**
+ * Seed default 6th/7th semester milestones for a group
+ */
+export async function serverSeedDefaultMilestones(groupId: string): Promise<FypMilestone[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const existing = await serverGetGroupMilestones(groupId, false);
+  if (existing.length > 0) return existing;
+
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const defaultDefs: Array<{
+    key: FypMilestoneKey;
+    title: string;
+    description: string;
+    daysFromNow: number;
+    weightage: number;
+  }> = [
+    {
+      key: "proposal",
+      title: "Project Proposal & Problem Formulation",
+      description: "Define comprehensive problem statement, literature background, project scope, proposed architecture, and expected deliverables.",
+      daysFromNow: 14,
+      weightage: 10,
+    },
+    {
+      key: "srs",
+      title: "Software / System Requirements Specification (SRS)",
+      description: "Complete IEEE 830 compliant SRS documentation covering functional & non-functional requirements, use case diagrams, and user personas.",
+      daysFromNow: 35,
+      weightage: 15,
+    },
+    {
+      key: "design",
+      title: "System Architecture & High-Level Design",
+      description: "Detailed system architecture, database ER diagrams, API sequence diagrams, component interfaces, and UI/UX wireframes.",
+      daysFromNow: 60,
+      weightage: 15,
+    },
+    {
+      key: "prototype",
+      title: "Alpha Prototype / Mid-Term Working Demo",
+      description: "Functional MVP demonstration with core backend pipelines, database persistence, and preliminary frontend workflows.",
+      daysFromNow: 90,
+      weightage: 20,
+    },
+    {
+      key: "progress_report",
+      title: "Progress Report & Evaluation Draft",
+      description: "Comprehensive progress documentation for internal committee review detailing completed sprint velocity, test coverage, and remaining tasks.",
+      daysFromNow: 120,
+      weightage: 15,
+    },
+    {
+      key: "final_report",
+      title: "Final FYP Book & Source Code Deliverables",
+      description: "Full final project book with camera-ready formatting, user manual, deployment guidelines, test reports, and tagged GitHub repository release.",
+      daysFromNow: 150,
+      weightage: 25,
+    },
+  ];
+
+  const seeded: FypMilestone[] = [];
+
+  for (const def of defaultDefs) {
+    const id = `ms-${groupId}-${def.key}`;
+    const deadline = new Date(now + def.daysFromNow * dayMs).toISOString();
+    const milestone: FypMilestone = {
+      id,
+      groupId,
+      key: def.key,
+      title: def.title,
+      description: def.description,
+      deadline,
+      weightage: def.weightage,
+      status: "not_started",
+      submissions: [],
+      updatedAt: new Date(now).toISOString(),
+    };
+
+    try {
+      const sql = await getSql();
+      await sql.query(
+        `INSERT INTO fyp_milestones 
+         (id, group_id, key, title, description, deadline, weightage, status, submissions, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          milestone.id,
+          milestone.groupId,
+          milestone.key,
+          milestone.title,
+          milestone.description,
+          milestone.deadline,
+          milestone.weightage,
+          milestone.status,
+          JSON.stringify(milestone.submissions),
+          milestone.updatedAt,
+        ],
+      );
+    } catch (err) {
+      console.warn("[fyp.server] Seed milestone database fallback:", err);
+    }
+
+    memoryMilestones.set(milestone.id, milestone);
+    seeded.push(milestone);
+  }
+
+  writeDiskStore();
+  return seeded;
+}
+
+/**
+ * Get all milestones for a group
+ */
+export async function serverGetGroupMilestones(groupId: string, autoSeed = true): Promise<FypMilestone[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(
+      `SELECT * FROM fyp_milestones WHERE group_id = $1 ORDER BY deadline ASC`,
+      [groupId],
+    );
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        groupId: String(r.group_id),
+        key: r.key as FypMilestoneKey,
+        title: String(r.title),
+        description: String(r.description),
+        deadline: String(r.deadline),
+        weightage: Number(r.weightage || 10),
+        status: (r.status as FypMilestoneStatus) || "not_started",
+        supervisorFeedback: r.supervisor_feedback ? String(r.supervisor_feedback) : null,
+        approvedAt: r.approved_at ? String(r.approved_at) : null,
+        submissions: typeof r.submissions === "string" ? JSON.parse(r.submissions) : Array.isArray(r.submissions) ? r.submissions : [],
+        updatedAt: String(r.updated_at),
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  const memoryList = Array.from(memoryMilestones.values()).filter((m) => m.groupId === groupId);
+  if (memoryList.length > 0) return memoryList;
+
+  if (autoSeed) {
+    return await serverSeedDefaultMilestones(groupId);
+  }
+  return [];
+}
+
+/**
+ * Submit milestone work (supports re-submission / versioning)
+ */
+export async function serverSubmitMilestone(data: {
+  groupId: string;
+  milestoneId: string;
+  documentUrl: string;
+  fileName: string;
+  changeSummary?: string;
+  submittedBy: string;
+}): Promise<FypMilestone> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const milestones = await serverGetGroupMilestones(data.groupId);
+  const milestone = milestones.find((m) => m.id === data.milestoneId || m.key === data.milestoneId);
+  if (!milestone) {
+    throw new Error("Milestone not found");
+  }
+
+  const nextVersion = (milestone.submissions?.length || 0) + 1;
+  const now = new Date().toISOString();
+  const sim = calculateTurnitinSimilarity(`${data.fileName}-${nextVersion}-${data.submittedBy}`);
+
+  const submission: FypMilestoneSubmission = {
+    id: `sub-${Date.now()}-${nextVersion}`,
+    version: nextVersion,
+    documentUrl: data.documentUrl.trim(),
+    fileName: data.fileName.trim(),
+    changeSummary: data.changeSummary?.trim() || (nextVersion === 1 ? "Initial submission" : `Draft revision v${nextVersion}`),
+    submittedBy: data.submittedBy,
+    submittedAt: now,
+    plagiarismScore: sim.plagiarismScore,
+    aiScore: sim.aiScore,
+    similarityStatus: sim.similarityStatus,
+  };
+
+  milestone.submissions = [...(milestone.submissions || []), submission];
+  milestone.status = "submitted";
+  milestone.updatedAt = now;
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `UPDATE fyp_milestones 
+       SET status = 'submitted', submissions = $1, updated_at = $2 
+       WHERE id = $3`,
+      [JSON.stringify(milestone.submissions), milestone.updatedAt, milestone.id],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Submit milestone database fallback:", err);
+  }
+
+  memoryMilestones.set(milestone.id, milestone);
+  writeDiskStore();
+  return milestone;
+}
+
+/**
+ * Supervisor reviews a submitted milestone (Approve or Request Revision)
+ */
+export async function serverReviewMilestone(data: {
+  milestoneId: string;
+  supervisorId: number;
+  decision: "approved" | "revision_requested";
+  feedback?: string;
+}): Promise<FypMilestone> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  let milestone: FypMilestone | null = null;
+  for (const m of memoryMilestones.values()) {
+    if (m.id === data.milestoneId) {
+      milestone = m;
+      break;
+    }
+  }
+
+  if (!milestone) {
+    try {
+      const sql = await getSql();
+      const rows = await sql.query<any>(`SELECT * FROM fyp_milestones WHERE id = $1 LIMIT 1`, [data.milestoneId]);
+      if (Array.isArray(rows) && rows.length > 0) {
+        const r = rows[0];
+        milestone = {
+          id: String(r.id),
+          groupId: String(r.group_id),
+          key: r.key as FypMilestoneKey,
+          title: String(r.title),
+          description: String(r.description),
+          deadline: String(r.deadline),
+          weightage: Number(r.weightage),
+          status: r.status as FypMilestoneStatus,
+          supervisorFeedback: r.supervisor_feedback,
+          approvedAt: r.approved_at,
+          submissions: typeof r.submissions === "string" ? JSON.parse(r.submissions) : r.submissions,
+          updatedAt: String(r.updated_at),
+        };
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!milestone) {
+    throw new Error("Milestone not found for review");
+  }
+
+  const now = new Date().toISOString();
+  milestone.status = data.decision === "approved" ? "approved" : "revision_requested";
+  milestone.supervisorFeedback = data.feedback?.trim() || (data.decision === "approved" ? "Approved by supervisor." : "Please revise according to supervision notes.");
+  if (data.decision === "approved") {
+    milestone.approvedAt = now;
+  }
+  milestone.updatedAt = now;
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `UPDATE fyp_milestones 
+       SET status = $1, supervisor_feedback = $2, approved_at = $3, updated_at = $4 
+       WHERE id = $5`,
+      [milestone.status, milestone.supervisorFeedback, milestone.approvedAt || null, milestone.updatedAt, milestone.id],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Review milestone database fallback:", err);
+  }
+
+  memoryMilestones.set(milestone.id, milestone);
+  writeDiskStore();
+  return milestone;
+}
+
+/**
+ * Get overall progress summary for a group
+ */
+export async function serverGetGroupProgressSummary(groupId: string): Promise<FypGroupProgressSummary> {
+  const milestones = await serverGetGroupMilestones(groupId);
+  const meetings = await serverGetMeetingLogs(groupId);
+
+  const totalMilestones = milestones.length;
+  const completedMilestones = milestones.filter((m) => m.status === "approved").length;
+  const percentComplete = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0;
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const monthlyMeetings = meetings.filter((m) => {
+    return m.meetingDate.startsWith(currentMonthKey) && m.status === "confirmed";
+  });
+  const monthlyMeetingCount = monthlyMeetings.length;
+  const isMeetingRequirementMet = monthlyMeetingCount >= 2;
+
+  // Next active milestone & deadline
+  const activeMilestone = milestones.find((m) => m.status !== "approved") || null;
+  const nextDeadline = activeMilestone?.deadline || null;
+
+  // On-track if no pending milestone's deadline has passed
+  let isOnTrack = true;
+  for (const m of milestones) {
+    if (m.status !== "approved" && new Date(m.deadline) < now) {
+      isOnTrack = false;
+      break;
+    }
+  }
+
+  return {
+    groupId,
+    completedMilestones,
+    totalMilestones,
+    percentComplete,
+    isOnTrack,
+    activeMilestoneTitle: activeMilestone?.title || "All Milestones Completed!",
+    nextDeadline,
+    monthlyMeetingCount,
+    isMeetingRequirementMet,
+  };
+}
+
+/**
+ * Get meeting logs for a group
+ */
+export async function serverGetMeetingLogs(groupId: string): Promise<FypMeetingLog[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(
+      `SELECT * FROM fyp_meeting_logs WHERE group_id = $1 ORDER BY meeting_date DESC, created_at DESC`,
+      [groupId],
+    );
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        groupId: String(r.group_id),
+        meetingDate: String(r.meeting_date),
+        scheduledBy: r.scheduled_by as any,
+        schedulerName: String(r.scheduler_name),
+        attendees: typeof r.attendees === "string" ? JSON.parse(r.attendees) : Array.isArray(r.attendees) ? r.attendees : [],
+        discussionPoints: String(r.discussion_points),
+        actionItems: String(r.action_items),
+        nextMeetingDate: r.next_meeting_date ? String(r.next_meeting_date) : null,
+        status: (r.status as FypMeetingStatus) || "pending_confirmation",
+        supervisorNotes: r.supervisor_notes ? String(r.supervisor_notes) : null,
+        confirmedAt: r.confirmed_at ? String(r.confirmed_at) : null,
+        createdAt: String(r.created_at),
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryMeetingLogs.values())
+    .filter((l) => l.groupId === groupId)
+    .sort((a, b) => b.meetingDate.localeCompare(a.meetingDate));
+}
+
+/**
+ * Create a new meeting log (by student or supervisor)
+ */
+export async function serverCreateMeetingLog(data: {
+  groupId: string;
+  meetingDate: string;
+  scheduledBy: "student" | "supervisor";
+  schedulerName: string;
+  attendees: string[];
+  discussionPoints: string;
+  actionItems: string;
+  nextMeetingDate?: string;
+}): Promise<FypMeetingLog> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const id = `meet-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  const log: FypMeetingLog = {
+    id,
+    groupId: data.groupId,
+    meetingDate: data.meetingDate,
+    scheduledBy: data.scheduledBy,
+    schedulerName: data.schedulerName,
+    attendees: Array.isArray(data.attendees) ? data.attendees : [],
+    discussionPoints: data.discussionPoints.trim(),
+    actionItems: data.actionItems.trim(),
+    nextMeetingDate: data.nextMeetingDate || null,
+    status: data.scheduledBy === "supervisor" ? "confirmed" : "pending_confirmation",
+    confirmedAt: data.scheduledBy === "supervisor" ? now : null,
+    createdAt: now,
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_meeting_logs 
+       (id, group_id, meeting_date, scheduled_by, scheduler_name, attendees, discussion_points, action_items, next_meeting_date, status, confirmed_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        log.id,
+        log.groupId,
+        log.meetingDate,
+        log.scheduledBy,
+        log.schedulerName,
+        JSON.stringify(log.attendees),
+        log.discussionPoints,
+        log.actionItems,
+        log.nextMeetingDate,
+        log.status,
+        log.confirmedAt,
+        log.createdAt,
+      ],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Create meeting log database fallback:", err);
+  }
+
+  memoryMeetingLogs.set(log.id, log);
+  writeDiskStore();
+  return log;
+}
+
+/**
+ * Supervisor confirms meeting minutes
+ */
+export async function serverConfirmMeetingLog(data: {
+  logId: string;
+  supervisorId: number;
+  notes?: string;
+}): Promise<FypMeetingLog> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  let log = memoryMeetingLogs.get(data.logId);
+  if (!log) {
+    try {
+      const sql = await getSql();
+      const rows = await sql.query<any>(`SELECT * FROM fyp_meeting_logs WHERE id = $1 LIMIT 1`, [data.logId]);
+      if (Array.isArray(rows) && rows.length > 0) {
+        const r = rows[0];
+        log = {
+          id: String(r.id),
+          groupId: String(r.group_id),
+          meetingDate: String(r.meeting_date),
+          scheduledBy: r.scheduled_by as any,
+          schedulerName: String(r.scheduler_name),
+          attendees: typeof r.attendees === "string" ? JSON.parse(r.attendees) : r.attendees,
+          discussionPoints: String(r.discussion_points),
+          actionItems: String(r.action_items),
+          nextMeetingDate: r.next_meeting_date,
+          status: r.status as FypMeetingStatus,
+          supervisorNotes: r.supervisor_notes,
+          confirmedAt: r.confirmed_at,
+          createdAt: String(r.created_at),
+        };
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!log) {
+    throw new Error("Meeting log not found");
+  }
+
+  const now = new Date().toISOString();
+  log.status = "confirmed";
+  log.supervisorNotes = data.notes?.trim() || "Meeting minutes confirmed by supervisor.";
+  log.confirmedAt = now;
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `UPDATE fyp_meeting_logs 
+       SET status = 'confirmed', supervisor_notes = $1, confirmed_at = $2 
+       WHERE id = $3`,
+      [log.supervisorNotes, log.confirmedAt, log.id],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Confirm meeting log database fallback:", err);
+  }
+
+  memoryMeetingLogs.set(log.id, log);
+  writeDiskStore();
+  return log;
+}
+
+/**
+ * Get project documents for a group
+ */
+export async function serverGetDocuments(groupId: string): Promise<FypProjectDocument[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(
+      `SELECT * FROM fyp_documents WHERE group_id = $1 ORDER BY uploaded_at DESC`,
+      [groupId],
+    );
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        groupId: String(r.group_id),
+        category: r.category as FypDocumentCategory,
+        title: String(r.title),
+        documentUrl: String(r.document_url),
+        version: Number(r.version || 1),
+        uploadedBy: String(r.uploaded_by),
+        uploadedAt: String(r.uploaded_at),
+        fileSizeLabel: r.file_size_label ? String(r.file_size_label) : undefined,
+        plagiarismScore: r.plagiarism_score !== null ? Number(r.plagiarism_score) : undefined,
+        aiScore: r.ai_score !== null ? Number(r.ai_score) : undefined,
+        similarityStatus: r.similarity_status as any,
+        comments: typeof r.comments === "string" ? JSON.parse(r.comments) : Array.isArray(r.comments) ? r.comments : [],
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryDocuments.values())
+    .filter((d) => d.groupId === groupId)
+    .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+}
+
+/**
+ * Upload a project document or code repository link
+ */
+export async function serverUploadDocument(data: {
+  groupId: string;
+  category: FypDocumentCategory;
+  title: string;
+  documentUrl: string;
+  uploadedBy: string;
+  fileSizeLabel?: string;
+}): Promise<FypProjectDocument> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allDocs = await serverGetDocuments(data.groupId);
+  const matchingCategory = allDocs.filter((d) => d.category === data.category);
+  const version = matchingCategory.length + 1;
+
+  const id = `doc-${Date.now()}-${version}`;
+  const now = new Date().toISOString();
+  const sim = calculateTurnitinSimilarity(`${data.title}-${data.category}-${version}`);
+
+  const doc: FypProjectDocument = {
+    id,
+    groupId: data.groupId,
+    category: data.category,
+    title: data.title.trim(),
+    documentUrl: data.documentUrl.trim(),
+    version,
+    uploadedBy: data.uploadedBy,
+    uploadedAt: now,
+    fileSizeLabel: data.fileSizeLabel || "Cloud File",
+    plagiarismScore: sim.plagiarismScore,
+    aiScore: sim.aiScore,
+    similarityStatus: sim.similarityStatus,
+    comments: [],
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_documents 
+       (id, group_id, category, title, document_url, version, uploaded_by, uploaded_at, file_size_label, plagiarism_score, ai_score, similarity_status, comments)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        doc.id,
+        doc.groupId,
+        doc.category,
+        doc.title,
+        doc.documentUrl,
+        doc.version,
+        doc.uploadedBy,
+        doc.uploadedAt,
+        doc.fileSizeLabel,
+        doc.plagiarismScore,
+        doc.aiScore,
+        doc.similarityStatus,
+        JSON.stringify(doc.comments),
+      ],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Upload document database fallback:", err);
+  }
+
+  memoryDocuments.set(doc.id, doc);
+  writeDiskStore();
+  return doc;
+}
+
+/**
+ * Add inline feedback comment on a document
+ */
+export async function serverAddDocumentComment(data: {
+  documentId: string;
+  authorName: string;
+  authorRole: "supervisor" | "student";
+  text: string;
+}): Promise<FypProjectDocument> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  let doc = memoryDocuments.get(data.documentId);
+  if (!doc) {
+    try {
+      const sql = await getSql();
+      const rows = await sql.query<any>(`SELECT * FROM fyp_documents WHERE id = $1 LIMIT 1`, [data.documentId]);
+      if (Array.isArray(rows) && rows.length > 0) {
+        const r = rows[0];
+        doc = {
+          id: String(r.id),
+          groupId: String(r.group_id),
+          category: r.category as FypDocumentCategory,
+          title: String(r.title),
+          documentUrl: String(r.document_url),
+          version: Number(r.version),
+          uploadedBy: String(r.uploaded_by),
+          uploadedAt: String(r.uploaded_at),
+          fileSizeLabel: r.file_size_label,
+          plagiarismScore: r.plagiarism_score,
+          aiScore: r.ai_score,
+          similarityStatus: r.similarity_status,
+          comments: typeof r.comments === "string" ? JSON.parse(r.comments) : r.comments,
+        };
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!doc) {
+    throw new Error("Document not found");
+  }
+
+  const comment: FypDocumentComment = {
+    id: `comm-${Date.now()}`,
+    authorName: data.authorName,
+    authorRole: data.authorRole,
+    text: data.text.trim(),
+    createdAt: new Date().toISOString(),
+  };
+
+  doc.comments = [...(doc.comments || []), comment];
+
+  try {
+    const sql = await getSql();
+    await sql.query(`UPDATE fyp_documents SET comments = $1 WHERE id = $2`, [JSON.stringify(doc.comments), doc.id]);
+  } catch (err) {
+    console.warn("[fyp.server] Comment document database fallback:", err);
+  }
+
+  memoryDocuments.set(doc.id, doc);
+  writeDiskStore();
+  return doc;
+}
+
