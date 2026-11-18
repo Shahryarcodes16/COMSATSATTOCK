@@ -22,6 +22,7 @@ const PushSubscriptionSchema = z.object({
   batchId: z.number().nullable().optional(),
   teacherId: z.number().nullable().optional(),
   leadMinutes: z.number().int().min(1).max(60).optional(),
+  customSchedule: z.array(z.any()).nullable().optional(),
 });
 
 export const savePushSubscriptionServerFn = createServerFn({
@@ -47,3 +48,11 @@ export const sendTestPushServerFn = createServerFn({
     const ok = await sendTestPushToEndpoint(data.endpoint);
     return { success: ok };
   });
+
+export const triggerUpcomingRemindersServerFn = createServerFn({
+  method: "POST",
+}).handler(async (): Promise<{ success: boolean; stats: { checked: number; sent: number; skipped: number } }> => {
+  const { dispatchUpcomingClassReminders } = await import("./push.server.ts");
+  const stats = await dispatchUpcomingClassReminders();
+  return { success: true, stats };
+});

@@ -1,4 +1,5 @@
 import { registerNotificationServiceWorker } from "./notifications.ts";
+import type { ClassEntry } from "./schedule.ts";
 import {
   getVapidPublicKeyServerFn,
   savePushSubscriptionServerFn,
@@ -41,6 +42,7 @@ export async function subscribeToWebPush(
     teacherId?: number | null;
     leadMinutes?: number;
     userType?: "student" | "faculty";
+    customSchedule?: ClassEntry[] | null;
   } = {},
 ): Promise<{ success: boolean; error?: string }> {
   if (typeof window === "undefined") return { success: false, error: "Window undefined" };
@@ -86,6 +88,7 @@ export async function subscribeToWebPush(
         teacherId: options.teacherId ?? null,
         leadMinutes: options.leadMinutes ?? 10,
         userType: options.userType || "student",
+        customSchedule: options.customSchedule ?? null,
       },
     });
 

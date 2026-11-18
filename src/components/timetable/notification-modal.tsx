@@ -49,10 +49,22 @@ export function useClassNotificationScheduler() {
     // Ensure Web Push subscription is current with active batch on boot
     const initialSettings = getStoredNotificationSettings();
     if (initialSettings.enabled && Notification.permission === "granted") {
-      subscribeToWebPush({
-        batchId: pinnedBatch,
-        leadMinutes: initialSettings.leadMinutes,
-      }).catch(() => {});
+      const faculty = getActiveFacultySession();
+      if (faculty?.profile?.teacherId !== null && faculty?.profile?.teacherId !== undefined) {
+        subscribeToWebPush({
+          userType: "faculty",
+          teacherId: faculty.profile.teacherId,
+          leadMinutes: faculty.profile.notificationLeadMins || initialSettings.leadMinutes || 10,
+        }).catch(() => {});
+      } else {
+        const customSched = initialSettings.source === "custom" ? loadCustomSchedule() : null;
+        subscribeToWebPush({
+          userType: "student",
+          batchId: pinnedBatch,
+          customSchedule: customSched,
+          leadMinutes: initialSettings.leadMinutes,
+        }).catch(() => {});
+      }
     }
 
     const checkAlarms = () => {
@@ -291,10 +303,22 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
         await registerNotificationServiceWorker();
 
         // Subscribe to server-side Web Push so closed-app alerts work
-        subscribeToWebPush({
-          batchId: pinnedBatch,
-          leadMinutes: next.leadMinutes,
-        }).catch((err) => console.warn("Push subscription failed:", err));
+        const faculty = getActiveFacultySession();
+        if (faculty?.profile?.teacherId !== null && faculty?.profile?.teacherId !== undefined) {
+          subscribeToWebPush({
+            userType: "faculty",
+            teacherId: faculty.profile.teacherId,
+            leadMinutes: next.leadMinutes,
+          }).catch((err) => console.warn("Push subscription failed:", err));
+        } else {
+          const customSched = next.source === "custom" ? loadCustomSchedule() : null;
+          subscribeToWebPush({
+            userType: "student",
+            batchId: pinnedBatch,
+            customSchedule: customSched,
+            leadMinutes: next.leadMinutes,
+          }).catch((err) => console.warn("Push subscription failed:", err));
+        }
 
         await sendSystemNotification("🔔 Class Reminders Activated", {
           body: `You will receive mobile alerts ${next.leadMinutes} mins before each lecture starts.`,
@@ -312,6 +336,15 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
     const next = { ...settings, leadMinutes: mins };
     setSettings(next);
     saveNotificationSettings(next);
+    if (next.enabled && permission === "granted") {
+      const faculty = getActiveFacultySession();
+      if (faculty?.profile?.teacherId !== null && faculty?.profile?.teacherId !== undefined) {
+        subscribeToWebPush({ userType: "faculty", teacherId: faculty.profile.teacherId, leadMinutes: mins }).catch(() => {});
+      } else {
+        const customSched = next.source === "custom" ? loadCustomSchedule() : null;
+        subscribeToWebPush({ userType: "student", batchId: pinnedBatch, customSchedule: customSched, leadMinutes: mins }).catch(() => {});
+      }
+    }
   };
 
   const handleSoundToggle = () => {
@@ -324,6 +357,10 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
     const next = { ...settings, source: src };
     setSettings(next);
     saveNotificationSettings(next);
+    if (next.enabled && permission === "granted") {
+      const customSched = src === "custom" ? loadCustomSchedule() : null;
+      subscribeToWebPush({ userType: "student", batchId: pinnedBatch, customSchedule: customSched, leadMinutes: settings.leadMinutes }).catch(() => {});
+    }
   };
 
   const handleSendTest = async () => {
@@ -335,11 +372,23 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
     if (perm === "granted") {
       await registerNotificationServiceWorker();
 
-      // Ensure server push subscription is registered
-      subscribeToWebPush({
-        batchId: pinnedBatch,
-        leadMinutes: settings.leadMinutes,
-      }).catch(() => {});
+      // Ensure server push subscription is registered with active profile
+      const faculty = getActiveFacultySession();
+      if (faculty?.profile?.teacherId !== null && faculty?.profile?.teacherId !== undefined) {
+        subscribeToWebPush({
+          userType: "faculty",
+          teacherId: faculty.profile.teacherId,
+          leadMinutes: settings.leadMinutes,
+        }).catch(() => {});
+      } else {
+        const customSched = settings.source === "custom" ? loadCustomSchedule() : null;
+        subscribeToWebPush({
+          userType: "student",
+          batchId: pinnedBatch,
+          customSchedule: customSched,
+          leadMinutes: settings.leadMinutes,
+        }).catch(() => {});
+      }
 
       const sent = await sendSystemNotification("🔔 FORTIS: Class Alert Active!", {
         body: `Testing ${settings.leadMinutes}m class reminder. Next lecture in Lab-03 with Dr. Muazzam Maqsood.`,
@@ -414,13 +463,32 @@ export function NotificationSettingsModal({ onClose }: { onClose: () => void }) 
           </div>
 
           {permission === "denied" && (
-            <div className="notif-warning-banner">
+            <div className="notif-warning-banner" role="alert">
               <AlertTriangle size={16} aria-hidden />
               <span>
-                Notifications are blocked in your browser settings. Please allow notifications for this site to receive reminders.
+                <strong>Notifications Blocked:</strong> Please tap the lock/tune icon near your browser address bar and set Notifications to <strong>Allow</strong>.
               </span>
             </div>
           )}
+
+          {typeof navigator !== "undefined" &&
+            /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+            typeof window !== "undefined" &&
+            !window.matchMedia("(display-mode: standalone)").matches && (
+              <div
+                className="notif-warning-banner"
+                style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  borderColor: "rgba(59, 130, 246, 0.35)",
+                  color: "var(--c-accent)",
+                }}
+              >
+                <Smartphone size={16} aria-hidden />
+                <span>
+                  <strong>iPhone Setup:</strong> On iOS, Apple requires adding FORTIS to your Home Screen for lock-screen alerts: tap <strong>Share</strong> (box with arrow) → <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
+                </span>
+              </div>
+            )}
 
           {/* Lead time setting */}
           <div className="notif-setting-section">
