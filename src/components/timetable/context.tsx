@@ -34,6 +34,7 @@ export type View =
   | "notices"
   | "cancel-class"
   | "makeup-class"
+  | "fyp"
   | "about";
 export type ThemeName = "paper" | "ink" | "midnight";
 
@@ -67,6 +68,8 @@ const VIEWS: View[] = [
   "notices",
   "cancel-class",
   "makeup-class",
+  "fyp",
+  "about",
 ];
 
 const defaultBatch = Math.max(

@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowLeft,
   ArrowUpRight,
+  Briefcase,
   CalendarCheck,
   CalendarDays,
   Clock,
@@ -131,6 +132,7 @@ const BASE_DESKTOP_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "notices" as View, label: "Teacher Messages", icon: Megaphone },
   { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
   { id: "custom", label: "My Schedule", icon: CalendarCheck },
+  { id: "fyp" as View, label: "FYP Portal", icon: Briefcase },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
   { id: "batches", label: "Batches", icon: Users },
@@ -143,6 +145,7 @@ const MOBILE_NAV: { id: View; label: string; icon: typeof Clock }[] = [
   { id: "today", label: "Today", icon: Clock },
   { id: "pulse" as View, label: "Pulse", icon: Activity },
   { id: "custom", label: "Schedule", icon: CalendarCheck },
+  { id: "fyp" as View, label: "FYP", icon: Briefcase },
   { id: "rooms", label: "Rooms", icon: DoorOpen },
   { id: "faculty", label: "Faculty", icon: GraduationCap },
 ];
@@ -217,6 +220,7 @@ export function Sidebar() {
       { id: "faculty-desk" as View, label: "Weekly Grid", icon: GraduationCap },
       { id: "cancel-class" as View, label: "Cancel Class", icon: XCircle },
       { id: "makeup-class" as View, label: "Makeup Class", icon: Sparkles },
+      { id: "fyp" as View, label: "FYP Studio", icon: Briefcase },
       { id: "notices" as View, label: "Teacher Messages", icon: Megaphone },
       { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
       { id: "custom" as View, label: "My Schedule", icon: CalendarCheck },
@@ -571,6 +575,7 @@ export function Dock() {
         { id: "faculty-desk" as View, label: "Weekly Grid", icon: CalendarDays },
         { id: "cancel-class" as View, label: "Cancel Class", icon: XCircle },
         { id: "makeup-class" as View, label: "Makeup Class", icon: Sparkles },
+        { id: "fyp" as View, label: "FYP", icon: Briefcase },
       ]
     : MOBILE_NAV;
 
