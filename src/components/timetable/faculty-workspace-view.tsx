@@ -64,7 +64,6 @@ import {
   type MakeupClassRecord,
 } from "@/lib/makeup-classes";
 import { facultyUpdateLeadTimeFn } from "@/lib/faculty-server-fn";
-import { FypFacultyDeck } from "@/components/timetable/fyp-faculty-deck";
 import {
   isClassCancelled,
   addClassCancellationAsync,
@@ -76,15 +75,15 @@ import {
 export function FacultyWorkspaceView({
   activeSection,
 }: {
-  activeSection?: "today" | "table" | "makeup" | "cancel" | "fyp";
+  activeSection?: "today" | "table" | "makeup" | "cancel";
 } = {}) {
   const { open, now, clock, makeupRevision, goBack, setView, view } = useDesk();
   const [facultySession, setFacultySession] = useState<FacultySession | null>(
     () => getActiveFacultySession(),
   );
 
-  // Tabs: Today's Lectures | Weekly Timetable (Table) | Smart Makeup & Lab Matcher | Cancel Class | FYP Studio
-  const [activeTab, setActiveTab] = useState<"today" | "table" | "makeup" | "cancel" | "fyp">(
+  // Tabs: Today's Lectures | Weekly Timetable (Table) | Smart Makeup & Lab Matcher | Cancel Class
+  const [activeTab, setActiveTab] = useState<"today" | "table" | "makeup" | "cancel">(
     () => activeSection || (clock.dayIndex !== null && clock.dayIndex >= 0 && clock.dayIndex < 5 ? "today" : "table"),
   );
 
@@ -612,24 +611,6 @@ export function FacultyWorkspaceView({
           {comparison && comparison.bothFreeSlotsCount > 0 && (
             <span className="tab-badge">{comparison.bothFreeSlotsCount}</span>
           )}
-        </button>
-
-        {/* Tab 5: FYP Studio */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "fyp"}
-          className={`faculty-tab-pill ${activeTab === "fyp" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("fyp");
-            setView("fyp");
-          }}
-        >
-          <GraduationCap size={16} />
-          <span className="tab-label-text">
-            <span className="tab-label-full">FYP Studio</span>
-            <span className="tab-label-short">FYP</span>
-          </span>
         </button>
       </div>
 
@@ -2088,15 +2069,6 @@ export function FacultyWorkspaceView({
                 })}
             </div>
           </div>
-        </section>
-      )}
-
-      {/* =========================================================================
-          TAB 5: FYP STUDIO (SUPERVISION QUOTAS, REQUESTS & ACTIVE GROUPS)
-          ========================================================================= */}
-      {activeTab === "fyp" && (
-        <section className="faculty-fyp-section stack">
-          <FypFacultyDeck />
         </section>
       )}
 
