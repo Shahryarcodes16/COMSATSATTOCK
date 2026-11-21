@@ -2,6 +2,7 @@ import { useEffect, useState, useTransition } from "react";
 import {
   AlertCircle,
   ArrowLeft,
+  Award,
   BookOpen,
   Briefcase,
   CheckCircle2,
@@ -13,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Send,
+  ShieldAlert,
   Sliders,
   Sparkles,
   Tag,
@@ -24,6 +26,7 @@ import {
 } from "lucide-react";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
 import { FypWorkspaceHub } from "./fyp-workspace-hub";
+import { FypDefenseDeck } from "./fyp-defense-deck";
 import type {
   FypFacultySettings,
   FypGroupRecord,
@@ -42,7 +45,7 @@ export function FypFacultyDeck() {
   const teacherId = facultySession?.profile?.teacherId ?? null;
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"requests" | "groups" | "settings">("requests");
+  const [activeTab, setActiveTab] = useState<"requests" | "groups" | "defense" | "settings">("requests");
   const [pendingRequests, setPendingRequests] = useState<FypSupervisorRequest[]>([]);
   const [acceptedGroups, setAcceptedGroups] = useState<FypGroupRecord[]>([]);
   const [selectedWorkspaceGroup, setSelectedWorkspaceGroup] = useState<FypGroupRecord | null>(null);
@@ -361,6 +364,16 @@ export function FypFacultyDeck() {
           >
             {acceptedGroups.length}
           </span>
+        </button>
+
+        <button
+          type="button"
+          className={`faculty-tab-pill ${activeTab === "defense" ? "active" : ""}`}
+          onClick={() => setActiveTab("defense")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <Award size={16} />
+          <span>Defense & Panels</span>
         </button>
 
         <button
@@ -791,6 +804,14 @@ export function FypFacultyDeck() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* TAB 4: DEFENSE PANELS & EVALUATIONS */}
+      {activeTab === "defense" && (
+        <FypDefenseDeck
+          teacherId={teacherId}
+          teacherName={settings?.teacherName || "Faculty Member"}
+        />
       )}
 
       {/* Decline Reason Modal */}

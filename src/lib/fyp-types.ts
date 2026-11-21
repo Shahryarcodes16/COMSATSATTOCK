@@ -230,3 +230,147 @@ export interface FypGroupProgressSummary {
   isMeetingRequirementMet: boolean; // >= 2 meetings this month
 }
 
+/**
+ * =========================================================================
+ * PHASE 3: PANEL ALLOCATION, DEFENSE SCHEDULING & 6TH SEMESTER EVALUATION
+ * =========================================================================
+ */
+
+export interface FypPanelMember {
+  teacherId: number;
+  teacherName: string;
+  email: string;
+  department: string;
+  isChair: boolean;
+}
+
+export interface FypDefensePanel {
+  id: string;
+  name: string; // e.g. "Panel A - AI & Cyber Security"
+  department: string;
+  members: FypPanelMember[]; // 2 to 3 faculty members
+  assignedGroupIds: string[];
+  createdAt: string;
+}
+
+export type FypDefenseStatus =
+  | "scheduled"
+  | "in_progress"
+  | "completed"
+  | "rescheduled";
+
+export interface FypDefenseSchedule {
+  id: string;
+  groupId: string;
+  groupTitle: string;
+  groupDomain: string;
+  defenseDate: string; // YYYY-MM-DD
+  startTime: string; // "09:00"
+  endTime: string; // "09:45"
+  venue: string; // "Seminar Hall", "CS Lab 1", "Conference Room"
+  panelId: string;
+  panelName: string;
+  status: FypDefenseStatus;
+  rescheduleReason?: string | null;
+  createdAt: string;
+}
+
+export interface FypDefenseRubricCriterion {
+  id: string;
+  name: string;
+  description: string;
+  maxMarks: number;
+}
+
+export const DEFAULT_DEFENSE_RUBRIC: FypDefenseRubricCriterion[] = [
+  {
+    id: "pres",
+    name: "Presentation & Communication Skills",
+    description: "Slide quality, clarity of verbal delivery, pacing, professional demeanor, and visual aids.",
+    maxMarks: 15,
+  },
+  {
+    id: "prob",
+    name: "Problem Understanding & Motivation",
+    description: "Justification of problem significance, stakeholder impact, and real-world relevance to COMSATS context.",
+    maxMarks: 15,
+  },
+  {
+    id: "tech",
+    name: "Technical Depth & Literature Survey",
+    description: "Rigorous comparative study of existing benchmarks, frameworks, and scientific papers.",
+    maxMarks: 20,
+  },
+  {
+    id: "arch",
+    name: "Proposed Methodology & System Architecture",
+    description: "Feasibility of proposed pipeline, algorithmic approach, database schema, and interface design.",
+    maxMarks: 20,
+  },
+  {
+    id: "qna",
+    name: "Q&A Defense & Analytical Reasoning",
+    description: "Ability to defend technical decisions, handle edge cases, and articulate limitations.",
+    maxMarks: 15,
+  },
+  {
+    id: "indiv",
+    name: "Individual Contribution & Technical Grasp",
+    description: "Assessed individually per student based on their specific module ownership and Q&A mastery.",
+    maxMarks: 15,
+  },
+];
+
+export interface FypStudentScore {
+  studentId: string;
+  regNo: string;
+  studentName: string;
+  individualMarks: number; // out of 15
+}
+
+export type FypDefenseRecommendation =
+  | "accepted"
+  | "accepted_with_minor_changes"
+  | "major_revision"
+  | "deferred";
+
+export interface FypPanelistEvaluation {
+  id: string;
+  panelId: string;
+  groupId: string;
+  panelistId: number;
+  panelistName: string;
+  groupCriterionScores: Record<string, number>; // criterionId -> marks
+  studentScores: FypStudentScore[];
+  totalScore: number; // sum of group criteria + average of individual scores
+  recommendation: FypDefenseRecommendation;
+  remarks: string;
+  submittedAt: string;
+  isLocked: boolean;
+}
+
+export interface FypDefenseResultSummary {
+  groupId: string;
+  groupTitle: string;
+  groupDomain: string;
+  averageTotalScore: number;
+  evaluationsCount: number;
+  totalPanelists: number;
+  isPublished: boolean;
+  consensusRecommendation: FypDefenseRecommendation | "pending";
+  publishedAt?: string | null;
+  panelistSummaries: Array<{
+    panelistName: string;
+    totalScore?: number; // hidden if blinded/unpublished
+    recommendation: FypDefenseRecommendation;
+    remarks: string;
+  }>;
+  studentAverages: Array<{
+    studentId: string;
+    regNo: string;
+    studentName: string;
+    averageMarks: number;
+  }>;
+}
+
+

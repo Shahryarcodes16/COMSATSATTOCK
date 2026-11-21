@@ -9,6 +9,12 @@ import path from "node:path";
 import { dbSource, getSql } from "./db.ts";
 import { facultyList, getFacultyByTeacher } from "./faculty.ts";
 import type {
+  FypDefensePanel,
+  FypDefenseRecommendation,
+  FypDefenseResultSummary,
+  FypDefenseRubricCriterion,
+  FypDefenseSchedule,
+  FypDefenseStatus,
   FypDocumentCategory,
   FypDocumentComment,
   FypFacultySettings,
@@ -20,10 +26,14 @@ import type {
   FypMilestoneKey,
   FypMilestoneStatus,
   FypMilestoneSubmission,
+  FypPanelMember,
+  FypPanelistEvaluation,
   FypProjectDocument,
+  FypStudentScore,
   FypSupervisorRequest,
   FypSupervisorSummary,
 } from "./fyp-types.ts";
+import { DEFAULT_DEFENSE_RUBRIC } from "./fyp-types.ts";
 
 let tablesEnsured = false;
 const FYP_DISK_BACKUP = path.join(os.tmpdir(), "cui_fyp_data_v1.json");
@@ -35,6 +45,10 @@ interface FypBackupStore {
   milestones: FypMilestone[];
   meetingLogs: FypMeetingLog[];
   documents: FypProjectDocument[];
+  defensePanels: FypDefensePanel[];
+  defenseSchedules: FypDefenseSchedule[];
+  defenseEvaluations: FypPanelistEvaluation[];
+  defensePublications: Record<string, { isPublished: boolean; publishedAt: string; publishedBy: string }>;
 }
 
 const memoryGroups = new Map<string, FypGroupRecord>();
@@ -43,6 +57,10 @@ const memoryFacultySettings = new Map<number, FypFacultySettings>();
 const memoryMilestones = new Map<string, FypMilestone>();
 const memoryMeetingLogs = new Map<string, FypMeetingLog>();
 const memoryDocuments = new Map<string, FypProjectDocument>();
+const memoryPanels = new Map<string, FypDefensePanel>();
+const memorySchedules = new Map<string, FypDefenseSchedule>();
+const memoryEvaluations = new Map<string, FypPanelistEvaluation>();
+const memoryPublications = new Map<string, { isPublished: boolean; publishedAt: string; publishedBy: string }>();
 
 function readDiskStore(): FypBackupStore {
   try {
@@ -55,16 +73,35 @@ function readDiskStore(): FypBackupStore {
         milestones: Array.isArray(parsed.milestones) ? parsed.milestones : [],
         meetingLogs: Array.isArray(parsed.meetingLogs) ? parsed.meetingLogs : [],
         documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+        defensePanels: Array.isArray(parsed.defensePanels) ? parsed.defensePanels : [],
+        defenseSchedules: Array.isArray(parsed.defenseSchedules) ? parsed.defenseSchedules : [],
+        defenseEvaluations: Array.isArray(parsed.defenseEvaluations) ? parsed.defenseEvaluations : [],
+        defensePublications: typeof parsed.defensePublications === "object" && parsed.defensePublications !== null ? parsed.defensePublications : {},
       };
     }
   } catch {
     // Ignore read errors
   }
-  return { groups: [], requests: [], facultySettings: [], milestones: [], meetingLogs: [], documents: [] };
+  return {
+    groups: [],
+    requests: [],
+    facultySettings: [],
+    milestones: [],
+    meetingLogs: [],
+    documents: [],
+    defensePanels: [],
+    defenseSchedules: [],
+    defenseEvaluations: [],
+    defensePublications: {},
+  };
 }
 
 function writeDiskStore() {
   try {
+    const pubs: Record<string, { isPublished: boolean; publishedAt: string; publishedBy: string }> = {};
+    for (const [k, v] of memoryPublications.entries()) {
+      pubs[k] = v;
+    }
     const payload: FypBackupStore = {
       groups: Array.from(memoryGroups.values()),
       requests: Array.from(memoryRequests.values()),
@@ -72,6 +109,10 @@ function writeDiskStore() {
       milestones: Array.from(memoryMilestones.values()),
       meetingLogs: Array.from(memoryMeetingLogs.values()),
       documents: Array.from(memoryDocuments.values()),
+      defensePanels: Array.from(memoryPanels.values()),
+      defenseSchedules: Array.from(memorySchedules.values()),
+      defenseEvaluations: Array.from(memoryEvaluations.values()),
+      defensePublications: pubs,
     };
     fs.writeFileSync(FYP_DISK_BACKUP, JSON.stringify(payload, null, 2), "utf8");
   } catch {
@@ -80,7 +121,7 @@ function writeDiskStore() {
 }
 
 function hydrateFallbackFromDisk() {
-  if (memoryGroups.size > 0 || memoryFacultySettings.size > 0 || memoryMilestones.size > 0) return;
+  if (memoryGroups.size > 0 || memoryFacultySettings.size > 0 || memoryMilestones.size > 0 || memoryPanels.size > 0) return;
   const store = readDiskStore();
   for (const g of store.groups) memoryGroups.set(g.id, g);
   for (const r of store.requests) memoryRequests.set(r.id, r);
@@ -88,6 +129,12 @@ function hydrateFallbackFromDisk() {
   for (const m of store.milestones) memoryMilestones.set(m.id, m);
   for (const l of store.meetingLogs) memoryMeetingLogs.set(l.id, l);
   for (const d of store.documents) memoryDocuments.set(d.id, d);
+  for (const p of store.defensePanels) memoryPanels.set(p.id, p);
+  for (const s of store.defenseSchedules) memorySchedules.set(s.id, s);
+  for (const e of store.defenseEvaluations) memoryEvaluations.set(e.id, e);
+  for (const [k, v] of Object.entries(store.defensePublications || {})) {
+    memoryPublications.set(k, v);
+  }
 }
 
 // Seed reasonable default research areas for faculty based on their department
@@ -241,6 +288,65 @@ export async function ensureFypTables() {
       )
     `);
 
+    // 7. FYP Defense Panels Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_defense_panels (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        department TEXT NOT NULL,
+        members JSONB NOT NULL DEFAULT '[]'::jsonb,
+        assigned_group_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TEXT NOT NULL
+      )
+    `);
+
+    // 8. FYP Defense Schedules Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_defense_schedules (
+        id TEXT PRIMARY KEY,
+        group_id TEXT NOT NULL,
+        group_title TEXT NOT NULL,
+        group_domain TEXT NOT NULL,
+        defense_date TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        venue TEXT NOT NULL,
+        panel_id TEXT NOT NULL,
+        panel_name TEXT NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'scheduled',
+        reschedule_reason TEXT,
+        created_at TEXT NOT NULL
+      )
+    `);
+
+    // 9. FYP Defense Evaluations Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_defense_evaluations (
+        id TEXT PRIMARY KEY,
+        panel_id TEXT NOT NULL,
+        group_id TEXT NOT NULL,
+        panelist_id INTEGER NOT NULL,
+        panelist_name TEXT NOT NULL,
+        group_criterion_scores JSONB NOT NULL,
+        student_scores JSONB NOT NULL,
+        total_score NUMERIC NOT NULL,
+        recommendation VARCHAR(40) NOT NULL,
+        remarks TEXT,
+        submitted_at TEXT NOT NULL,
+        is_locked BOOLEAN NOT NULL DEFAULT TRUE
+      )
+    `);
+
+    // 10. FYP Defense Publications Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_defense_publications (
+        group_id TEXT PRIMARY KEY,
+        is_published BOOLEAN NOT NULL DEFAULT FALSE,
+        published_at TEXT,
+        published_by TEXT
+      )
+    `);
+
     // Create indexes safely
     try {
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_req_teacher ON fyp_supervisor_requests (teacher_id, status)`);
@@ -249,6 +355,9 @@ export async function ensureFypTables() {
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_milestones_group ON fyp_milestones (group_id)`);
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_meetings_group ON fyp_meeting_logs (group_id)`);
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_documents_group ON fyp_documents (group_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_schedules_group ON fyp_defense_schedules (group_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_schedules_panel ON fyp_defense_schedules (panel_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_evals_group ON fyp_defense_evaluations (group_id)`);
     } catch {
       // Ignore index duplicate warnings
     }
@@ -1598,4 +1707,719 @@ export async function serverAddDocumentComment(data: {
   writeDiskStore();
   return doc;
 }
+
+/**
+ * =========================================================================
+ * PHASE 3: PANEL ALLOCATION, DEFENSE SCHEDULING & 6TH SEMESTER EVALUATION
+ * =========================================================================
+ */
+
+/**
+ * Retrieve all defense panels
+ */
+export async function serverGetAllDefensePanels(): Promise<FypDefensePanel[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_defense_panels ORDER BY created_at DESC`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        name: String(r.name),
+        department: String(r.department || "Computer Science"),
+        members: typeof r.members === "string" ? JSON.parse(r.members) : Array.isArray(r.members) ? r.members : [],
+        assignedGroupIds: typeof r.assigned_group_ids === "string" ? JSON.parse(r.assigned_group_ids) : Array.isArray(r.assigned_group_ids) ? r.assigned_group_ids : [],
+        createdAt: String(r.created_at),
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryPanels.values());
+}
+
+/**
+ * Create a new defense panel of 2-4 faculty members
+ */
+export async function serverCreateDefensePanel(data: {
+  name: string;
+  department?: string;
+  members: FypPanelMember[];
+}): Promise<FypDefensePanel> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  if (!data.name?.trim()) {
+    throw new Error("Panel name is required");
+  }
+  if (!Array.isArray(data.members) || data.members.length < 2 || data.members.length > 4) {
+    throw new Error("A defense panel must have between 2 and 4 faculty members.");
+  }
+
+  // Ensure exactly one chairperson
+  const hasChair = data.members.some((m) => m.isChair);
+  const formattedMembers = data.members.map((m, idx) => ({
+    ...m,
+    isChair: hasChair ? m.isChair : idx === 0, // Designate first member as chair if unset
+  }));
+
+  const id = `panel-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  const panel: FypDefensePanel = {
+    id,
+    name: data.name.trim(),
+    department: data.department || data.members[0]?.department || "Computer Science",
+    members: formattedMembers,
+    assignedGroupIds: [],
+    createdAt: now,
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_defense_panels (id, name, department, members, assigned_group_ids, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO UPDATE SET
+         name = EXCLUDED.name,
+         members = EXCLUDED.members,
+         assigned_group_ids = EXCLUDED.assigned_group_ids`,
+      [panel.id, panel.name, panel.department, JSON.stringify(panel.members), JSON.stringify(panel.assignedGroupIds), panel.createdAt],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Create panel database fallback:", err);
+  }
+
+  memoryPanels.set(panel.id, panel);
+  writeDiskStore();
+  return panel;
+}
+
+/**
+ * Assign groups to a defense panel with STRICT Supervisor Conflict Check
+ */
+export async function serverAssignGroupsToPanel(data: {
+  panelId: string;
+  groupIds: string[];
+}): Promise<FypDefensePanel> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const panels = await serverGetAllDefensePanels();
+  const panel = panels.find((p) => p.id === data.panelId);
+  if (!panel) {
+    throw new Error("Defense panel not found");
+  }
+
+  const allGroups = await serverGetAllFypGroups();
+
+  // Strict Conflict Check: Panel member cannot supervise assigned group!
+  for (const gid of data.groupIds) {
+    const group = allGroups.find((g) => g.id === gid);
+    if (!group) continue;
+
+    if (group.supervisorId !== null && group.supervisorId !== undefined) {
+      const conflictMember = panel.members.find((m) => m.teacherId === group.supervisorId);
+      if (conflictMember) {
+        throw new Error(
+          `Conflict of Interest: ${conflictMember.teacherName} is the official supervisor of group "${group.title}" and is strictly excluded from evaluating their own group.`,
+        );
+      }
+    }
+  }
+
+  panel.assignedGroupIds = Array.from(new Set([...panel.assignedGroupIds, ...data.groupIds]));
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `UPDATE fyp_defense_panels SET assigned_group_ids = $1 WHERE id = $2`,
+      [JSON.stringify(panel.assignedGroupIds), panel.id],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Assign groups database fallback:", err);
+  }
+
+  memoryPanels.set(panel.id, panel);
+  writeDiskStore();
+  return panel;
+}
+
+/**
+ * Auto-suggests compatible panels for groups avoiding supervisor conflicts and balancing workload
+ */
+export async function serverAutoSuggestPanels(groupIds?: string[]): Promise<
+  Array<{
+    groupId: string;
+    groupTitle: string;
+    domain: string;
+    supervisorName: string;
+    suggestedPanelId?: string;
+    suggestedPanelName?: string;
+    eligiblePanelsCount: number;
+  }>
+> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const panels = await serverGetAllDefensePanels();
+  const allGroups = await serverGetAllFypGroups();
+  const targetGroups = groupIds && groupIds.length > 0
+    ? allGroups.filter((g) => groupIds.includes(g.id))
+    : allGroups.filter((g) => g.status === "supervisor_accepted" || g.status === "locked");
+
+  const results = [];
+
+  for (const group of targetGroups) {
+    // Find panels without conflict
+    const eligiblePanels = panels.filter((p) => {
+      if (!group.supervisorId) return true;
+      return !p.members.some((m) => m.teacherId === group.supervisorId);
+    });
+
+    // Sort by fewest assigned groups (workload balance)
+    eligiblePanels.sort((a, b) => a.assignedGroupIds.length - b.assignedGroupIds.length);
+    const bestMatch = eligiblePanels[0];
+
+    results.push({
+      groupId: group.id,
+      groupTitle: group.title,
+      domain: group.domain,
+      supervisorName: group.supervisorName || "Unassigned",
+      suggestedPanelId: bestMatch?.id,
+      suggestedPanelName: bestMatch?.name,
+      eligiblePanelsCount: eligiblePanels.length,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Get all defense schedules
+ */
+export async function serverGetAllDefenseSchedules(): Promise<FypDefenseSchedule[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_defense_schedules ORDER BY defense_date ASC, start_time ASC`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        groupId: String(r.group_id),
+        groupTitle: String(r.group_title),
+        groupDomain: String(r.group_domain),
+        defenseDate: String(r.defense_date),
+        startTime: String(r.start_time),
+        endTime: String(r.end_time),
+        venue: String(r.venue),
+        panelId: String(r.panel_id),
+        panelName: String(r.panel_name),
+        status: (r.status as FypDefenseStatus) || "scheduled",
+        rescheduleReason: r.reschedule_reason ? String(r.reschedule_reason) : null,
+        createdAt: String(r.created_at),
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memorySchedules.values()).sort(
+    (a, b) => a.defenseDate.localeCompare(b.defenseDate) || a.startTime.localeCompare(b.startTime),
+  );
+}
+
+/**
+ * Schedule defense presentation avoiding room clashes and panel double-booking
+ */
+export async function serverScheduleDefense(data: {
+  groupId: string;
+  panelId: string;
+  defenseDate: string; // YYYY-MM-DD
+  startTime: string; // "09:00"
+  endTime: string; // "09:45"
+  venue: string; // "Seminar Hall", "CS Lab 1", etc.
+}): Promise<FypDefenseSchedule> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allGroups = await serverGetAllFypGroups();
+  const group = allGroups.find((g) => g.id === data.groupId);
+  if (!group) throw new Error("Group not found");
+
+  const panels = await serverGetAllDefensePanels();
+  const panel = panels.find((p) => p.id === data.panelId);
+  if (!panel) throw new Error("Defense panel not found");
+
+  // Conflict Check 1: Supervisor cannot evaluate their own group
+  if (group.supervisorId && panel.members.some((m) => m.teacherId === group.supervisorId)) {
+    throw new Error(
+      `Conflict of Interest: A panel evaluating group "${group.title}" cannot include supervisor ${group.supervisorName}.`,
+    );
+  }
+
+  const existingSchedules = await serverGetAllDefenseSchedules();
+
+  // Clash Check 2: Room/Venue clash during overlapping time
+  const venueClash = existingSchedules.find((s) => {
+    if (s.groupId === data.groupId) return false;
+    if (s.defenseDate !== data.defenseDate) return false;
+    if (s.venue.trim().toLowerCase() !== data.venue.trim().toLowerCase()) return false;
+    // Overlap: (start1 < end2) && (start2 < end1)
+    return data.startTime < s.endTime && s.startTime < data.endTime;
+  });
+
+  if (venueClash) {
+    throw new Error(
+      `Venue Clash: "${data.venue}" is already booked on ${data.defenseDate} from ${venueClash.startTime} to ${venueClash.endTime} for "${venueClash.groupTitle}".`,
+    );
+  }
+
+  // Clash Check 3: Panel double-booking at overlapping time
+  const panelClash = existingSchedules.find((s) => {
+    if (s.groupId === data.groupId) return false;
+    if (s.defenseDate !== data.defenseDate) return false;
+    if (s.panelId !== data.panelId) return false;
+    return data.startTime < s.endTime && s.startTime < data.endTime;
+  });
+
+  if (panelClash) {
+    throw new Error(
+      `Panel Clash: "${panel.name}" is already evaluating another defense from ${panelClash.startTime} to ${panelClash.endTime}.`,
+    );
+  }
+
+  const id = `sched-${data.groupId}`;
+  const now = new Date().toISOString();
+
+  const schedule: FypDefenseSchedule = {
+    id,
+    groupId: group.id,
+    groupTitle: group.title,
+    groupDomain: group.domain,
+    defenseDate: data.defenseDate,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    venue: data.venue.trim(),
+    panelId: panel.id,
+    panelName: panel.name,
+    status: "scheduled",
+    createdAt: now,
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_defense_schedules 
+       (id, group_id, group_title, group_domain, defense_date, start_time, end_time, venue, panel_id, panel_name, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT (id) DO UPDATE SET
+         defense_date = EXCLUDED.defense_date,
+         start_time = EXCLUDED.start_time,
+         end_time = EXCLUDED.end_time,
+         venue = EXCLUDED.venue,
+         panel_id = EXCLUDED.panel_id,
+         panel_name = EXCLUDED.panel_name,
+         status = EXCLUDED.status`,
+      [
+        schedule.id,
+        schedule.groupId,
+        schedule.groupTitle,
+        schedule.groupDomain,
+        schedule.defenseDate,
+        schedule.startTime,
+        schedule.endTime,
+        schedule.venue,
+        schedule.panelId,
+        schedule.panelName,
+        schedule.status,
+        schedule.createdAt,
+      ],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Schedule defense database fallback:", err);
+  }
+
+  memorySchedules.set(schedule.id, schedule);
+  // Also link group to panel if not linked yet
+  if (!panel.assignedGroupIds.includes(group.id)) {
+    panel.assignedGroupIds.push(group.id);
+    memoryPanels.set(panel.id, panel);
+  }
+
+  writeDiskStore();
+  return schedule;
+}
+
+/**
+ * Get defenses assigned to a specific faculty panelist
+ */
+export async function serverGetFacultyAssignedDefenses(teacherId: number): Promise<
+  Array<{
+    schedule: FypDefenseSchedule;
+    group: FypGroupRecord;
+    panel: FypDefensePanel;
+    isChair: boolean;
+    myEvaluation?: FypPanelistEvaluation;
+  }>
+> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const panels = await serverGetAllDefensePanels();
+  const myPanels = panels.filter((p) => p.members.some((m) => m.teacherId === teacherId));
+  const myPanelIds = new Set(myPanels.map((p) => p.id));
+
+  const allSchedules = await serverGetAllDefenseSchedules();
+  const relevantSchedules = allSchedules.filter((s) => myPanelIds.has(s.panelId));
+  const allGroups = await serverGetAllFypGroups();
+  const allEvaluations = await serverGetAllDefenseEvaluations();
+
+  const results = [];
+
+  for (const sched of relevantSchedules) {
+    const group = allGroups.find((g) => g.id === sched.groupId);
+    const panel = myPanels.find((p) => p.id === sched.panelId);
+    if (!group || !panel) continue;
+
+    const myEvaluation = allEvaluations.find(
+      (e) => e.groupId === sched.groupId && e.panelistId === teacherId,
+    );
+    const myMember = panel.members.find((m) => m.teacherId === teacherId);
+
+    results.push({
+      schedule: sched,
+      group,
+      panel,
+      isChair: Boolean(myMember?.isChair),
+      myEvaluation,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Get all defense evaluations submitted
+ */
+export async function serverGetAllDefenseEvaluations(): Promise<FypPanelistEvaluation[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_defense_evaluations`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        panelId: String(r.panel_id),
+        groupId: String(r.group_id),
+        panelistId: Number(r.panelist_id),
+        panelistName: String(r.panelist_name),
+        groupCriterionScores: typeof r.group_criterion_scores === "string" ? JSON.parse(r.group_criterion_scores) : r.group_criterion_scores || {},
+        studentScores: typeof r.student_scores === "string" ? JSON.parse(r.student_scores) : Array.isArray(r.student_scores) ? r.student_scores : [],
+        totalScore: Number(r.total_score),
+        recommendation: r.recommendation as FypDefenseRecommendation,
+        remarks: String(r.remarks || ""),
+        submittedAt: String(r.submitted_at),
+        isLocked: r.is_locked !== false,
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryEvaluations.values());
+}
+
+/**
+ * Submit defense scoring evaluation independently as a panelist
+ */
+export async function serverSubmitDefenseEvaluation(data: {
+  panelId: string;
+  groupId: string;
+  panelistId: number;
+  panelistName: string;
+  groupCriterionScores: Record<string, number>;
+  studentScores: FypStudentScore[];
+  recommendation: FypDefenseRecommendation;
+  remarks: string;
+}): Promise<FypPanelistEvaluation> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  // Calculate total score:
+  // 1. Sum of group rubric criteria (pres: 15, prob: 15, tech: 20, arch: 20, qna: 15 = 85 max)
+  let groupCriteriaTotal = 0;
+  for (const [k, v] of Object.entries(data.groupCriterionScores)) {
+    if (k !== "indiv") {
+      groupCriteriaTotal += Number(v) || 0;
+    }
+  }
+
+  // 2. Average of individual student scores (15 max)
+  let avgStudentIndividual = 0;
+  if (data.studentScores.length > 0) {
+    const indivSum = data.studentScores.reduce((acc, s) => acc + (Number(s.individualMarks) || 0), 0);
+    avgStudentIndividual = Math.round((indivSum / data.studentScores.length) * 10) / 10;
+  }
+
+  const totalScore = Math.min(100, Math.round((groupCriteriaTotal + avgStudentIndividual) * 10) / 10);
+
+  const id = `eval-${data.groupId}-${data.panelistId}`;
+  const now = new Date().toISOString();
+
+  const evalRecord: FypPanelistEvaluation = {
+    id,
+    panelId: data.panelId,
+    groupId: data.groupId,
+    panelistId: data.panelistId,
+    panelistName: data.panelistName,
+    groupCriterionScores: data.groupCriterionScores,
+    studentScores: data.studentScores,
+    totalScore,
+    recommendation: data.recommendation,
+    remarks: data.remarks.trim(),
+    submittedAt: now,
+    isLocked: true,
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_defense_evaluations 
+       (id, panel_id, group_id, panelist_id, panelist_name, group_criterion_scores, student_scores, total_score, recommendation, remarks, submitted_at, is_locked)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT (id) DO UPDATE SET
+         group_criterion_scores = EXCLUDED.group_criterion_scores,
+         student_scores = EXCLUDED.student_scores,
+         total_score = EXCLUDED.total_score,
+         recommendation = EXCLUDED.recommendation,
+         remarks = EXCLUDED.remarks,
+         submitted_at = EXCLUDED.submitted_at,
+         is_locked = EXCLUDED.is_locked`,
+      [
+        evalRecord.id,
+        evalRecord.panelId,
+        evalRecord.groupId,
+        evalRecord.panelistId,
+        evalRecord.panelistName,
+        JSON.stringify(evalRecord.groupCriterionScores),
+        JSON.stringify(evalRecord.studentScores),
+        evalRecord.totalScore,
+        evalRecord.recommendation,
+        evalRecord.remarks,
+        evalRecord.submittedAt,
+        evalRecord.isLocked,
+      ],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Submit evaluation database fallback:", err);
+  }
+
+  memoryEvaluations.set(evalRecord.id, evalRecord);
+  writeDiskStore();
+  return evalRecord;
+}
+
+/**
+ * Check if defense results are published for a group
+ */
+export async function serverGetDefensePublicationStatus(groupId: string): Promise<{
+  isPublished: boolean;
+  publishedAt?: string | null;
+  publishedBy?: string | null;
+}> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_defense_publications WHERE group_id = $1 LIMIT 1`, [groupId]);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return {
+        isPublished: Boolean(rows[0].is_published),
+        publishedAt: rows[0].published_at,
+        publishedBy: rows[0].published_by,
+      };
+    }
+  } catch {
+    // Fallback
+  }
+
+  const pub = memoryPublications.get(groupId);
+  return {
+    isPublished: pub ? pub.isPublished : false,
+    publishedAt: pub ? pub.publishedAt : null,
+    publishedBy: pub ? pub.publishedBy : null,
+  };
+}
+
+/**
+ * Publish defense results to group and student portals
+ */
+export async function serverPublishDefenseResult(data: {
+  groupId: string;
+  publishedBy: string;
+}): Promise<{ success: boolean; resultSummary: FypDefenseResultSummary }> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const now = new Date().toISOString();
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_defense_publications (group_id, is_published, published_at, published_by)
+       VALUES ($1, TRUE, $2, $3)
+       ON CONFLICT (group_id) DO UPDATE SET
+         is_published = TRUE,
+         published_at = EXCLUDED.published_at,
+         published_by = EXCLUDED.published_by`,
+      [data.groupId, now, data.publishedBy],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Publish defense results database fallback:", err);
+  }
+
+  memoryPublications.set(data.groupId, {
+    isPublished: true,
+    publishedAt: now,
+    publishedBy: data.publishedBy,
+  });
+  writeDiskStore();
+
+  const summary = await serverGetGroupDefenseResult(data.groupId, "coordinator");
+  return { success: true, resultSummary: summary };
+}
+
+/**
+ * Get comprehensive defense result with blind-scoring rules
+ */
+export async function serverGetGroupDefenseResult(
+  groupId: string,
+  requestingRole: "student" | "panelist" | "coordinator",
+  requesterId?: number,
+): Promise<FypDefenseResultSummary> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allGroups = await serverGetAllFypGroups();
+  const group = allGroups.find((g) => g.id === groupId);
+  const groupTitle = group?.title || "Final Year Project";
+  const groupDomain = group?.domain || "Computer Science";
+
+  const panels = await serverGetAllDefensePanels();
+  const panel = panels.find((p) => p.assignedGroupIds.includes(groupId));
+  const totalPanelists = panel?.members.length || 3;
+
+  const allEvals = await serverGetAllDefenseEvaluations();
+  const groupEvals = allEvals.filter((e) => e.groupId === groupId);
+  const pubStatus = await serverGetDefensePublicationStatus(groupId);
+
+  // Compute average total score
+  const averageTotalScore = groupEvals.length > 0
+    ? Math.round((groupEvals.reduce((acc, e) => acc + e.totalScore, 0) / groupEvals.length) * 10) / 10
+    : 0;
+
+  // Compute consensus recommendation
+  let consensusRecommendation: FypDefenseRecommendation | "pending" = "pending";
+  if (groupEvals.length > 0) {
+    const recCounts: Record<string, number> = {};
+    for (const e of groupEvals) {
+      recCounts[e.recommendation] = (recCounts[e.recommendation] || 0) + 1;
+    }
+    // Highest frequency
+    let highestCount = 0;
+    for (const [rec, cnt] of Object.entries(recCounts)) {
+      if (cnt > highestCount) {
+        highestCount = cnt;
+        consensusRecommendation = rec as FypDefenseRecommendation;
+      }
+    }
+  }
+
+  // Student Individual Averages
+  const studentAvgMap = new Map<string, { regNo: string; name: string; sum: number; count: number }>();
+  for (const e of groupEvals) {
+    for (const s of e.studentScores) {
+      const existing = studentAvgMap.get(s.studentId) || { regNo: s.regNo, name: s.studentName, sum: 0, count: 0 };
+      existing.sum += s.individualMarks;
+      existing.count += 1;
+      studentAvgMap.set(s.studentId, existing);
+    }
+  }
+
+  const studentAverages = Array.from(studentAvgMap.entries()).map(([studentId, val]) => ({
+    studentId,
+    regNo: val.regNo,
+    studentName: val.name,
+    averageMarks: val.count > 0 ? Math.round((val.sum / val.count) * 10) / 10 : 0,
+  }));
+
+  // Blind scoring filters:
+  // If not published and requester is student: hide numerical marks
+  // If panelist: can see own score; others' scores hidden if blind scoring active
+  const isPublished = pubStatus.isPublished;
+  const panelistSummaries = groupEvals.map((e) => {
+    const isMine = requesterId !== undefined && e.panelistId === requesterId;
+    const canSeeScore = isPublished || requestingRole === "coordinator" || isMine;
+
+    return {
+      panelistName: e.panelistName,
+      totalScore: canSeeScore ? e.totalScore : undefined,
+      recommendation: e.recommendation,
+      remarks: isPublished || requestingRole === "coordinator" || isMine ? e.remarks : "Evaluation submitted (blinded).",
+    };
+  });
+
+  return {
+    groupId,
+    groupTitle,
+    groupDomain,
+    averageTotalScore: isPublished || requestingRole === "coordinator" ? averageTotalScore : 0,
+    evaluationsCount: groupEvals.length,
+    totalPanelists,
+    isPublished,
+    consensusRecommendation: isPublished || requestingRole === "coordinator" ? consensusRecommendation : "pending",
+    publishedAt: pubStatus.publishedAt,
+    panelistSummaries,
+    studentAverages: isPublished || requestingRole === "coordinator" ? studentAverages : [],
+  };
+}
+
+/**
+ * Get student's defense schedule and published result
+ */
+export async function serverGetStudentDefenseSchedule(groupId: string): Promise<{
+  schedule: FypDefenseSchedule | null;
+  panel: FypDefensePanel | null;
+  resultSummary: FypDefenseResultSummary | null;
+}> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allSchedules = await serverGetAllDefenseSchedules();
+  const schedule = allSchedules.find((s) => s.groupId === groupId) || null;
+
+  let panel: FypDefensePanel | null = null;
+  if (schedule) {
+    const panels = await serverGetAllDefensePanels();
+    panel = panels.find((p) => p.id === schedule.panelId) || null;
+  }
+
+  const resultSummary = await serverGetGroupDefenseResult(groupId, "student");
+
+  return {
+    schedule,
+    panel,
+    resultSummary,
+  };
+}
+
 

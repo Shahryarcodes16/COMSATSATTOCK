@@ -304,3 +304,181 @@ export const addDocumentCommentServerFn = createServerFn({
     return { success: true, document };
   });
 
+/**
+ * =========================================================================
+ * PHASE 3 SERVER FUNCTIONS: PANELS, SCHEDULING & DEFENSE EVALUATION
+ * =========================================================================
+ */
+
+export const getAllDefensePanelsServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const { serverGetAllDefensePanels } = await import("./fyp.server.ts");
+  const panels = await serverGetAllDefensePanels();
+  return { panels };
+});
+
+const PanelMemberSchema = z.object({
+  teacherId: z.number().int().positive(),
+  teacherName: z.string().min(1),
+  email: z.string().email(),
+  department: z.string().min(1),
+  isChair: z.boolean(),
+});
+
+const CreateDefensePanelSchema = z.object({
+  name: z.string().min(3),
+  department: z.string().optional(),
+  members: z.array(PanelMemberSchema).min(2).max(4),
+});
+
+export const createDefensePanelServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => CreateDefensePanelSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverCreateDefensePanel } = await import("./fyp.server.ts");
+    const panel = await serverCreateDefensePanel(data);
+    return { success: true, panel };
+  });
+
+const AssignGroupsToPanelSchema = z.object({
+  panelId: z.string().min(1),
+  groupIds: z.array(z.string().min(1)),
+});
+
+export const assignGroupsToPanelServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => AssignGroupsToPanelSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverAssignGroupsToPanel } = await import("./fyp.server.ts");
+    const panel = await serverAssignGroupsToPanel(data);
+    return { success: true, panel };
+  });
+
+export const autoSuggestPanelsServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupIds: z.array(z.string()).optional() }).optional().parse(d))
+  .handler(async ({ data }) => {
+    const { serverAutoSuggestPanels } = await import("./fyp.server.ts");
+    const suggestions = await serverAutoSuggestPanels(data?.groupIds);
+    return { suggestions };
+  });
+
+export const getAllDefenseSchedulesServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const { serverGetAllDefenseSchedules } = await import("./fyp.server.ts");
+  const schedules = await serverGetAllDefenseSchedules();
+  return { schedules };
+});
+
+const ScheduleDefenseSchema = z.object({
+  groupId: z.string().min(1),
+  panelId: z.string().min(1),
+  defenseDate: z.string().min(1),
+  startTime: z.string().min(1),
+  endTime: z.string().min(1),
+  venue: z.string().min(1),
+});
+
+export const scheduleDefenseServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => ScheduleDefenseSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverScheduleDefense } = await import("./fyp.server.ts");
+    const schedule = await serverScheduleDefense(data);
+    return { success: true, schedule };
+  });
+
+export const getFacultyAssignedDefensesServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ teacherId: z.number().int().positive() }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetFacultyAssignedDefenses } = await import("./fyp.server.ts");
+    const defenses = await serverGetFacultyAssignedDefenses(data.teacherId);
+    return { defenses };
+  });
+
+export const getStudentDefenseScheduleServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetStudentDefenseSchedule } = await import("./fyp.server.ts");
+    const result = await serverGetStudentDefenseSchedule(data.groupId);
+    return result;
+  });
+
+const StudentScoreSchema = z.object({
+  studentId: z.string().min(1),
+  regNo: z.string().min(1),
+  studentName: z.string().min(1),
+  individualMarks: z.number().min(0).max(15),
+});
+
+const SubmitDefenseEvaluationSchema = z.object({
+  panelId: z.string().min(1),
+  groupId: z.string().min(1),
+  panelistId: z.number().int().positive(),
+  panelistName: z.string().min(1),
+  groupCriterionScores: z.record(z.string(), z.number()),
+  studentScores: z.array(StudentScoreSchema),
+  recommendation: z.enum([
+    "accepted",
+    "accepted_with_minor_changes",
+    "major_revision",
+    "deferred",
+  ]),
+  remarks: z.string().min(1, "Feedback remarks are required"),
+});
+
+export const submitDefenseEvaluationServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => SubmitDefenseEvaluationSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverSubmitDefenseEvaluation } = await import("./fyp.server.ts");
+    const evaluation = await serverSubmitDefenseEvaluation(data);
+    return { success: true, evaluation };
+  });
+
+export const getGroupDefenseResultServerFn = createServerFn({
+  method: "GET",
+})
+  .validator(
+    (d: unknown) =>
+      z
+        .object({
+          groupId: z.string().min(1),
+          role: z.enum(["student", "panelist", "coordinator"]).default("student"),
+          requesterId: z.number().optional(),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { serverGetGroupDefenseResult } = await import("./fyp.server.ts");
+    const result = await serverGetGroupDefenseResult(data.groupId, data.role, data.requesterId);
+    return { result };
+  });
+
+const PublishDefenseResultSchema = z.object({
+  groupId: z.string().min(1),
+  publishedBy: z.string().min(1),
+});
+
+export const publishDefenseResultServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => PublishDefenseResultSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverPublishDefenseResult } = await import("./fyp.server.ts");
+    const res = await serverPublishDefenseResult(data);
+    return res;
+  });
+
+

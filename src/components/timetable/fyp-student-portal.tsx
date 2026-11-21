@@ -251,7 +251,7 @@ export function FypStudentPortal() {
           <div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
               <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
-                Phase 1: 6th Semester Module
+                6th Semester FYP Module (Supervisor Selection &amp; Defense)
               </span>
               <span className="badge" style={{ background: isGroupSupervised ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)", color: isGroupSupervised ? "#10b981" : "#d97706" }}>
                 {isGroupSupervised ? "✓ Supervisor Confirmed" : group ? "⏳ Supervisor Selection in Progress" : "○ Group Formation"}

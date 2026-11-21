@@ -16,6 +16,7 @@ import {
   GitBranch,
   GraduationCap,
   Layers,
+  MapPin,
   MessageSquare,
   Paperclip,
   Plus,
@@ -30,6 +31,9 @@ import {
   XCircle,
 } from "lucide-react";
 import type {
+  FypDefensePanel,
+  FypDefenseResultSummary,
+  FypDefenseSchedule,
   FypDocumentCategory,
   FypGroupProgressSummary,
   FypGroupRecord,
@@ -46,6 +50,7 @@ import {
   getGroupMeetingLogsServerFn,
   getGroupMilestonesServerFn,
   getGroupProgressSummaryServerFn,
+  getStudentDefenseScheduleServerFn,
   reviewMilestoneServerFn,
   submitMilestoneServerFn,
   uploadGroupDocumentServerFn,
@@ -66,12 +71,15 @@ export function FypWorkspaceHub({
   supervisorId,
   onRefreshGroup,
 }: FypWorkspaceHubProps) {
-  const [activeTab, setActiveTab] = useState<"milestones" | "meetings" | "documents">("milestones");
+  const [activeTab, setActiveTab] = useState<"milestones" | "meetings" | "documents" | "defense">("milestones");
   const [loading, setLoading] = useState(true);
   const [milestones, setMilestones] = useState<FypMilestone[]>([]);
   const [meetings, setMeetings] = useState<FypMeetingLog[]>([]);
   const [documents, setDocuments] = useState<FypProjectDocument[]>([]);
   const [summary, setSummary] = useState<FypGroupProgressSummary | null>(null);
+  const [defenseSchedule, setDefenseSchedule] = useState<FypDefenseSchedule | null>(null);
+  const [defensePanel, setDefensePanel] = useState<FypDefensePanel | null>(null);
+  const [defenseResult, setDefenseResult] = useState<FypDefenseResultSummary | null>(null);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -118,17 +126,27 @@ export function FypWorkspaceHub({
   const loadHubData = async () => {
     try {
       setLoading(true);
-      const [mRes, meetRes, docRes, sumRes] = await Promise.all([
+      const [mRes, meetRes, docRes, sumRes, defRes] = await Promise.all([
         getGroupMilestonesServerFn({ data: { groupId: group.id } }),
         getGroupMeetingLogsServerFn({ data: { groupId: group.id } }),
         getGroupDocumentsServerFn({ data: { groupId: group.id } }),
         getGroupProgressSummaryServerFn({ data: { groupId: group.id } }),
+        getStudentDefenseScheduleServerFn({ data: { groupId: group.id } }).catch(() => ({
+          schedule: null,
+          panel: null,
+          resultSummary: null,
+        })),
       ]);
 
       setMilestones(mRes.milestones || []);
       setMeetings(meetRes.meetingLogs || []);
       setDocuments(docRes.documents || []);
       setSummary(sumRes.summary || null);
+      if (defRes) {
+        setDefenseSchedule(defRes.schedule || null);
+        setDefensePanel(defRes.panel || null);
+        setDefenseResult(defRes.resultSummary || null);
+      }
     } catch (err) {
       console.error("Failed to load FYP workspace hub data:", err);
     } finally {
@@ -470,6 +488,43 @@ export function FypWorkspaceHub({
           <FileText size={15} />
           <span>Document Vault & Turnitin</span>
           <span className="tab-badge">{documents.length}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`faculty-tab-pill ${activeTab === "defense" ? "active" : ""}`}
+          onClick={() => setActiveTab("defense")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <Award size={15} />
+          <span>6th Sem Defense</span>
+          {defenseResult?.published ? (
+            <span
+              style={{
+                background: "rgba(16, 185, 129, 0.2)",
+                color: "#10b981",
+                fontSize: "0.72rem",
+                padding: "1px 6px",
+                borderRadius: "10px",
+                fontWeight: 700,
+              }}
+            >
+              Published
+            </span>
+          ) : defenseSchedule ? (
+            <span
+              style={{
+                background: "rgba(99, 102, 241, 0.2)",
+                color: "var(--accent)",
+                fontSize: "0.72rem",
+                padding: "1px 6px",
+                borderRadius: "10px",
+                fontWeight: 700,
+              }}
+            >
+              Scheduled
+            </span>
+          ) : null}
         </button>
       </div>
 
@@ -978,6 +1033,284 @@ export function FypWorkspaceHub({
                 </div>
               </div>
             ))
+          )}
+        </section>
+      )}
+
+      {/* =========================================================================
+          TAB 4: 6TH SEMESTER DEFENSE & EVALUATION
+          ========================================================================= */}
+      {activeTab === "defense" && (
+        <section className="stack" style={{ gap: "1.25rem" }}>
+          {!defenseSchedule && (
+            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
+              <Clock size={40} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>Defense Allocation in Progress</h4>
+              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem", maxWidth: "480px" }}>
+                The FYP Coordinator is currently forming evaluation panels and scheduling defense slots across departmental venues. You will see your exact presentation date, room, and panelist roster once published.
+              </p>
+            </div>
+          )}
+
+          {defenseSchedule && (
+            <div className="card" style={{ padding: "1.25rem", borderLeft: "4px solid var(--accent)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.3rem" }}>
+                    <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                      6th Semester Defense
+                    </span>
+                    <span
+                      className="badge"
+                      style={{
+                        background:
+                          defenseSchedule.status === "completed"
+                            ? "rgba(16, 185, 129, 0.15)"
+                            : "rgba(245, 158, 11, 0.15)",
+                        color: defenseSchedule.status === "completed" ? "#10b981" : "#d97706",
+                      }}
+                    >
+                      {defenseSchedule.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    Presentation Logistics & Venue
+                  </h3>
+                </div>
+
+                <div style={{ textAlign: "right", fontSize: "0.85rem" }}>
+                  <div style={{ fontWeight: 700, color: "var(--accent)", fontSize: "0.95rem" }}>
+                    📅 {defenseSchedule.defenseDate}
+                  </div>
+                  <div style={{ color: "var(--muted)" }}>
+                    ⏰ {defenseSchedule.startTime} – {defenseSchedule.endTime}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "1rem",
+                  marginTop: "1rem",
+                  padding: "0.85rem",
+                  background: "var(--surface)",
+                  borderRadius: "8px",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)" }}>
+                    Defense Venue
+                  </div>
+                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
+                    <MapPin size={16} color="var(--accent)" />
+                    {defenseSchedule.venue}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)" }}>
+                    Assigned Panel
+                  </div>
+                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
+                    <Users size={16} color="var(--accent)" />
+                    {defensePanel ? `${defensePanel.panelCode} (${defensePanel.members.length} Evaluators)` : "Assigned"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Panel Evaluators List */}
+              {defensePanel && (
+                <div style={{ marginTop: "1rem" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                    Evaluation Committee Members
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.75rem" }}>
+                    {defensePanel.members.map((member) => (
+                      <div
+                        key={member.teacherId}
+                        style={{
+                          padding: "0.6rem 0.8rem",
+                          borderRadius: "6px",
+                          background: member.isChairperson ? "rgba(99, 102, 241, 0.08)" : "var(--background)",
+                          border: member.isChairperson ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>
+                            {member.isChairperson ? "👑 " : "👤 "} {member.teacherName}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                            {member.designation} • {member.department}
+                          </div>
+                        </div>
+                        {member.isChairperson && (
+                          <span className="badge" style={{ background: "var(--accent)", color: "#fff", fontSize: "0.7rem" }}>
+                            Chair
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Published Results & Rubric Summary */}
+          {defenseResult?.published && (
+            <div
+              className="card"
+              style={{
+                padding: "1.25rem",
+                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(99, 102, 241, 0.04))",
+                borderLeft: "4px solid #10b981",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+                    <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                      Official Published Results
+                    </span>
+                    <span
+                      className="badge"
+                      style={{
+                        background:
+                          defenseResult.consensusRecommendation === "accepted"
+                            ? "rgba(16, 185, 129, 0.2)"
+                            : defenseResult.consensusRecommendation === "accepted_with_minor_changes"
+                            ? "rgba(59, 130, 246, 0.2)"
+                            : "rgba(239, 68, 68, 0.2)",
+                        color:
+                          defenseResult.consensusRecommendation === "accepted"
+                            ? "#10b981"
+                            : defenseResult.consensusRecommendation === "accepted_with_minor_changes"
+                            ? "#2563eb"
+                            : "#ef4444",
+                      }}
+                    >
+                      {defenseResult.consensusRecommendation.replace(/_/g, " ").toUpperCase()}
+                    </span>
+                  </div>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    6th Semester Defense Evaluation Scorecard
+                  </h3>
+                  <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                    Published on {new Date(defenseResult.publishedAt || "").toLocaleDateString()} by {defenseResult.publishedBy}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "0.6rem 1.25rem",
+                    borderRadius: "8px",
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                  }}
+                >
+                  <div style={{ fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700, color: "#10b981" }}>
+                    Panel Average
+                  </div>
+                  <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#10b981", lineHeight: 1.1 }}>
+                    {defenseResult.panelAverageScore}
+                    <span style={{ fontSize: "0.9rem", fontWeight: 500 }}> / 100</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rubric Breakdown */}
+              <div style={{ marginTop: "1.25rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                  Defense Rubric Breakdown
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+                  {Object.entries(defenseResult.rubricBreakdown).map(([critId, score]) => (
+                    <div
+                      key={critId}
+                      style={{
+                        padding: "0.6rem 0.8rem",
+                        background: "var(--surface)",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <div style={{ fontSize: "0.78rem", color: "var(--muted)", textTransform: "capitalize" }}>
+                        {critId.replace(/_/g, " ")}
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: "1.05rem", marginTop: "0.2rem", color: "var(--accent)" }}>
+                        {score} pts
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Per-Student Individual Marks */}
+              <div style={{ marginTop: "1.25rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                  Individual Student Performance Marks
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.75rem" }}>
+                  {defenseResult.studentScores.map((st) => (
+                    <div
+                      key={st.studentId}
+                      style={{
+                        padding: "0.6rem 0.8rem",
+                        background: "var(--surface)",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{st.studentName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{st.regNo}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent)" }}>
+                          {st.individualMarks} / 15
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>Individual</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Panel Remarks */}
+              {defenseResult.panelRemarks.length > 0 && (
+                <div style={{ marginTop: "1.25rem" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                    Consolidated Panel Feedback & Directions
+                  </div>
+                  <div className="stack" style={{ gap: "0.5rem" }}>
+                    {defenseResult.panelRemarks.map((remark, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: "0.6rem 0.8rem",
+                          borderRadius: "6px",
+                          background: "var(--surface)",
+                          borderLeft: "3px solid var(--accent)",
+                          fontSize: "0.85rem",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        &ldquo;{remark}&rdquo;
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </section>
       )}
