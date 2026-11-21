@@ -96,7 +96,6 @@ export function StudentGateway({
   const [coordCode, setCoordCode] = useState("");
   const [coordRememberMe, setCoordRememberMe] = useState(true);
   const [coordShowPassword, setCoordShowPassword] = useState(false);
-  const [coordDevPreviewCode, setCoordDevPreviewCode] = useState<string | null>(null);
   const [coordResendCooldown, setCoordResendCooldown] = useState(0);
 
   // Student mode
@@ -1622,17 +1621,9 @@ export function StudentGateway({
 
                     setCoordStage("verify");
                     setCoordResendCooldown(60);
-                    if (res.devPreviewCode) {
-                      setCoordDevPreviewCode(res.devPreviewCode);
-                    }
-                    setSuccessMsg(res.message || `A 6-digit verification code has been dispatched to ${cleanEmail}.`);
+                    setSuccessMsg(res.message || `A 6-digit verification code has been dispatched to ${cleanEmail}. Please check your official inbox.`);
                   } catch (err: any) {
-                    // Client-side fallback if server offline
-                    const code = Math.floor(100000 + Math.random() * 900000).toString();
-                    setCoordDevPreviewCode(code);
-                    setCoordStage("verify");
-                    setCoordResendCooldown(60);
-                    setSuccessMsg(`Verification code generated for ${cleanEmail}. Check preview below.`);
+                    setError(err?.message || "Failed to dispatch verification code. Please check your network and try again.");
                   } finally {
                     setLoading(false);
                   }
@@ -1779,54 +1770,15 @@ export function StudentGateway({
 
                   setLoading(true);
                   try {
-                    let res;
-                    try {
-                      res = await coordinatorVerifyAndSignUpFn({
-                        data: {
-                          email: cleanEmail,
-                          code: coordCode.trim(),
-                          password: coordPassword,
-                          department: coordDepartment.trim(),
-                          designation: coordDesignation.trim(),
-                        },
-                      });
-                    } catch {
-                      if (coordDevPreviewCode && coordCode.trim() === coordDevPreviewCode.trim()) {
-                        const salt = generateCoordinatorSalt();
-                        const hash = await hashCoordinatorPasswordClient(coordPassword, salt);
-                        const id = `coord_${Date.now()}`;
-                        const session: CoordinatorSession = {
-                          role: "coordinator",
-                          profile: {
-                            id,
-                            email: cleanEmail,
-                            fullName: coordName.trim() || "Academic Coordinator",
-                            department: coordDepartment.trim() || "Academic & Timetable Coordination Office",
-                            designation: coordDesignation.trim() || "Academic Timetable Coordinator",
-                            createdAt: new Date().toISOString(),
-                          },
-                          token: `cui-coord-${Date.now()}`,
-                          signedInAt: new Date().toISOString(),
-                        };
-
-                        saveLocalCoordinatorAccount({
-                          id,
-                          email: cleanEmail,
-                          fullName: coordName.trim(),
-                          department: coordDepartment.trim(),
-                          designation: coordDesignation.trim(),
-                          passwordHash: hash,
-                          passwordSalt: salt,
-                          registeredAt: new Date().toISOString(),
-                        });
-
-                        setCoordinatorSession(session, coordRememberMe);
-                        onCoordinatorAuthenticated?.(session);
-                        setView("coordinator");
-                        return;
-                      }
-                      throw new Error("Invalid verification code. Please check your official email.");
-                    }
+                    const res = await coordinatorVerifyAndSignUpFn({
+                      data: {
+                        email: cleanEmail,
+                        code: coordCode.trim(),
+                        password: coordPassword,
+                        department: coordDepartment.trim(),
+                        designation: coordDesignation.trim(),
+                      },
+                    });
 
                     if (!res?.success || !res?.session) {
                       setError(res?.error || "Failed to create coordinator account.");
@@ -1850,7 +1802,7 @@ export function StudentGateway({
                     onCoordinatorAuthenticated?.(res.session);
                     setView("coordinator");
                   } catch (err: any) {
-                    setError(err?.message || "Verification failed. Please check your code.");
+                    setError(err?.message || "Verification failed. Please check the 6-digit code sent to your official email.");
                   } finally {
                     setLoading(false);
                   }
@@ -1862,32 +1814,6 @@ export function StudentGateway({
                     Enter the 6-digit code sent to <strong>{coordEmail}</strong>
                   </p>
                 </div>
-
-                {coordDevPreviewCode && (
-                  <div
-                    style={{
-                      background: "rgba(14, 165, 233, 0.1)",
-                      border: "1px dashed #0284c7",
-                      borderRadius: 8,
-                      padding: "8px 12px",
-                      marginBottom: 12,
-                      fontSize: "0.82rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <span>Dev Preview Code: <strong>{coordDevPreviewCode}</strong></span>
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => setCoordCode(coordDevPreviewCode)}
-                      style={{ color: "#0284c7", fontWeight: 700, border: "none", background: "none", cursor: "pointer" }}
-                    >
-                      Autofill
-                    </button>
-                  </div>
-                )}
 
                 <div className="gateway-input-group">
                   <label htmlFor="coord-code-input">6-Digit Verification Code</label>
@@ -1937,12 +1863,13 @@ export function StudentGateway({
                             originUrl: origin,
                           },
                         });
-                        if (res.devPreviewCode) setCoordDevPreviewCode(res.devPreviewCode);
-                        setSuccessMsg("Fresh code dispatched to your email.");
-                      } catch {
-                        const code = Math.floor(100000 + Math.random() * 900000).toString();
-                        setCoordDevPreviewCode(code);
-                        setSuccessMsg("Fresh code generated. See preview above.");
+                        if (res.success) {
+                          setSuccessMsg(res.message || "Fresh verification code dispatched to your official email.");
+                        } else {
+                          setError(res.error || "Unable to dispatch verification code.");
+                        }
+                      } catch (err: any) {
+                        setError(err?.message || "Failed to resend code. Please check your network.");
                       }
                     }}
                     className="link-btn"

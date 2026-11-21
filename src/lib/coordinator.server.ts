@@ -261,7 +261,7 @@ export async function serverRequestCoordinatorVerificationCode(
   department = "Academic & Timetable Coordination Office",
   designation = "Academic Timetable Coordinator",
   originUrl?: string,
-): Promise<{ success: boolean; message?: string; devPreviewCode?: string; error?: string }> {
+): Promise<{ success: boolean; message?: string; error?: string }> {
   const normalized = email.trim().toLowerCase();
 
   if (!isCoordinatorEmail(normalized)) {
@@ -311,12 +311,16 @@ export async function serverRequestCoordinatorVerificationCode(
     magicLink,
   });
 
+  if (!emailResult.sent && !emailResult.devMode) {
+    return {
+      success: false,
+      error: "Unable to dispatch verification email. Please contact the campus administrator.",
+    };
+  }
+
   return {
     success: true,
-    message: emailResult.sent
-      ? `A 6-digit verification code has been dispatched to ${normalized}. Please check your official inbox.`
-      : `Verification code generated for ${normalized}.`,
-    devPreviewCode: code,
+    message: `A 6-digit verification code has been dispatched to ${normalized}. Please check your official university inbox.`,
   };
 }
 

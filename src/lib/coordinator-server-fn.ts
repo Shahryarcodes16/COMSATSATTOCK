@@ -50,7 +50,6 @@ export const coordinatorRequestVerificationCodeFn = createServerFn({ method: "PO
     }): Promise<{
       success: boolean;
       message?: string;
-      devPreviewCode?: string;
       error?: string;
     }> => {
       const { serverRequestCoordinatorVerificationCode } = await import("./coordinator.server.ts");

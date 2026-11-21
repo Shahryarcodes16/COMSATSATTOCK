@@ -94,7 +94,6 @@ export function CoordinatorWorkspaceView() {
   const [nameInput, setNameInput] = useState("");
   const [designationInput, setDesignationInput] = useState("Academic Timetable Coordinator");
   const [verificationCodeInput, setVerificationCodeInput] = useState("");
-  const [devPreviewCode, setDevPreviewCode] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState("");
@@ -355,16 +354,9 @@ export function CoordinatorWorkspaceView() {
 
       setAuthStage("verify");
       setResendCooldown(60);
-      if (res.devPreviewCode) {
-        setDevPreviewCode(res.devPreviewCode);
-      }
-      setAuthSuccessMsg(res.message || `A 6-digit verification code has been dispatched to ${cleanEmail}.`);
-    } catch {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setDevPreviewCode(code);
-      setAuthStage("verify");
-      setResendCooldown(60);
-      setAuthSuccessMsg(`Verification code generated for ${cleanEmail}. Check preview below.`);
+      setAuthSuccessMsg(res.message || `A 6-digit verification code has been dispatched to ${cleanEmail}. Please check your official university inbox.`);
+    } catch (err: any) {
+      setLoginError(err?.message || "Failed to dispatch verification code. Please check your network and try again.");
     } finally {
       setIsLoggingIn(false);
     }
@@ -384,53 +376,15 @@ export function CoordinatorWorkspaceView() {
 
     setIsLoggingIn(true);
     try {
-      let res;
-      try {
-        res = await coordinatorVerifyAndSignUpFn({
-          data: {
-            email: cleanEmail,
-            code: verificationCodeInput.trim(),
-            password: passwordInput,
-            department: "Academic & Timetable Coordination Office",
-            designation: designationInput.trim(),
-          },
-        });
-      } catch {
-        if (devPreviewCode && verificationCodeInput.trim() === devPreviewCode.trim()) {
-          const salt = generateCoordinatorSalt();
-          const hash = await hashCoordinatorPasswordClient(passwordInput, salt);
-          const id = `coord_${Date.now()}`;
-          const fallbackSession: CoordinatorSession = {
-            role: "coordinator",
-            profile: {
-              id,
-              email: cleanEmail,
-              fullName: nameInput.trim() || "Academic Coordinator",
-              department: "Academic & Timetable Coordination Office",
-              designation: designationInput.trim() || "Academic Timetable Coordinator",
-              createdAt: new Date().toISOString(),
-            },
-            token: `cui-coord-${Date.now()}`,
-            signedInAt: new Date().toISOString(),
-          };
-
-          saveLocalCoordinatorAccount({
-            id,
-            email: cleanEmail,
-            fullName: nameInput.trim(),
-            department: "Academic & Timetable Coordination Office",
-            designation: designationInput.trim(),
-            passwordHash: hash,
-            passwordSalt: salt,
-            registeredAt: new Date().toISOString(),
-          });
-
-          setCoordinatorSession(fallbackSession, rememberMe);
-          setSession(fallbackSession);
-          return;
-        }
-        throw new Error("Invalid verification code. Please check your official email.");
-      }
+      const res = await coordinatorVerifyAndSignUpFn({
+        data: {
+          email: cleanEmail,
+          code: verificationCodeInput.trim(),
+          password: passwordInput,
+          department: "Academic & Timetable Coordination Office",
+          designation: designationInput.trim(),
+        },
+      });
 
       if (!res?.success || !res?.session) {
         setLoginError(res?.error || "Failed to create coordinator account.");
@@ -453,7 +407,7 @@ export function CoordinatorWorkspaceView() {
       setCoordinatorSession(res.session, rememberMe);
       setSession(res.session);
     } catch (err: any) {
-      setLoginError(err?.message || "Verification failed. Please check your code.");
+      setLoginError(err?.message || "Verification failed. Please check the 6-digit code sent to your official email.");
     } finally {
       setIsLoggingIn(false);
     }
@@ -851,29 +805,6 @@ export function CoordinatorWorkspaceView() {
                   </p>
                 </div>
 
-                {devPreviewCode && (
-                  <div style={{
-                    background: "rgba(14, 165, 233, 0.1)",
-                    border: "1px dashed #0284c7",
-                    borderRadius: 8,
-                    padding: "8px 12px",
-                    fontSize: "0.82rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between"
-                  }}>
-                    <span>Preview Code: <strong>{devPreviewCode}</strong></span>
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => setVerificationCodeInput(devPreviewCode)}
-                      style={{ color: "#0284c7", fontWeight: 700, border: "none", background: "none", cursor: "pointer" }}
-                    >
-                      Autofill
-                    </button>
-                  </div>
-                )}
-
                 <label className="stack" style={{ gap: "0.35rem" }}>
                   <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--c-ink)" }}>6-Digit Verification Code</span>
                   <input
@@ -918,12 +849,13 @@ export function CoordinatorWorkspaceView() {
                             originUrl: origin,
                           },
                         });
-                        if (res.devPreviewCode) setDevPreviewCode(res.devPreviewCode);
-                        setAuthSuccessMsg("Fresh code dispatched to your official email.");
-                      } catch {
-                        const code = Math.floor(100000 + Math.random() * 900000).toString();
-                        setDevPreviewCode(code);
-                        setAuthSuccessMsg("Fresh code generated. See preview above.");
+                        if (res.success) {
+                          setAuthSuccessMsg(res.message || "Fresh code dispatched to your official email.");
+                        } else {
+                          setLoginError(res.error || "Failed to dispatch verification code.");
+                        }
+                      } catch (err: any) {
+                        setLoginError(err?.message || "Failed to resend code. Please check your network.");
                       }
                     }}
                     className="link-btn"
