@@ -20,8 +20,10 @@ import { StudentGateway } from "@/components/timetable/student-gateway";
 import { FacultyWorkspaceView } from "@/components/timetable/faculty-workspace-view";
 import { AboutSupportView } from "@/components/timetable/about-support-view";
 import { PwaOfflineEngine } from "@/components/timetable/pwa-offline-engine";
+import { CoordinatorWorkspaceView } from "@/components/timetable/coordinator-workspace-view";
 import { getActiveStudentSession, type StudentSession } from "@/lib/student";
 import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth";
+import { getActiveCoordinatorSession, type CoordinatorSession } from "@/lib/coordinator";
 
 export function Desk() {
   return (
@@ -36,6 +38,7 @@ function Frame() {
   const { view, setView, detail } = useDesk();
   const [studentSession, setStudentSession] = useState<StudentSession | null>(() => getActiveStudentSession());
   const [facultySession, setFacultySession] = useState<FacultySession | null>(() => getActiveFacultySession());
+  const [coordinatorSession, setCoordinatorSession] = useState<CoordinatorSession | null>(() => getActiveCoordinatorSession());
 
   useEffect(() => {
     // If incoming link contains a QuickShare code, automatically switch to My Schedule view
@@ -51,6 +54,7 @@ function Frame() {
     // Keep sessions strictly in sync with client storage & broadcast updates
     setStudentSession(getActiveStudentSession());
     setFacultySession(getActiveFacultySession());
+    setCoordinatorSession(getActiveCoordinatorSession());
 
     const handleStudentSession = (e: Event) => {
       const customEvent = e as CustomEvent<StudentSession | null>;
@@ -62,15 +66,23 @@ function Frame() {
       setFacultySession(customEvent.detail ?? getActiveFacultySession());
     };
 
+    const handleCoordinatorSession = (e: Event) => {
+      const customEvent = e as CustomEvent<CoordinatorSession | null>;
+      setCoordinatorSession(customEvent.detail ?? getActiveCoordinatorSession());
+    };
+
     window.addEventListener("cui:student-session-update", handleStudentSession);
     window.addEventListener("cui:faculty-session-update", handleFacultySession);
+    window.addEventListener("cui:coordinator-session-update", handleCoordinatorSession);
     window.addEventListener("storage", () => {
       setStudentSession(getActiveStudentSession());
       setFacultySession(getActiveFacultySession());
+      setCoordinatorSession(getActiveCoordinatorSession());
     });
     return () => {
       window.removeEventListener("cui:student-session-update", handleStudentSession);
       window.removeEventListener("cui:faculty-session-update", handleFacultySession);
+      window.removeEventListener("cui:coordinator-session-update", handleCoordinatorSession);
     };
   }, []);
 
@@ -87,8 +99,9 @@ function Frame() {
     );
   }
 
-  // Strict Authentication Gate: User MUST be signed in as either a Student or Faculty member.
-  const isAuthenticated = Boolean(studentSession || facultySession);
+  // Strict Authentication Gate: User MUST be signed in as either a Student, Faculty member, or Coordinator.
+  // If view is explicitly set to coordinator, the coordinator view has its own internal secure passkey screen.
+  const isAuthenticated = Boolean(studentSession || facultySession || coordinatorSession || view === "coordinator");
 
   if (!isAuthenticated) {
     return (
@@ -96,6 +109,7 @@ function Frame() {
         <StudentGateway
           onAuthenticated={(session) => setStudentSession(session)}
           onFacultyAuthenticated={(session) => setFacultySession(session)}
+          onCoordinatorAuthenticated={(session) => setCoordinatorSession(session)}
         />
       </div>
     );
@@ -138,6 +152,9 @@ function Frame() {
             </div>
             <div hidden={view !== "faculty-desk" && view !== "cancel-class" && view !== "makeup-class"}>
               <FacultyWorkspaceView activeSection={view === "cancel-class" ? "cancel" : view === "makeup-class" ? "makeup" : view === "faculty-desk" ? "table" : undefined} />
+            </div>
+            <div hidden={view !== "coordinator"}>
+              <CoordinatorWorkspaceView />
             </div>
             <div hidden={view !== "notices"}>
               <TeacherMessagesView />

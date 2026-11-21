@@ -20,6 +20,7 @@ import {
   Zap,
   Megaphone,
   Bell,
+  Briefcase,
 } from "lucide-react";
 import crest from "@/assets/crest.png";
 import {
@@ -45,6 +46,11 @@ import {
   getLocalFacultyAccount,
   type FacultySession,
 } from "@/lib/faculty-auth";
+import {
+  verifyCoordinatorPasskey,
+  setCoordinatorSession,
+  type CoordinatorSession,
+} from "@/lib/coordinator";
 import { facultyList } from "@/lib/faculty";
 import {
   facultyRequestVerificationCodeFn,
@@ -57,12 +63,19 @@ import { batches } from "@/lib/schedule";
 export function StudentGateway({
   onAuthenticated,
   onFacultyAuthenticated,
+  onCoordinatorAuthenticated,
 }: {
   onAuthenticated: (session: StudentSession) => void;
   onFacultyAuthenticated?: (session: FacultySession) => void;
+  onCoordinatorAuthenticated?: (session: CoordinatorSession) => void;
 }) {
   const { setView, pinBatch, setBatchId } = useDesk();
-  const [portalType, setPortalType] = useState<"student" | "faculty">("student");
+  const [portalType, setPortalType] = useState<"student" | "faculty" | "coordinator">("student");
+
+  // Coordinator mode
+  const [coordPasskey, setCoordPasskey] = useState("");
+  const [coordName, setCoordName] = useState("Academic Timetable Coordinator");
+  const [coordShowPasskey, setCoordShowPasskey] = useState(false);
 
   // Student mode
   const [mode, setMode] = useState<"signup" | "signin">("signin");
@@ -601,6 +614,20 @@ export function StudentGateway({
               <GraduationCap size={16} />
               <span>Faculty Portal</span>
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={portalType === "coordinator"}
+              className={`role-switcher-btn ${portalType === "coordinator" ? "active" : ""}`}
+              onClick={() => {
+                setPortalType("coordinator");
+                setError("");
+                setSuccessMsg("");
+              }}
+            >
+              <Briefcase size={16} />
+              <span>Coordinator</span>
+            </button>
           </div>
 
           {/* Auth Card */}
@@ -1009,7 +1036,7 @@ export function StudentGateway({
             </form>
           )}
         </>
-      ) : (
+      ) : portalType === "faculty" ? (
         /* =================== FACULTY PORTAL =================== */
         <>
           {/* Faculty Tabs: Sign In first, Register second */}
@@ -1462,6 +1489,126 @@ export function StudentGateway({
               </p>
             </form>
           )}
+        </>
+      ) : (
+        /* =================== COORDINATOR PORTAL =================== */
+        <>
+          <div className="student-gateway-tabs">
+            <button
+              type="button"
+              className="gateway-tab-btn active"
+              style={{ cursor: "default" }}
+            >
+              <Briefcase size={16} />
+              <span>Academic Coordinator Desk</span>
+            </button>
+          </div>
+
+          {error && (
+            <div className="admin-error-banner" role="alert" style={{ margin: "1rem 1.5rem 0", display: "flex", alignItems: "center", gap: 8 }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="admin-success-banner" role="status" style={{ margin: "1rem 1.5rem 0", display: "flex", alignItems: "center", gap: 8 }}>
+              <CheckCircle2 size={16} />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          <div style={{ padding: "1.5rem 1.5rem 0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(14, 165, 233, 0.15)", color: "#0284c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Briefcase size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>Timetable & Class Coordinator</h3>
+                <p className="fine quiet" style={{ margin: 0 }}>Campus Academic Class Arrangement Authority</p>
+              </div>
+            </div>
+            <p className="fine quiet" style={{ lineHeight: 1.5, margin: "8px 0 0" }}>
+              Designated desk for student class scheduling requests, vacant venue allocation, and live timetable updates.
+            </p>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setLoading(true);
+              setError("");
+              try {
+                const verified = verifyCoordinatorPasskey(coordPasskey);
+                if (verified) {
+                  const session = setCoordinatorSession(coordName.trim() || "Academic Coordinator");
+                  onCoordinatorAuthenticated?.(session);
+                  setView("coordinator");
+                } else {
+                  setError("Invalid Coordinator Passkey. Default key is 'coordinator786'.");
+                }
+              } catch (err: any) {
+                setError(err?.message || "Authentication error.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="student-gateway-form"
+            style={{ paddingTop: "0.5rem" }}
+          >
+            <div className="gateway-input-group">
+              <label htmlFor="coord-name-input">Coordinator Name / Title</label>
+              <div className="gateway-input-wrap">
+                <User size={18} className="input-icon" />
+                <input
+                  id="coord-name-input"
+                  type="text"
+                  placeholder="e.g. Academic Timetable Officer"
+                  value={coordName}
+                  onChange={(e) => setCoordName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="gateway-input-group">
+              <label htmlFor="coord-passkey-input">Authorization Passkey</label>
+              <div className="gateway-input-wrap">
+                <Lock size={18} className="input-icon" />
+                <input
+                  id="coord-passkey-input"
+                  type={coordShowPasskey ? "text" : "password"}
+                  placeholder="Enter Coordinator Passkey (e.g. coordinator786)"
+                  value={coordPasskey}
+                  onChange={(e) => setCoordPasskey(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setCoordShowPasskey(!coordShowPasskey)}
+                  tabIndex={-1}
+                  aria-label={coordShowPasskey ? "Hide passkey" : "Show passkey"}
+                >
+                  {coordShowPasskey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <span className="fine quiet" style={{ marginTop: 4, display: "block" }}>
+                Default key: <code>coordinator786</code> (or <code>coord2026</code>)
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              className="btn solid tap student-gateway-submit"
+              disabled={loading}
+              style={{ marginTop: 6 }}
+            >
+              {loading ? <RefreshCw size={18} className="spin" /> : <Briefcase size={18} />}
+              <span>{loading ? "Authorizing..." : "Open Coordinator Desk"}</span>
+            </button>
+          </form>
         </>
       )}
 

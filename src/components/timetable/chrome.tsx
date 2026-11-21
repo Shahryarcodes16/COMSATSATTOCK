@@ -41,6 +41,7 @@ import { StudentAuthButton } from "@/components/timetable/student-auth-modal";
 import { FacultyAuthButton } from "@/components/timetable/faculty-auth-modal";
 import { getActiveFacultySession } from "@/lib/faculty-auth";
 import { getActiveStudentSession } from "@/lib/student";
+import { getActiveCoordinatorSession } from "@/lib/coordinator";
 import {
   getClassCancellations,
   matchesStudentCancellationContext,
@@ -194,25 +195,42 @@ export function Sidebar() {
   const { now, view, setView } = useDesk();
   const datesheetActive = isDatesheetActive(now);
   const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
+  const [coordActive, setCoordActive] = useState(() => !!getActiveCoordinatorSession());
   const messageCount = useTeacherMessageCount();
 
   useEffect(() => {
     const handleUpdate = () => {
       setFacultyActive(!!getActiveFacultySession());
+      setCoordActive(!!getActiveCoordinatorSession());
     };
     window.addEventListener("cui:faculty-session-update", handleUpdate);
+    window.addEventListener("cui:coordinator-session-update", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("cui:faculty-session-update", handleUpdate);
+      window.removeEventListener("cui:coordinator-session-update", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 
   const isFacultyView = facultyActive || view === "faculty-desk" || view === "cancel-class" || view === "makeup-class";
+  const isCoordView = coordActive || view === "coordinator";
 
   let desktopNav: { id: View; label: string; icon: typeof Clock }[];
 
-  if (isFacultyView) {
+  if (isCoordView) {
+    desktopNav = [
+      { id: "coordinator" as View, label: "Coordinator Desk", icon: Briefcase },
+      { id: "today" as View, label: "Today", icon: Clock },
+      { id: "rooms" as View, label: "Rooms & Theatres", icon: DoorOpen },
+      { id: "pulse" as View, label: "Campus Pulse", icon: Activity },
+      { id: "batches" as View, label: "Batches", icon: Users },
+      { id: "faculty" as View, label: "Faculty", icon: GraduationCap },
+      { id: "notices" as View, label: "Teacher Messages", icon: Megaphone },
+      { id: "find" as View, label: "Search", icon: Search },
+      { id: "about" as View, label: "About & Support", icon: Info },
+    ];
+  } else if (isFacultyView) {
     desktopNav = [
       { id: "today" as View, label: "Today", icon: Clock },
       { id: "faculty-desk" as View, label: "Weekly Grid", icon: GraduationCap },
@@ -291,6 +309,16 @@ export function Sidebar() {
         <span className="side-note">A clearer view of campus life.</span>
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
           <StudentAuthButton showLabel={true} />
+          <button
+            type="button"
+            className={`side-admin-link tap ${view === "coordinator" ? "on" : ""}`}
+            onClick={() => setView("coordinator")}
+            title="Academic Timetable & Room Coordinator Desk"
+            style={{ color: "var(--c-accent)" }}
+          >
+            <Briefcase size={13} aria-hidden />
+            <span>Coordinator Desk</span>
+          </button>
           <button
             type="button"
             className={`side-admin-link tap ${view === "admin" ? "on" : ""}`}
@@ -520,6 +548,15 @@ export function CampusFooter() {
         </button>
         <button
           type="button"
+          className={`btn tap campus-footer-admin-btn ${view === "coordinator" ? "solid" : ""}`}
+          onClick={() => setView("coordinator")}
+          title="Academic Timetable & Room Coordinator Desk"
+        >
+          <Briefcase size={15} aria-hidden />
+          <span>Coordinator</span>
+        </button>
+        <button
+          type="button"
           className={`btn tap campus-footer-admin-btn ${view === "admin" ? "solid" : ""}`}
           onClick={() => setView("admin")}
           title="Campus Administrator Control Center"
@@ -551,22 +588,34 @@ export function CampusFooter() {
 export function Dock() {
   const { view, setView } = useDesk();
   const [facultyActive, setFacultyActive] = useState(() => !!getActiveFacultySession());
+  const [coordActive, setCoordActive] = useState(() => !!getActiveCoordinatorSession());
 
   useEffect(() => {
     const handleUpdate = () => {
       setFacultyActive(!!getActiveFacultySession());
+      setCoordActive(!!getActiveCoordinatorSession());
     };
     window.addEventListener("cui:faculty-session-update", handleUpdate);
+    window.addEventListener("cui:coordinator-session-update", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
       window.removeEventListener("cui:faculty-session-update", handleUpdate);
+      window.removeEventListener("cui:coordinator-session-update", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, []);
 
   const isFacultyView = facultyActive || view === "faculty-desk" || view === "cancel-class" || view === "makeup-class";
+  const isCoordView = coordActive || view === "coordinator";
 
-  const navItems = isFacultyView
+  const navItems = isCoordView
+    ? [
+        { id: "coordinator" as View, label: "Arrange", icon: Briefcase },
+        { id: "today" as View, label: "Today", icon: Clock },
+        { id: "rooms" as View, label: "Rooms", icon: DoorOpen },
+        { id: "pulse" as View, label: "Pulse", icon: Activity },
+      ]
+    : isFacultyView
     ? [
         { id: "today" as View, label: "Today", icon: Clock },
         { id: "faculty-desk" as View, label: "Weekly Grid", icon: CalendarDays },

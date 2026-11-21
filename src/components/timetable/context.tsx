@@ -29,6 +29,7 @@ export type View =
   | "find"
   | "datesheet"
   | "admin"
+  | "coordinator"
   | "faculty-desk"
   | "pulse"
   | "notices"
@@ -62,6 +63,7 @@ const VIEWS: View[] = [
   "find",
   "datesheet",
   "admin",
+  "coordinator",
   "faculty-desk",
   "pulse",
   "notices",
