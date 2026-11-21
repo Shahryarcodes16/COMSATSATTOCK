@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock,
   Edit3,
+  FileSpreadsheet,
   GraduationCap,
   Layers,
   Lightbulb,
@@ -27,6 +28,7 @@ import {
 import { getActiveFacultySession } from "@/lib/faculty-auth";
 import { FypWorkspaceHub } from "./fyp-workspace-hub";
 import { FypDefenseDeck } from "./fyp-defense-deck";
+import { FypCommitteeDeck } from "./fyp-committee-deck";
 import type {
   FypFacultySettings,
   FypGroupRecord,
@@ -45,7 +47,7 @@ export function FypFacultyDeck() {
   const teacherId = facultySession?.profile?.teacherId ?? null;
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"requests" | "groups" | "defense" | "settings">("requests");
+  const [activeTab, setActiveTab] = useState<"requests" | "groups" | "defense" | "committee" | "settings">("requests");
   const [pendingRequests, setPendingRequests] = useState<FypSupervisorRequest[]>([]);
   const [acceptedGroups, setAcceptedGroups] = useState<FypGroupRecord[]>([]);
   const [selectedWorkspaceGroup, setSelectedWorkspaceGroup] = useState<FypGroupRecord | null>(null);
@@ -374,6 +376,16 @@ export function FypFacultyDeck() {
         >
           <Award size={16} />
           <span>Defense & Panels</span>
+        </button>
+
+        <button
+          type="button"
+          className={`faculty-tab-pill ${activeTab === "committee" ? "active" : ""}`}
+          onClick={() => setActiveTab("committee")}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <FileSpreadsheet size={16} />
+          <span>7th Sem Committee</span>
         </button>
 
         <button
@@ -809,6 +821,14 @@ export function FypFacultyDeck() {
       {/* TAB 4: DEFENSE PANELS & EVALUATIONS */}
       {activeTab === "defense" && (
         <FypDefenseDeck
+          teacherId={teacherId}
+          teacherName={settings?.teacherName || "Faculty Member"}
+        />
+      )}
+
+      {/* TAB 5: 7TH SEM COMMITTEE & MARKS AGGREGATION */}
+      {activeTab === "committee" && (
+        <FypCommitteeDeck
           teacherId={teacherId}
           teacherName={settings?.teacherName || "Faculty Member"}
         />

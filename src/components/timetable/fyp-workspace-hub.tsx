@@ -35,6 +35,7 @@ import type {
   FypDefenseResultSummary,
   FypDefenseSchedule,
   FypDocumentCategory,
+  FypFinalStudentGrade,
   FypGroupProgressSummary,
   FypGroupRecord,
   FypMeetingLog,
@@ -47,6 +48,7 @@ import {
   confirmMeetingLogServerFn,
   createMeetingLogServerFn,
   getGroupDocumentsServerFn,
+  getGroupFinalResultsServerFn,
   getGroupMeetingLogsServerFn,
   getGroupMilestonesServerFn,
   getGroupProgressSummaryServerFn,
@@ -80,6 +82,7 @@ export function FypWorkspaceHub({
   const [defenseSchedule, setDefenseSchedule] = useState<FypDefenseSchedule | null>(null);
   const [defensePanel, setDefensePanel] = useState<FypDefensePanel | null>(null);
   const [defenseResult, setDefenseResult] = useState<FypDefenseResultSummary | null>(null);
+  const [finalGrades, setFinalGrades] = useState<FypFinalStudentGrade[]>([]);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -126,7 +129,7 @@ export function FypWorkspaceHub({
   const loadHubData = async () => {
     try {
       setLoading(true);
-      const [mRes, meetRes, docRes, sumRes, defRes] = await Promise.all([
+      const [mRes, meetRes, docRes, sumRes, defRes, gradesRes] = await Promise.all([
         getGroupMilestonesServerFn({ data: { groupId: group.id } }),
         getGroupMeetingLogsServerFn({ data: { groupId: group.id } }),
         getGroupDocumentsServerFn({ data: { groupId: group.id } }),
@@ -136,6 +139,7 @@ export function FypWorkspaceHub({
           panel: null,
           resultSummary: null,
         })),
+        getGroupFinalResultsServerFn({ data: { groupId: group.id } }).catch(() => ({ grades: [] })),
       ]);
 
       setMilestones(mRes.milestones || []);
@@ -147,6 +151,7 @@ export function FypWorkspaceHub({
         setDefensePanel(defRes.panel || null);
         setDefenseResult(defRes.resultSummary || null);
       }
+      setFinalGrades(gradesRes?.grades || []);
     } catch (err) {
       console.error("Failed to load FYP workspace hub data:", err);
     } finally {
@@ -1310,6 +1315,81 @@ export function FypWorkspaceHub({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Phase 4: Official Final Aggregated Grades (When Published) */}
+          {finalGrades.length > 0 && finalGrades.some((g) => g.isPublished) && (
+            <div
+              className="card"
+              style={{
+                padding: "1.25rem",
+                background: "linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(16, 185, 129, 0.06))",
+                borderLeft: "4px solid #10b981",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+                    <span className="badge" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#10b981" }}>
+                      Official Final Marksheet
+                    </span>
+                    <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                      CUI Exam Department
+                    </span>
+                  </div>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.2rem 0" }}>
+                    Final Year Project Official Marks &amp; GPA
+                  </h3>
+                  <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                    Published by {finalGrades[0]?.publishedBy || "Exam Board"} on {new Date(finalGrades[0]?.publishedAt || "").toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ overflowX: "auto", marginTop: "0.5rem" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid var(--border)", background: "var(--surface)" }}>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Student</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Reg No</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Supervisor (30%)</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Defense (30%)</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Committee (40%)</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Total Score</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>Letter Grade</th>
+                      <th style={{ padding: "0.5rem 0.75rem" }}>GPA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {finalGrades.map((g) => (
+                      <tr key={g.studentId} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td style={{ padding: "0.6rem 0.75rem", fontWeight: 600 }}>{g.studentName}</td>
+                        <td style={{ padding: "0.6rem 0.75rem", color: "var(--muted)" }}>{g.regNo}</td>
+                        <td style={{ padding: "0.6rem 0.75rem" }}>{g.supervisorScore}</td>
+                        <td style={{ padding: "0.6rem 0.75rem" }}>{g.defenseScore}</td>
+                        <td style={{ padding: "0.6rem 0.75rem" }}>{g.committeeScore}</td>
+                        <td style={{ padding: "0.6rem 0.75rem", fontWeight: 800, color: "var(--accent)" }}>
+                          {g.weightedTotal} / 100
+                        </td>
+                        <td style={{ padding: "0.6rem 0.75rem" }}>
+                          <span
+                            className="badge"
+                            style={{
+                              background: g.letterGrade.startsWith("A") ? "rgba(16, 185, 129, 0.2)" : "rgba(99, 102, 241, 0.2)",
+                              color: g.letterGrade.startsWith("A") ? "#10b981" : "var(--accent)",
+                              fontWeight: 800,
+                            }}
+                          >
+                            {g.letterGrade}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.6rem 0.75rem", fontWeight: 700 }}>{g.gradePoint.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>

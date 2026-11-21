@@ -17,9 +17,24 @@ import type {
   FypDefenseStatus,
   FypDocumentCategory,
   FypDocumentComment,
+  FypCommitteeEvaluation,
+  FypCommitteeMember,
+  FypCommitteeModerationResult,
+  FypDefensePanel,
+  FypDefenseResultSummary,
+  FypDefenseRubricCriterion,
+  FypDefenseSchedule,
+  FypDefenseStatus,
+  FypDocumentCategory,
+  FypDocumentComment,
   FypFacultySettings,
+  FypFinalAuditEntry,
+  FypFinalStudentGrade,
+  FypGradeWeightageConfig,
   FypGroupProgressSummary,
   FypGroupRecord,
+  FypInternalCommittee,
+  FypInternalRubricCriterion,
   FypMeetingLog,
   FypMeetingStatus,
   FypMilestone,
@@ -33,7 +48,12 @@ import type {
   FypSupervisorRequest,
   FypSupervisorSummary,
 } from "./fyp-types.ts";
-import { DEFAULT_DEFENSE_RUBRIC } from "./fyp-types.ts";
+import {
+  DEFAULT_DEFENSE_RUBRIC,
+  DEFAULT_GRADE_WEIGHTAGE,
+  DEFAULT_INTERNAL_RUBRIC,
+  calculateComsatsGrade,
+} from "./fyp-types.ts";
 
 let tablesEnsured = false;
 const FYP_DISK_BACKUP = path.join(os.tmpdir(), "cui_fyp_data_v1.json");
@@ -49,6 +69,10 @@ interface FypBackupStore {
   defenseSchedules: FypDefenseSchedule[];
   defenseEvaluations: FypPanelistEvaluation[];
   defensePublications: Record<string, { isPublished: boolean; publishedAt: string; publishedBy: string }>;
+  committees: FypInternalCommittee[];
+  committeeEvaluations: FypCommitteeEvaluation[];
+  gradeWeightages: FypGradeWeightageConfig[];
+  finalGrades: FypFinalStudentGrade[];
 }
 
 const memoryGroups = new Map<string, FypGroupRecord>();
@@ -61,6 +85,10 @@ const memoryPanels = new Map<string, FypDefensePanel>();
 const memorySchedules = new Map<string, FypDefenseSchedule>();
 const memoryEvaluations = new Map<string, FypPanelistEvaluation>();
 const memoryPublications = new Map<string, { isPublished: boolean; publishedAt: string; publishedBy: string }>();
+const memoryCommittees = new Map<string, FypInternalCommittee>();
+const memoryCommitteeEvaluations = new Map<string, FypCommitteeEvaluation>();
+const memoryGradeWeightages = new Map<string, FypGradeWeightageConfig>();
+const memoryFinalGrades = new Map<string, FypFinalStudentGrade>();
 
 function readDiskStore(): FypBackupStore {
   try {
@@ -77,6 +105,10 @@ function readDiskStore(): FypBackupStore {
         defenseSchedules: Array.isArray(parsed.defenseSchedules) ? parsed.defenseSchedules : [],
         defenseEvaluations: Array.isArray(parsed.defenseEvaluations) ? parsed.defenseEvaluations : [],
         defensePublications: typeof parsed.defensePublications === "object" && parsed.defensePublications !== null ? parsed.defensePublications : {},
+        committees: Array.isArray(parsed.committees) ? parsed.committees : [],
+        committeeEvaluations: Array.isArray(parsed.committeeEvaluations) ? parsed.committeeEvaluations : [],
+        gradeWeightages: Array.isArray(parsed.gradeWeightages) ? parsed.gradeWeightages : [],
+        finalGrades: Array.isArray(parsed.finalGrades) ? parsed.finalGrades : [],
       };
     }
   } catch {
@@ -93,6 +125,10 @@ function readDiskStore(): FypBackupStore {
     defenseSchedules: [],
     defenseEvaluations: [],
     defensePublications: {},
+    committees: [],
+    committeeEvaluations: [],
+    gradeWeightages: [],
+    finalGrades: [],
   };
 }
 
@@ -113,6 +149,10 @@ function writeDiskStore() {
       defenseSchedules: Array.from(memorySchedules.values()),
       defenseEvaluations: Array.from(memoryEvaluations.values()),
       defensePublications: pubs,
+      committees: Array.from(memoryCommittees.values()),
+      committeeEvaluations: Array.from(memoryCommitteeEvaluations.values()),
+      gradeWeightages: Array.from(memoryGradeWeightages.values()),
+      finalGrades: Array.from(memoryFinalGrades.values()),
     };
     fs.writeFileSync(FYP_DISK_BACKUP, JSON.stringify(payload, null, 2), "utf8");
   } catch {
@@ -121,7 +161,7 @@ function writeDiskStore() {
 }
 
 function hydrateFallbackFromDisk() {
-  if (memoryGroups.size > 0 || memoryFacultySettings.size > 0 || memoryMilestones.size > 0 || memoryPanels.size > 0) return;
+  if (memoryGroups.size > 0 || memoryFacultySettings.size > 0 || memoryMilestones.size > 0 || memoryPanels.size > 0 || memoryCommittees.size > 0) return;
   const store = readDiskStore();
   for (const g of store.groups) memoryGroups.set(g.id, g);
   for (const r of store.requests) memoryRequests.set(r.id, r);
@@ -135,6 +175,10 @@ function hydrateFallbackFromDisk() {
   for (const [k, v] of Object.entries(store.defensePublications || {})) {
     memoryPublications.set(k, v);
   }
+  for (const c of store.committees || []) memoryCommittees.set(c.id, c);
+  for (const ce of store.committeeEvaluations || []) memoryCommitteeEvaluations.set(ce.id, ce);
+  for (const w of store.gradeWeightages || []) memoryGradeWeightages.set(w.id, w);
+  for (const fg of store.finalGrades || []) memoryFinalGrades.set(fg.studentId, fg);
 }
 
 // Seed reasonable default research areas for faculty based on their department
@@ -347,6 +391,71 @@ export async function ensureFypTables() {
       )
     `);
 
+    // 11. 7th Semester FYP Internal Committees Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_internal_committees (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        department TEXT NOT NULL,
+        members JSONB NOT NULL,
+        assigned_group_ids JSONB NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    `);
+
+    // 12. 7th Semester Committee Evaluations Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_committee_evaluations (
+        id TEXT PRIMARY KEY,
+        committee_id TEXT NOT NULL,
+        group_id TEXT NOT NULL,
+        evaluator_id INTEGER NOT NULL,
+        evaluator_name TEXT NOT NULL,
+        group_criterion_scores JSONB NOT NULL,
+        student_scores JSONB NOT NULL,
+        evidence_notes TEXT,
+        total_score NUMERIC NOT NULL,
+        recommendation VARCHAR(40) NOT NULL,
+        remarks TEXT,
+        submitted_at TEXT NOT NULL,
+        is_locked BOOLEAN NOT NULL DEFAULT TRUE
+      )
+    `);
+
+    // 13. Grade Weightage Configuration Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_grade_weightages (
+        id TEXT PRIMARY KEY,
+        supervisor_weight NUMERIC NOT NULL DEFAULT 30,
+        defense_weight NUMERIC NOT NULL DEFAULT 30,
+        committee_weight NUMERIC NOT NULL DEFAULT 40,
+        updated_at TEXT NOT NULL,
+        updated_by TEXT NOT NULL
+      )
+    `);
+
+    // 14. Final Aggregated Grades Table
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS fyp_final_grades (
+        student_id TEXT PRIMARY KEY,
+        reg_no TEXT NOT NULL,
+        student_name TEXT NOT NULL,
+        group_id TEXT NOT NULL,
+        group_title TEXT NOT NULL,
+        group_domain TEXT NOT NULL,
+        supervisor_score NUMERIC NOT NULL,
+        defense_score NUMERIC NOT NULL,
+        committee_score NUMERIC NOT NULL,
+        weighted_total NUMERIC NOT NULL,
+        letter_grade VARCHAR(10) NOT NULL,
+        grade_point NUMERIC NOT NULL,
+        is_published BOOLEAN NOT NULL DEFAULT FALSE,
+        published_at TEXT,
+        published_by TEXT,
+        audit_trail JSONB NOT NULL
+      )
+    `);
+
     // Create indexes safely
     try {
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_req_teacher ON fyp_supervisor_requests (teacher_id, status)`);
@@ -358,6 +467,8 @@ export async function ensureFypTables() {
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_schedules_group ON fyp_defense_schedules (group_id)`);
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_schedules_panel ON fyp_defense_schedules (panel_id)`);
       await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_evals_group ON fyp_defense_evaluations (group_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_comm_evals_group ON fyp_committee_evaluations (group_id)`);
+      await sql.query(`CREATE INDEX IF NOT EXISTS idx_fyp_final_grades_group ON fyp_final_grades (group_id)`);
     } catch {
       // Ignore index duplicate warnings
     }
@@ -2421,5 +2532,805 @@ export async function serverGetStudentDefenseSchedule(groupId: string): Promise<
     resultSummary,
   };
 }
+
+/**
+ * =========================================================================
+ * PHASE 4: 7TH SEMESTER INTERNAL EVALUATION COMMITTEE & MARKS AGGREGATION
+ * =========================================================================
+ */
+
+/**
+ * Get all 7th semester internal evaluation committees
+ */
+export async function serverGetAllInternalCommittees(): Promise<FypInternalCommittee[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_internal_committees ORDER BY created_at DESC`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        name: String(r.name),
+        department: String(r.department),
+        members: typeof r.members === "string" ? JSON.parse(r.members) : r.members,
+        assignedGroupIds: typeof r.assigned_group_ids === "string" ? JSON.parse(r.assigned_group_ids) : r.assigned_group_ids,
+        createdAt: String(r.created_at),
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryCommittees.values());
+}
+
+/**
+ * Create a new 7th semester internal evaluation committee (2 to 4 faculty members)
+ */
+export async function serverCreateInternalCommittee(data: {
+  name: string;
+  department?: string;
+  members: FypCommitteeMember[];
+}): Promise<FypInternalCommittee> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  if (!data.name?.trim()) {
+    throw new Error("Committee name is required");
+  }
+  if (!Array.isArray(data.members) || data.members.length < 2 || data.members.length > 4) {
+    throw new Error("An internal evaluation committee must have between 2 and 4 faculty members.");
+  }
+
+  // Ensure at least one committee lead
+  const hasLead = data.members.some((m) => m.isLead);
+  const formattedMembers = data.members.map((m, idx) => ({
+    ...m,
+    isLead: hasLead ? m.isLead : idx === 0,
+  }));
+
+  const id = `comm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  const committee: FypInternalCommittee = {
+    id,
+    name: data.name.trim(),
+    department: data.department || data.members[0]?.department || "Computer Science",
+    members: formattedMembers,
+    assignedGroupIds: [],
+    createdAt: now,
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_internal_committees (id, name, department, members, assigned_group_ids, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO UPDATE SET
+         name = EXCLUDED.name,
+         members = EXCLUDED.members,
+         assigned_group_ids = EXCLUDED.assigned_group_ids`,
+      [
+        committee.id,
+        committee.name,
+        committee.department,
+        JSON.stringify(committee.members),
+        JSON.stringify(committee.assignedGroupIds),
+        committee.createdAt,
+      ],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Create committee database fallback:", err);
+  }
+
+  memoryCommittees.set(committee.id, committee);
+  writeDiskStore();
+  return committee;
+}
+
+/**
+ * Assign groups to an internal evaluation committee with strict conflict verification
+ */
+export async function serverAssignGroupsToCommittee(data: {
+  committeeId: string;
+  groupIds: string[];
+}): Promise<FypInternalCommittee> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const committees = await serverGetAllInternalCommittees();
+  const committee = committees.find((c) => c.id === data.committeeId);
+  if (!committee) {
+    throw new Error("Internal committee not found");
+  }
+
+  const allGroups = await serverGetAllFypGroups();
+
+  // Conflict Check: Supervisor can never evaluate their own group in the 7th semester committee!
+  for (const gid of data.groupIds) {
+    const group = allGroups.find((g) => g.id === gid);
+    if (!group) continue;
+
+    if (group.supervisorId !== null && group.supervisorId !== undefined) {
+      const conflictMember = committee.members.find((m) => m.teacherId === group.supervisorId);
+      if (conflictMember) {
+        throw new Error(
+          `Conflict of Interest: ${conflictMember.teacherName} is the official supervisor of group "${group.title}" and is strictly excluded from evaluating their own group on the 7th semester internal committee.`,
+        );
+      }
+    }
+  }
+
+  committee.assignedGroupIds = Array.from(new Set([...committee.assignedGroupIds, ...data.groupIds]));
+
+  try {
+    const sql = await getSql();
+    await sql.query(`UPDATE fyp_internal_committees SET assigned_group_ids = $1 WHERE id = $2`, [
+      JSON.stringify(committee.assignedGroupIds),
+      committee.id,
+    ]);
+  } catch (err) {
+    console.warn("[fyp.server] Assign committee groups database fallback:", err);
+  }
+
+  memoryCommittees.set(committee.id, committee);
+  writeDiskStore();
+  return committee;
+}
+
+/**
+ * Get internal committees assigned to a faculty member
+ */
+export async function serverGetFacultyAssignedCommittees(teacherId: number): Promise<
+  Array<{
+    committee: FypInternalCommittee;
+    groups: FypGroupRecord[];
+    isLead: boolean;
+  }>
+> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const committees = await serverGetAllInternalCommittees();
+  const myCommittees = committees.filter((c) => c.members.some((m) => m.teacherId === teacherId));
+  const allGroups = await serverGetAllFypGroups();
+
+  const results = [];
+  for (const comm of myCommittees) {
+    const myMember = comm.members.find((m) => m.teacherId === teacherId);
+    const assignedGroups = allGroups.filter((g) => comm.assignedGroupIds.includes(g.id));
+    results.push({
+      committee: comm,
+      groups: assignedGroups,
+      isLead: Boolean(myMember?.isLead),
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Get all 7th semester committee evaluations
+ */
+export async function serverGetAllCommitteeEvaluations(): Promise<FypCommitteeEvaluation[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_committee_evaluations ORDER BY submitted_at DESC`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        id: String(r.id),
+        committeeId: String(r.committee_id),
+        groupId: String(r.group_id),
+        evaluatorId: Number(r.evaluator_id),
+        evaluatorName: String(r.evaluator_name),
+        groupCriterionScores: typeof r.group_criterion_scores === "string" ? JSON.parse(r.group_criterion_scores) : r.group_criterion_scores,
+        studentScores: typeof r.student_scores === "string" ? JSON.parse(r.student_scores) : r.student_scores,
+        evidenceNotes: String(r.evidence_notes || ""),
+        totalScore: Number(r.total_score),
+        recommendation: r.recommendation,
+        remarks: String(r.remarks || ""),
+        submittedAt: String(r.submitted_at),
+        isLocked: Boolean(r.is_locked),
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryCommitteeEvaluations.values());
+}
+
+/**
+ * Submit independent rubric evaluation by committee member (7th semester)
+ */
+export async function serverSubmitCommitteeEvaluation(data: {
+  committeeId: string;
+  groupId: string;
+  evaluatorId: number;
+  evaluatorName: string;
+  groupCriterionScores: Record<string, number>;
+  studentScores: FypStudentScore[];
+  evidenceNotes?: string;
+  recommendation: "accepted" | "minor_revisions" | "major_revisions" | "repeat";
+  remarks: string;
+}): Promise<FypCommitteeEvaluation> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  // Validate group and committee
+  const allGroups = await serverGetAllFypGroups();
+  const group = allGroups.find((g) => g.id === data.groupId);
+  if (!group) throw new Error("Group not found");
+
+  const committees = await serverGetAllInternalCommittees();
+  const committee = committees.find((c) => c.id === data.committeeId);
+  if (!committee) throw new Error("Committee not found");
+
+  // Conflict invariant check
+  if (group.supervisorId === data.evaluatorId) {
+    throw new Error("Conflict of Interest: You are the supervisor of this group and cannot submit a committee evaluation.");
+  }
+
+  // 1. Group criteria total (max 85)
+  let groupCriteriaTotal = 0;
+  for (const criterion of DEFAULT_INTERNAL_RUBRIC) {
+    if (criterion.id !== "indiv") {
+      const score = Number(data.groupCriterionScores[criterion.id]) || 0;
+      groupCriteriaTotal += Math.max(0, Math.min(criterion.maxMarks, score));
+    }
+  }
+
+  // 2. Average of student individual contribution scores (max 15)
+  let avgStudentIndividual = 0;
+  if (data.studentScores.length > 0) {
+    const indivSum = data.studentScores.reduce((acc, s) => acc + (Number(s.individualMarks) || 0), 0);
+    avgStudentIndividual = Math.round((indivSum / data.studentScores.length) * 10) / 10;
+  }
+
+  const totalScore = Math.min(100, Math.round((groupCriteriaTotal + avgStudentIndividual) * 10) / 10);
+  const id = `comm-eval-${data.groupId}-${data.evaluatorId}`;
+  const now = new Date().toISOString();
+
+  const evalRecord: FypCommitteeEvaluation = {
+    id,
+    committeeId: data.committeeId,
+    groupId: data.groupId,
+    evaluatorId: data.evaluatorId,
+    evaluatorName: data.evaluatorName,
+    groupCriterionScores: data.groupCriterionScores,
+    studentScores: data.studentScores,
+    evidenceNotes: data.evidenceNotes?.trim() || "",
+    totalScore,
+    recommendation: data.recommendation,
+    remarks: data.remarks.trim(),
+    submittedAt: now,
+    isLocked: true,
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_committee_evaluations
+       (id, committee_id, group_id, evaluator_id, evaluator_name, group_criterion_scores, student_scores, evidence_notes, total_score, recommendation, remarks, submitted_at, is_locked)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       ON CONFLICT (id) DO UPDATE SET
+         group_criterion_scores = EXCLUDED.group_criterion_scores,
+         student_scores = EXCLUDED.student_scores,
+         evidence_notes = EXCLUDED.evidence_notes,
+         total_score = EXCLUDED.total_score,
+         recommendation = EXCLUDED.recommendation,
+         remarks = EXCLUDED.remarks,
+         submitted_at = EXCLUDED.submitted_at,
+         is_locked = EXCLUDED.is_locked`,
+      [
+        evalRecord.id,
+        evalRecord.committeeId,
+        evalRecord.groupId,
+        evalRecord.evaluatorId,
+        evalRecord.evaluatorName,
+        JSON.stringify(evalRecord.groupCriterionScores),
+        JSON.stringify(evalRecord.studentScores),
+        evalRecord.evidenceNotes,
+        evalRecord.totalScore,
+        evalRecord.recommendation,
+        evalRecord.remarks,
+        evalRecord.submittedAt,
+        evalRecord.isLocked,
+      ],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Submit committee evaluation database fallback:", err);
+  }
+
+  memoryCommitteeEvaluations.set(evalRecord.id, evalRecord);
+  writeDiskStore();
+  return evalRecord;
+}
+
+/**
+ * Get committee evaluations for a group with blind scoring rules
+ */
+export async function serverGetCommitteeEvaluationsForGroup(
+  groupId: string,
+  requestingRole: "student" | "committee_member" | "coordinator",
+  requesterId?: number,
+): Promise<{
+  evaluations: FypCommitteeEvaluation[];
+  averageScore: number;
+  evaluationsCount: number;
+  totalMembers: number;
+  isComplete: boolean;
+}> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const committees = await serverGetAllInternalCommittees();
+  const committee = committees.find((c) => c.assignedGroupIds.includes(groupId));
+  const totalMembers = committee?.members.length || 3;
+
+  const allEvals = await serverGetAllCommitteeEvaluations();
+  const groupEvals = allEvals.filter((e) => e.groupId === groupId);
+
+  const averageScore = groupEvals.length > 0
+    ? Math.round((groupEvals.reduce((acc, e) => acc + e.totalScore, 0) / groupEvals.length) * 10) / 10
+    : 0;
+
+  const isComplete = groupEvals.length >= totalMembers;
+
+  // Blind scoring filters
+  const sanitizedEvaluations = groupEvals.map((e) => {
+    const isMine = requesterId !== undefined && e.evaluatorId === requesterId;
+    const canSeeScore = isComplete || requestingRole === "coordinator" || isMine;
+
+    return {
+      ...e,
+      totalScore: canSeeScore ? e.totalScore : 0,
+      remarks: canSeeScore ? e.remarks : "Evaluation submitted (blinded until all members complete scoring).",
+    };
+  });
+
+  return {
+    evaluations: sanitizedEvaluations,
+    averageScore: isComplete || requestingRole === "coordinator" ? averageScore : 0,
+    evaluationsCount: groupEvals.length,
+    totalMembers,
+    isComplete,
+  };
+}
+
+/**
+ * Get moderation view to detect score divergence between committee members
+ */
+export async function serverGetCommitteeModerationView(groupId: string): Promise<FypCommitteeModerationResult> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allGroups = await serverGetAllFypGroups();
+  const group = allGroups.find((g) => g.id === groupId);
+  const groupTitle = group?.title || "Project Group";
+
+  const committees = await serverGetAllInternalCommittees();
+  const committee = committees.find((c) => c.assignedGroupIds.includes(groupId));
+  const totalCommitteeMembers = committee?.members.length || 3;
+
+  const allEvals = await serverGetAllCommitteeEvaluations();
+  const groupEvals = allEvals.filter((e) => e.groupId === groupId);
+
+  const scores = groupEvals.map((e) => ({
+    evaluatorId: e.evaluatorId,
+    evaluatorName: e.evaluatorName,
+    totalScore: e.totalScore,
+  }));
+
+  const numericScores = scores.map((s) => s.totalScore);
+  const minScore = numericScores.length > 0 ? Math.min(...numericScores) : 0;
+  const maxScore = numericScores.length > 0 ? Math.max(...numericScores) : 0;
+  const maxDivergence = Math.round((maxScore - minScore) * 10) / 10;
+  const averageScore = numericScores.length > 0
+    ? Math.round((numericScores.reduce((a, b) => a + b, 0) / numericScores.length) * 10) / 10
+    : 0;
+
+  // Alert when divergence exceeds 15 marks
+  const hasDivergenceAlert = numericScores.length >= 2 && maxDivergence > 15;
+
+  return {
+    groupId,
+    groupTitle,
+    evaluationsCount: scores.length,
+    totalCommitteeMembers,
+    scores,
+    averageScore,
+    maxDivergence,
+    hasDivergenceAlert,
+  };
+}
+
+/**
+ * Get current grade weightage configuration
+ */
+export async function serverGetGradeWeightageConfig(): Promise<FypGradeWeightageConfig> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_grade_weightages LIMIT 1`);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return {
+        id: String(rows[0].id),
+        supervisorWeight: Number(rows[0].supervisor_weight),
+        defenseWeight: Number(rows[0].defense_weight),
+        committeeWeight: Number(rows[0].committee_weight),
+        updatedAt: String(rows[0].updated_at),
+        updatedBy: String(rows[0].updated_by),
+      };
+    }
+  } catch {
+    // Fallback
+  }
+
+  const existing = memoryGradeWeightages.get("default_weightage");
+  if (existing) return existing;
+
+  memoryGradeWeightages.set("default_weightage", DEFAULT_GRADE_WEIGHTAGE);
+  return DEFAULT_GRADE_WEIGHTAGE;
+}
+
+/**
+ * Update grade weightage configuration
+ */
+export async function serverSaveGradeWeightageConfig(data: {
+  supervisorWeight: number;
+  defenseWeight: number;
+  committeeWeight: number;
+  updatedBy: string;
+}): Promise<FypGradeWeightageConfig> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const sum = data.supervisorWeight + data.defenseWeight + data.committeeWeight;
+  if (sum !== 100) {
+    throw new Error(`Grade weightages must total exactly 100%. Current sum: ${sum}%.`);
+  }
+
+  const now = new Date().toISOString();
+  const config: FypGradeWeightageConfig = {
+    id: "default_weightage",
+    supervisorWeight: data.supervisorWeight,
+    defenseWeight: data.defenseWeight,
+    committeeWeight: data.committeeWeight,
+    updatedAt: now,
+    updatedBy: data.updatedBy.trim() || "FYP Coordinator",
+  };
+
+  try {
+    const sql = await getSql();
+    await sql.query(
+      `INSERT INTO fyp_grade_weightages (id, supervisor_weight, defense_weight, committee_weight, updated_at, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO UPDATE SET
+         supervisor_weight = EXCLUDED.supervisor_weight,
+         defense_weight = EXCLUDED.defense_weight,
+         committee_weight = EXCLUDED.committee_weight,
+         updated_at = EXCLUDED.updated_at,
+         updated_by = EXCLUDED.updated_by`,
+      [config.id, config.supervisorWeight, config.defenseWeight, config.committeeWeight, config.updatedAt, config.updatedBy],
+    );
+  } catch (err) {
+    console.warn("[fyp.server] Save weightage database fallback:", err);
+  }
+
+  memoryGradeWeightages.set(config.id, config);
+  writeDiskStore();
+  return config;
+}
+
+/**
+ * Compute and aggregate final student grades across supervisor, defense, and committee scores
+ */
+export async function serverComputeFinalGrades(
+  groupId: string,
+  calculatedBy: string = "FYP Examination Committee",
+): Promise<FypFinalStudentGrade[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allGroups = await serverGetAllFypGroups();
+  const group = allGroups.find((g) => g.id === groupId);
+  if (!group) throw new Error("Group not found");
+
+  const weightage = await serverGetGradeWeightageConfig();
+
+  // 1. Supervisor Score
+  const milestones = await serverGetGroupMilestones(groupId);
+  const approvedMilestones = milestones.filter((m) => m.status === "approved");
+  const supervisorScore = approvedMilestones.length > 0
+    ? Math.round((approvedMilestones.reduce((acc, m) => acc + m.weightage, 0) / 100) * 88)
+    : 85;
+
+  // 2. 6th Semester Defense Score
+  const defenseSummary = await serverGetGroupDefenseResult(groupId, "coordinator");
+  const defenseScore = defenseSummary.averageTotalScore > 0 ? defenseSummary.averageTotalScore : 82;
+
+  // 3. 7th Semester Committee Score
+  const committeeSummary = await serverGetCommitteeEvaluationsForGroup(groupId, "coordinator");
+  const committeeScore = committeeSummary.averageScore > 0 ? committeeSummary.averageScore : 80;
+
+  // Roster of students
+  const students = [group.leader, ...group.members];
+  const results: FypFinalStudentGrade[] = [];
+  const now = new Date().toISOString();
+
+  for (const st of students) {
+    // Check if student has specific individual score adjustments from committee
+    let studentCommitteeScore = committeeScore;
+    const studentEvaluations = committeeSummary.evaluations;
+    if (studentEvaluations.length > 0) {
+      const studentIndivScores: number[] = [];
+      for (const ev of studentEvaluations) {
+        const match = ev.studentScores.find((s) => s.studentId === st.studentId || s.regNo === st.regNo);
+        if (match) studentIndivScores.push(match.individualMarks);
+      }
+      if (studentIndivScores.length > 0) {
+        const avgIndiv = studentIndivScores.reduce((a, b) => a + b, 0) / studentIndivScores.length;
+        // Group criteria average (out of 85) + individual average (out of 15)
+        const groupCriteriaPart = Math.max(0, committeeScore - 15);
+        studentCommitteeScore = Math.min(100, Math.round((groupCriteriaPart + avgIndiv) * 10) / 10);
+      }
+    }
+
+    // Weighted Total calculation
+    const weighted = (
+      (supervisorScore * weightage.supervisorWeight) +
+      (defenseScore * weightage.defenseWeight) +
+      (studentCommitteeScore * weightage.committeeWeight)
+    ) / 100;
+
+    const weightedTotal = Math.round(weighted * 10) / 10;
+    const { letterGrade, gradePoint } = calculateComsatsGrade(weightedTotal);
+
+    const auditTrail: FypFinalAuditEntry[] = [
+      {
+        timestamp: now,
+        action: "INITIAL_AGGREGATION",
+        actor: calculatedBy,
+        reason: `Aggregated with weights: Supervisor (${weightage.supervisorWeight}%), Defense (${weightage.defenseWeight}%), Committee (${weightage.committeeWeight}%)`,
+      },
+    ];
+
+    const studentGrade: FypFinalStudentGrade = {
+      studentId: st.studentId,
+      regNo: st.regNo,
+      studentName: st.fullName,
+      groupId: group.id,
+      groupTitle: group.title,
+      groupDomain: group.domain,
+      supervisorScore,
+      defenseScore,
+      committeeScore: studentCommitteeScore,
+      weightedTotal,
+      letterGrade,
+      gradePoint,
+      isPublished: false,
+      publishedAt: null,
+      publishedBy: null,
+      auditTrail,
+    };
+
+    try {
+      const sql = await getSql();
+      await sql.query(
+        `INSERT INTO fyp_final_grades
+         (student_id, reg_no, student_name, group_id, group_title, group_domain, supervisor_score, defense_score, committee_score, weighted_total, letter_grade, grade_point, is_published, audit_trail)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, FALSE, $13)
+         ON CONFLICT (student_id) DO UPDATE SET
+           supervisor_score = EXCLUDED.supervisor_score,
+           defense_score = EXCLUDED.defense_score,
+           committee_score = EXCLUDED.committee_score,
+           weighted_total = EXCLUDED.weighted_total,
+           letter_grade = EXCLUDED.letter_grade,
+           grade_point = EXCLUDED.grade_point,
+           audit_trail = EXCLUDED.audit_trail`,
+        [
+          studentGrade.studentId,
+          studentGrade.regNo,
+          studentGrade.studentName,
+          studentGrade.groupId,
+          studentGrade.groupTitle,
+          studentGrade.groupDomain,
+          studentGrade.supervisorScore,
+          studentGrade.defenseScore,
+          studentGrade.committeeScore,
+          studentGrade.weightedTotal,
+          studentGrade.letterGrade,
+          studentGrade.gradePoint,
+          JSON.stringify(studentGrade.auditTrail),
+        ],
+      );
+    } catch (err) {
+      console.warn("[fyp.server] Save student final grade database fallback:", err);
+    }
+
+    memoryFinalGrades.set(studentGrade.studentId, studentGrade);
+    results.push(studentGrade);
+  }
+
+  writeDiskStore();
+  return results;
+}
+
+/**
+ * Publish final grades to student portal and exam department
+ */
+export async function serverPublishFinalResults(
+  groupId: string,
+  publishedBy: string,
+): Promise<{ success: boolean; grades: FypFinalStudentGrade[] }> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  let grades = Array.from(memoryFinalGrades.values()).filter((g) => g.groupId === groupId);
+  if (grades.length === 0) {
+    grades = await serverComputeFinalGrades(groupId, publishedBy);
+  }
+
+  const now = new Date().toISOString();
+  const publishedGrades: FypFinalStudentGrade[] = [];
+
+  for (const grade of grades) {
+    grade.isPublished = true;
+    grade.publishedAt = now;
+    grade.publishedBy = publishedBy;
+    grade.auditTrail.push({
+      timestamp: now,
+      action: "PUBLISHED_FINAL_RESULTS",
+      actor: publishedBy,
+      reason: "Official sign-off by FYP Coordinator & Department Exam Board",
+    });
+
+    try {
+      const sql = await getSql();
+      await sql.query(
+        `UPDATE fyp_final_grades SET
+           is_published = TRUE,
+           published_at = $1,
+           published_by = $2,
+           audit_trail = $3
+         WHERE student_id = $4`,
+        [now, publishedBy, JSON.stringify(grade.auditTrail), grade.studentId],
+      );
+    } catch (err) {
+      console.warn("[fyp.server] Publish final grades database fallback:", err);
+    }
+
+    memoryFinalGrades.set(grade.studentId, grade);
+    publishedGrades.push(grade);
+  }
+
+  writeDiskStore();
+  return { success: true, grades: publishedGrades };
+}
+
+/**
+ * Get final grades for a group
+ */
+export async function serverGetGroupFinalResults(groupId: string): Promise<FypFinalStudentGrade[]> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  try {
+    const sql = await getSql();
+    const rows = await sql.query<any>(`SELECT * FROM fyp_final_grades WHERE group_id = $1`, [groupId]);
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        studentId: String(r.student_id),
+        regNo: String(r.reg_no),
+        studentName: String(r.student_name),
+        groupId: String(r.group_id),
+        groupTitle: String(r.group_title),
+        groupDomain: String(r.group_domain),
+        supervisorScore: Number(r.supervisor_score),
+        defenseScore: Number(r.defense_score),
+        committeeScore: Number(r.committee_score),
+        weightedTotal: Number(r.weighted_total),
+        letterGrade: r.letter_grade,
+        gradePoint: Number(r.grade_point),
+        isPublished: Boolean(r.is_published),
+        publishedAt: r.published_at ? String(r.published_at) : null,
+        publishedBy: r.published_by ? String(r.published_by) : null,
+        auditTrail: typeof r.audit_trail === "string" ? JSON.parse(r.audit_trail) : r.audit_trail,
+      }));
+    }
+  } catch {
+    // Fallback
+  }
+
+  return Array.from(memoryFinalGrades.values()).filter((g) => g.groupId === groupId);
+}
+
+/**
+ * Get final grade for an individual student (by studentId, regNo, or email)
+ */
+export async function serverGetStudentFinalGrade(identifier: string): Promise<FypFinalStudentGrade | null> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const lower = identifier.trim().toLowerCase();
+  const allGrades = Array.from(memoryFinalGrades.values());
+
+  const match = allGrades.find(
+    (g) =>
+      g.studentId.toLowerCase() === lower ||
+      g.regNo.toLowerCase() === lower,
+  );
+
+  return match || null;
+}
+
+/**
+ * Export official marksheet in CSV format for COMSATS Exam Department
+ */
+export async function serverExportMarksheet(format: "csv" | "json" = "csv"): Promise<{
+  data: string;
+  filename: string;
+  mimeType: string;
+}> {
+  await ensureFypTables();
+  hydrateFallbackFromDisk();
+
+  const allGrades = Array.from(memoryFinalGrades.values()).sort((a, b) => a.regNo.localeCompare(b.regNo));
+  const dateStr = new Date().toISOString().split("T")[0];
+
+  if (format === "json") {
+    return {
+      data: JSON.stringify(allGrades, null, 2),
+      filename: `COMSATS_Attock_FYP_Marksheet_${dateStr}.json`,
+      mimeType: "application/json",
+    };
+  }
+
+  // Generate CSV Header & rows
+  const headers = [
+    "Registration No",
+    "Student Name",
+    "Project Title",
+    "Domain",
+    "Supervisor Marks (30%)",
+    "Defense Marks (30%)",
+    "Committee Marks (40%)",
+    "Total Score (100)",
+    "Letter Grade",
+    "Grade Point (GPA)",
+    "Published Status",
+  ];
+
+  const rows = allGrades.map((g) => [
+    `"${g.regNo}"`,
+    `"${g.studentName}"`,
+    `"${g.groupTitle.replace(/"/g, '""')}"`,
+    `"${g.groupDomain}"`,
+    g.supervisorScore,
+    g.defenseScore,
+    g.committeeScore,
+    g.weightedTotal,
+    g.letterGrade,
+    g.gradePoint.toFixed(2),
+    g.isPublished ? "PUBLISHED" : "PENDING_APPROVAL",
+  ]);
+
+  const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+
+  return {
+    data: csvContent,
+    filename: `COMSATS_Attock_FYP_Official_Marksheet_${dateStr}.csv`,
+    mimeType: "text/csv",
+  };
+}
+
 
 

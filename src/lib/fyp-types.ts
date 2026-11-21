@@ -373,4 +373,163 @@ export interface FypDefenseResultSummary {
   }>;
 }
 
+/**
+ * =========================================================================
+ * PHASE 4: 7TH SEMESTER INTERNAL EVALUATION COMMITTEE & MARKS AGGREGATION
+ * =========================================================================
+ */
+
+export interface FypCommitteeMember {
+  teacherId: number;
+  teacherName: string;
+  email: string;
+  department: string;
+  isLead: boolean;
+}
+
+export interface FypInternalCommittee {
+  id: string;
+  name: string; // e.g. "7th Sem Committee 01 - AI & Data Science"
+  department: string;
+  members: FypCommitteeMember[]; // 2 to 3 faculty members
+  assignedGroupIds: string[];
+  createdAt: string;
+}
+
+export interface FypInternalRubricCriterion {
+  id: string;
+  name: string;
+  description: string;
+  maxMarks: number;
+}
+
+export const DEFAULT_INTERNAL_RUBRIC: FypInternalRubricCriterion[] = [
+  {
+    id: "impl",
+    name: "System Implementation & Code Quality",
+    description: "Architecture robustness, coding standards, error handling, database normalization, and repository activity.",
+    maxMarks: 25,
+  },
+  {
+    id: "prog",
+    name: "Milestone Progress & Sprint Adherence",
+    description: "Completion of SRS, design blueprints, progress sprints, and responsiveness to supervisor reviews.",
+    maxMarks: 20,
+  },
+  {
+    id: "rep",
+    name: "Report Quality & Documentation Rigor",
+    description: "Clarity of 7th semester report, IEEE citation standard, Turnitin similarity compliance, and diagrams.",
+    maxMarks: 20,
+  },
+  {
+    id: "demo",
+    name: "Working Prototype Demonstration",
+    description: "Live functional walkthrough of all core user journeys, data pipelines, and resilience under edge cases.",
+    maxMarks: 20,
+  },
+  {
+    id: "indiv",
+    name: "Individual Technical Contribution",
+    description: "Measured per student based on verifiable commit history, task ownership, and technical defense during committee Q&A.",
+    maxMarks: 15,
+  },
+];
+
+export interface FypCommitteeEvaluation {
+  id: string;
+  committeeId: string;
+  groupId: string;
+  evaluatorId: number;
+  evaluatorName: string;
+  groupCriterionScores: Record<string, number>; // criterionId -> marks (out of 85)
+  studentScores: FypStudentScore[]; // studentId -> individualMarks (out of 15)
+  evidenceNotes: string; // references to git commits, task logs, demo performance
+  totalScore: number; // group sum + average of student individual marks (out of 100)
+  recommendation: "accepted" | "minor_revisions" | "major_revisions" | "repeat";
+  remarks: string;
+  submittedAt: string;
+  isLocked: boolean;
+}
+
+export interface FypCommitteeModerationResult {
+  groupId: string;
+  groupTitle: string;
+  evaluationsCount: number;
+  totalCommitteeMembers: number;
+  scores: Array<{
+    evaluatorId: number;
+    evaluatorName: string;
+    totalScore: number;
+  }>;
+  averageScore: number;
+  maxDivergence: number;
+  hasDivergenceAlert: boolean; // divergence > 15 marks
+}
+
+export interface FypGradeWeightageConfig {
+  id: string;
+  supervisorWeight: number; // e.g. 30 (%)
+  defenseWeight: number; // e.g. 30 (%) - 6th semester defense
+  committeeWeight: number; // e.g. 40 (%) - 7th semester internal committee
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export const DEFAULT_GRADE_WEIGHTAGE: FypGradeWeightageConfig = {
+  id: "default_weightage",
+  supervisorWeight: 30,
+  defenseWeight: 30,
+  committeeWeight: 40,
+  updatedAt: new Date().toISOString(),
+  updatedBy: "Academic FYP Committee",
+};
+
+export interface FypFinalAuditEntry {
+  timestamp: string;
+  action: string;
+  actor: string;
+  reason?: string;
+}
+
+export interface FypFinalStudentGrade {
+  studentId: string;
+  regNo: string;
+  studentName: string;
+  groupId: string;
+  groupTitle: string;
+  groupDomain: string;
+  supervisorScore: number; // out of 100
+  defenseScore: number; // out of 100
+  committeeScore: number; // out of 100
+  weightedTotal: number; // out of 100
+  letterGrade: "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F";
+  gradePoint: number;
+  isPublished: boolean;
+  publishedAt?: string | null;
+  publishedBy?: string | null;
+  auditTrail: FypFinalAuditEntry[];
+}
+
+/**
+ * COMSATS Official Grading Scheme
+ */
+export function calculateComsatsGrade(total: number): {
+  letterGrade: "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F";
+  gradePoint: number;
+} {
+  const rounded = Math.round(total * 10) / 10;
+  if (rounded >= 85) return { letterGrade: "A", gradePoint: 4.0 };
+  if (rounded >= 80) return { letterGrade: "A-", gradePoint: 3.66 };
+  if (rounded >= 75) return { letterGrade: "B+", gradePoint: 3.33 };
+  if (rounded >= 70) return { letterGrade: "B", gradePoint: 3.0 };
+  if (rounded >= 65) return { letterGrade: "B-", gradePoint: 2.66 };
+  if (rounded >= 61) return { letterGrade: "C+", gradePoint: 2.33 };
+  if (rounded >= 58) return { letterGrade: "C", gradePoint: 2.0 };
+  if (rounded >= 55) return { letterGrade: "C-", gradePoint: 1.66 };
+  if (rounded >= 50) return { letterGrade: "D", gradePoint: 1.0 };
+  return { letterGrade: "F", gradePoint: 0.0 };
+}
+
+
 

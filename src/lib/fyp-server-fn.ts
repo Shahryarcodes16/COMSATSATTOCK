@@ -481,4 +481,224 @@ export const publishDefenseResultServerFn = createServerFn({
     return res;
   });
 
+/**
+ * =========================================================================
+ * PHASE 4: 7TH SEMESTER INTERNAL EVALUATION COMMITTEE & MARKS AGGREGATION
+ * =========================================================================
+ */
+
+export const getAllInternalCommitteesServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const { serverGetAllInternalCommittees } = await import("./fyp.server.ts");
+  const committees = await serverGetAllInternalCommittees();
+  return { committees };
+});
+
+const CommitteeMemberInputSchema = z.object({
+  teacherId: z.number().int().positive(),
+  teacherName: z.string().min(1),
+  email: z.string().email(),
+  department: z.string().min(1),
+  isLead: z.boolean(),
+});
+
+const CreateInternalCommitteeSchema = z.object({
+  name: z.string().min(2, "Committee name required"),
+  department: z.string().optional(),
+  members: z.array(CommitteeMemberInputSchema).min(2).max(4),
+});
+
+export const createInternalCommitteeServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => CreateInternalCommitteeSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverCreateInternalCommittee } = await import("./fyp.server.ts");
+    const committee = await serverCreateInternalCommittee(data);
+    return { success: true, committee };
+  });
+
+const AssignGroupsToCommitteeSchema = z.object({
+  committeeId: z.string().min(1),
+  groupIds: z.array(z.string().min(1)).min(1),
+});
+
+export const assignGroupsToCommitteeServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => AssignGroupsToCommitteeSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverAssignGroupsToCommittee } = await import("./fyp.server.ts");
+    const committee = await serverAssignGroupsToCommittee(data);
+    return { success: true, committee };
+  });
+
+export const getFacultyAssignedCommitteesServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ teacherId: z.number().int().positive() }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetFacultyAssignedCommittees } = await import("./fyp.server.ts");
+    const assignments = await serverGetFacultyAssignedCommittees(data.teacherId);
+    return { assignments };
+  });
+
+const SubmitCommitteeEvaluationSchema = z.object({
+  committeeId: z.string().min(1),
+  groupId: z.string().min(1),
+  evaluatorId: z.number().int().positive(),
+  evaluatorName: z.string().min(1),
+  groupCriterionScores: z.record(z.string(), z.number()),
+  studentScores: z.array(
+    z.object({
+      studentId: z.string().min(1),
+      regNo: z.string().min(1),
+      studentName: z.string().min(1),
+      individualMarks: z.number().min(0).max(15),
+    }),
+  ),
+  evidenceNotes: z.string().optional(),
+  recommendation: z.enum(["accepted", "minor_revisions", "major_revisions", "repeat"]),
+  remarks: z.string().min(1, "Evaluation remarks are required"),
+});
+
+export const submitCommitteeEvaluationServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => SubmitCommitteeEvaluationSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverSubmitCommitteeEvaluation } = await import("./fyp.server.ts");
+    const evaluation = await serverSubmitCommitteeEvaluation(data);
+    return { success: true, evaluation };
+  });
+
+export const getCommitteeEvaluationsForGroupServerFn = createServerFn({
+  method: "GET",
+})
+  .validator(
+    (d: unknown) =>
+      z
+        .object({
+          groupId: z.string().min(1),
+          role: z.enum(["student", "committee_member", "coordinator"]).default("student"),
+          requesterId: z.number().optional(),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { serverGetCommitteeEvaluationsForGroup } = await import("./fyp.server.ts");
+    const res = await serverGetCommitteeEvaluationsForGroup(data.groupId, data.role, data.requesterId);
+    return res;
+  });
+
+export const getCommitteeModerationViewServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetCommitteeModerationView } = await import("./fyp.server.ts");
+    const moderation = await serverGetCommitteeModerationView(data.groupId);
+    return { moderation };
+  });
+
+export const getGradeWeightageConfigServerFn = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const { serverGetGradeWeightageConfig } = await import("./fyp.server.ts");
+  const config = await serverGetGradeWeightageConfig();
+  return { config };
+});
+
+const SaveGradeWeightageSchema = z.object({
+  supervisorWeight: z.number().min(0).max(100),
+  defenseWeight: z.number().min(0).max(100),
+  committeeWeight: z.number().min(0).max(100),
+  updatedBy: z.string().min(1),
+});
+
+export const saveGradeWeightageConfigServerFn = createServerFn({
+  method: "POST",
+})
+  .validator((d: unknown) => SaveGradeWeightageSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { serverSaveGradeWeightageConfig } = await import("./fyp.server.ts");
+    const config = await serverSaveGradeWeightageConfig(data);
+    return { success: true, config };
+  });
+
+export const computeFinalGradesServerFn = createServerFn({
+  method: "POST",
+})
+  .validator(
+    (d: unknown) =>
+      z
+        .object({
+          groupId: z.string().min(1),
+          calculatedBy: z.string().default("FYP Examination Committee"),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { serverComputeFinalGrades } = await import("./fyp.server.ts");
+    const grades = await serverComputeFinalGrades(data.groupId, data.calculatedBy);
+    return { success: true, grades };
+  });
+
+export const publishFinalResultsServerFn = createServerFn({
+  method: "POST",
+})
+  .validator(
+    (d: unknown) =>
+      z
+        .object({
+          groupId: z.string().min(1),
+          publishedBy: z.string().min(1),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { serverPublishFinalResults } = await import("./fyp.server.ts");
+    const res = await serverPublishFinalResults(data.groupId, data.publishedBy);
+    return res;
+  });
+
+export const getGroupFinalResultsServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ groupId: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetGroupFinalResults } = await import("./fyp.server.ts");
+    const grades = await serverGetGroupFinalResults(data.groupId);
+    return { grades };
+  });
+
+export const getStudentFinalGradeServerFn = createServerFn({
+  method: "GET",
+})
+  .validator((d: unknown) => z.object({ identifier: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { serverGetStudentFinalGrade } = await import("./fyp.server.ts");
+    const grade = await serverGetStudentFinalGrade(data.identifier);
+    return { grade };
+  });
+
+export const exportMarksheetServerFn = createServerFn({
+  method: "GET",
+})
+  .validator(
+    (d: unknown) =>
+      z
+        .object({
+          format: z.enum(["csv", "json"]).default("csv"),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { serverExportMarksheet } = await import("./fyp.server.ts");
+    const file = await serverExportMarksheet(data.format);
+    return file;
+  });
+
+
 
