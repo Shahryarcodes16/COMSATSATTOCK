@@ -419,6 +419,39 @@ export function Topbar() {
           )}
         </button>
 
+        {/* Theme toggle: Paper (Light) -> Ink (Slate Dark) -> Midnight (OLED Pitch Black) */}
+        <button
+          type="button"
+          className="icon-btn tap topbar-theme-btn"
+          aria-label={
+            theme === "paper"
+              ? "Current theme: Paper (Light). Click to switch to Ink (Slate Dark)."
+              : theme === "ink"
+                ? "Current theme: Ink (Slate Dark). Click to switch to Midnight (Pitch Black OLED)."
+                : "Current theme: Midnight (Pitch Black OLED). Click to switch to Paper (Light)."
+          }
+          title={
+            theme === "paper"
+              ? "Theme: Paper (Light) — Click for Slate Ink"
+              : theme === "ink"
+                ? "Theme: Ink (Slate Dark) — Click for Modern Midnight Black"
+                : "Theme: Midnight (Pitch Black OLED) — Click for Paper Light"
+          }
+          onClick={toggleTheme}
+        >
+          <span className="icon-swap">
+            <span className={theme === "paper" ? "" : "off"}>
+              <Sun size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className={theme === "ink" ? "" : "off"}>
+              <Moon size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+            <span className={theme === "midnight" ? "" : "off"}>
+              <Sparkles size={18} strokeWidth={1.75} aria-hidden />
+            </span>
+          </span>
+        </button>
+
         {/* If faculty is logged in, show their official teaching desk pill */}
         {facultyActive ? (
           <FacultyAuthButton />
@@ -468,46 +501,13 @@ export function Topbar() {
             <Info size={18} strokeWidth={1.8} aria-hidden />
           )}
         </button>
-
-        {/* Theme toggle: Paper (Light) -> Ink (Slate Dark) -> Midnight (OLED Pitch Black) */}
-        <button
-          type="button"
-          className="icon-btn tap"
-          aria-label={
-            theme === "paper"
-              ? "Current theme: Paper (Light). Click to switch to Ink (Slate Dark)."
-              : theme === "ink"
-                ? "Current theme: Ink (Slate Dark). Click to switch to Midnight (Pitch Black OLED)."
-                : "Current theme: Midnight (Pitch Black OLED). Click to switch to Paper (Light)."
-          }
-          title={
-            theme === "paper"
-              ? "Theme: Paper (Light) — Click for Slate Ink"
-              : theme === "ink"
-                ? "Theme: Ink (Slate Dark) — Click for Modern Midnight Black"
-                : "Theme: Midnight (Pitch Black OLED) — Click for Paper Light"
-          }
-          onClick={toggleTheme}
-        >
-          <span className="icon-swap">
-            <span className={theme === "paper" ? "" : "off"}>
-              <Sun size={18} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className={theme === "ink" ? "" : "off"}>
-              <Moon size={18} strokeWidth={1.75} aria-hidden />
-            </span>
-            <span className={theme === "midnight" ? "" : "off"}>
-              <Sparkles size={18} strokeWidth={1.75} aria-hidden />
-            </span>
-          </span>
-        </button>
       </div>
     </header>
   );
 }
 
 export function CampusFooter() {
-  const { view, setView } = useDesk();
+  const { view, setView, theme, toggleTheme } = useDesk();
 
   return (
     <footer className="campus-footer">
@@ -537,6 +537,34 @@ export function CampusFooter() {
         <p className="fine">COMSATS Attock Campus · © Muhammad Shahryar. All rights reserved.</p>
       </div>
       <div className="campus-footer-contacts">
+        <button
+          type="button"
+          className="btn tap footer-theme-btn"
+          onClick={toggleTheme}
+          title={`Switch Theme: currently ${
+            theme === "paper"
+              ? "Paper (Light)"
+              : theme === "ink"
+                ? "Ink (Slate Dark)"
+                : "Midnight (Pitch Black OLED)"
+          }`}
+          aria-label="Toggle visual theme between Paper Light, Ink Dark, and Midnight OLED"
+        >
+          {theme === "paper" ? (
+            <Sun size={15} aria-hidden style={{ color: "#d97706" }} />
+          ) : theme === "ink" ? (
+            <Moon size={15} aria-hidden style={{ color: "#38bdf8" }} />
+          ) : (
+            <Sparkles size={15} aria-hidden style={{ color: "#facc15" }} />
+          )}
+          <span>
+            {theme === "paper"
+              ? "Paper Light"
+              : theme === "ink"
+                ? "Slate Dark"
+                : "Midnight OLED"}
+          </span>
+        </button>
         <button
           type="button"
           className={`btn tap ${view === "about" ? "solid" : ""}`}
