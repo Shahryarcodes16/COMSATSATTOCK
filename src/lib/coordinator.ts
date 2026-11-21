@@ -4,8 +4,8 @@
  * with their official university email (@cuiatk.edu.pk, @ciit-attock.edu.pk, @comsats.edu.pk),
  * sign in securely, and arrange classes on behalf of students.
  */
-import { addMakeupClassAsync, removeMakeupClass, getActiveArrangedMakeupClasses, type MakeupClassRecord } from "./makeup-classes";
-import { UNIVERSITY_EMAIL_REGEX } from "./student";
+import { addMakeupClassAsync, removeMakeupClass, getActiveArrangedMakeupClasses, type MakeupClassRecord } from "./makeup-classes.ts";
+import { UNIVERSITY_EMAIL_REGEX } from "./student.ts";
 
 export const COORDINATOR_SESSION_STORAGE_KEY = "cui_coordinator_active_session_v1";
 export const COORDINATOR_ACCOUNTS_VAULT_KEY = "cui_registered_coordinator_vault_v1";
