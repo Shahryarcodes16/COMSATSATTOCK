@@ -452,13 +452,6 @@ export function Topbar() {
           </span>
         </button>
 
-        {/* If faculty is logged in, show their official teaching desk pill */}
-        {facultyActive ? (
-          <FacultyAuthButton />
-        ) : (
-          <StudentAuthButton />
-        )}
-
         {/* Teacher Messages & Today's Cancelled Classes Screen */}
         <button
           type="button"
@@ -480,11 +473,18 @@ export function Topbar() {
           {view !== "notices" && messageCount > 0 && <span className="notices-badge-count">{messageCount}</span>}
         </button>
 
+        {/* If faculty is logged in, show their official teaching desk pill, else Student Account */}
+        {facultyActive ? (
+          <FacultyAuthButton />
+        ) : (
+          <StudentAuthButton />
+        )}
+
         {/* PWA 1-Tap Native Install Button */}
         <PwaInstallTopbarButton />
 
         {/* Class Reminders */}
-        <NotificationBellButton />
+        <NotificationBellButton className="topbar-bell-btn" />
 
         {/* About & Support Portal */}
         <button

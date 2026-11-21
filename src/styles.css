@@ -2363,7 +2363,9 @@
   .page {
     gap: 1.15rem;
   }
-  .brand-acronym-row {
+  .brand-acronym-row,
+  .brand-badge,
+  .mobile-brand .brand-badge {
     display: none !important;
   }
   .brand-header-row {
@@ -2373,14 +2375,10 @@
     font-size: 1.15rem !important;
     font-weight: 800;
   }
-  .mobile-brand .brand-badge {
-    font-size: 0.58rem !important;
-    padding: 0.1rem 0.35rem !important;
-  }
   .mobile-brand .crest {
-    width: 2.35rem;
-    height: 2.35rem;
-    border-radius: 0.65rem !important;
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    border-radius: 0.55rem !important;
   }
   .page-title {
     font-size: 1.75rem;
@@ -12384,41 +12382,68 @@ article.mini.makeup-class .mini-label > span:first-child {
     max-width: 100% !important;
     flex-wrap: nowrap !important;
     gap: 0.5rem !important;
-    margin-bottom: 0.85rem !important;
-    padding-bottom: 0.65rem !important;
+    margin-bottom: 1.15rem !important;
+    padding: 0.35rem 0 0.75rem !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--c-line) 55%, transparent) !important;
     box-sizing: border-box !important;
   }
 
   .topbar-left-group {
     display: flex !important;
     align-items: center !important;
-    gap: 0.5rem !important;
+    gap: 0.45rem !important;
     min-width: 0 !important;
     flex-shrink: 1 !important;
   }
 
   .topbar-brand-wrap {
+    display: flex !important;
+    align-items: center !important;
     min-width: 0 !important;
     flex-shrink: 1 !important;
     overflow: hidden !important;
   }
 
-  .topbar-brand-wrap .hello {
+  .topbar-brand-wrap .hello,
+  .brand-badge {
     display: none !important;
+  }
+
+  .mobile-brand .brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+
+  .mobile-brand .crest {
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    border-radius: 0.55rem !important;
+    object-fit: cover !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .mobile-brand .brand-name {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--c-ink) !important;
+    line-height: 1 !important;
+    margin: 0 !important;
   }
 
   .topbar-actions {
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
-    gap: 0.35rem !important;
+    gap: 0.4rem !important;
     flex-wrap: nowrap !important;
     flex-shrink: 0 !important;
-    max-width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  /* Unified mobile topbar action buttons: exactly symmetrical 38px rounded squares */
+  /* Sleek, circular glass-style action buttons for modern mobile feel */
   .icon-btn,
   .topbar-mobile-search,
   .topbar-theme-btn,
@@ -12429,17 +12454,38 @@ article.mini.makeup-class .mini-label > span:first-child {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 2.35rem !important;
-    height: 2.35rem !important;
-    min-width: 2.35rem !important;
-    min-height: 2.35rem !important;
-    max-width: 2.35rem !important;
-    max-height: 2.35rem !important;
+    width: 2.3rem !important;
+    height: 2.3rem !important;
+    min-width: 2.3rem !important;
+    min-height: 2.3rem !important;
+    max-width: 2.3rem !important;
+    max-height: 2.3rem !important;
     padding: 0 !important;
-    border-radius: 0.65rem !important;
+    border-radius: 9999px !important;
+    background: color-mix(in srgb, var(--c-surface) 80%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--c-line) 65%, transparent) !important;
+    color: var(--c-ink) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
     position: relative !important;
     box-sizing: border-box !important;
     flex-shrink: 0 !important;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease !important;
+  }
+
+  .icon-btn:active,
+  .topbar-mobile-search:active,
+  .topbar-theme-btn:active,
+  .notices-topbar-btn:active,
+  .student-topbar-pill:active {
+    transform: scale(0.92) !important;
+    background: color-mix(in srgb, var(--c-accent) 15%, var(--c-surface)) !important;
+  }
+
+  .topbar-mobile-search.on,
+  .notices-topbar-btn.on {
+    background: var(--c-accent) !important;
+    color: #ffffff !important;
+    border-color: var(--c-accent) !important;
   }
 
   .topbar-theme-btn {
@@ -12451,7 +12497,9 @@ article.mini.makeup-class .mini-label > span:first-child {
   }
 
   @media (max-width: 640px) {
-    .about-topbar-btn {
+    .about-topbar-btn,
+    .topbar-bell-btn,
+    .pwa-topbar-install-btn {
       display: none !important;
     }
   }
@@ -12488,10 +12536,11 @@ article.mini.makeup-class .mini-label > span:first-child {
 @media (max-width: 480px) {
   .topbar {
     gap: 0.35rem !important;
+    padding: 0.3rem 0 0.65rem !important;
   }
 
   .topbar-actions {
-    gap: 0.28rem !important;
+    gap: 0.32rem !important;
   }
 
   .icon-btn,
@@ -12501,19 +12550,18 @@ article.mini.makeup-class .mini-label > span:first-child {
   .student-topbar-pill,
   .faculty-topbar-pill,
   .datesheet-topbar-pill {
-    width: 2.22rem !important;
-    height: 2.22rem !important;
-    min-width: 2.22rem !important;
-    min-height: 2.22rem !important;
-    max-width: 2.22rem !important;
-    max-height: 2.22rem !important;
-    border-radius: 0.58rem !important;
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    min-width: 2.15rem !important;
+    min-height: 2.15rem !important;
+    max-width: 2.15rem !important;
+    max-height: 2.15rem !important;
   }
 }
 
 @media (max-width: 360px) {
   .topbar-actions {
-    gap: 0.2rem !important;
+    gap: 0.22rem !important;
   }
 
   .icon-btn,
@@ -12523,13 +12571,12 @@ article.mini.makeup-class .mini-label > span:first-child {
   .student-topbar-pill,
   .faculty-topbar-pill,
   .datesheet-topbar-pill {
-    width: 2.05rem !important;
-    height: 2.05rem !important;
-    min-width: 2.05rem !important;
-    min-height: 2.05rem !important;
-    max-width: 2.05rem !important;
-    max-height: 2.05rem !important;
-    border-radius: 0.5rem !important;
+    width: 2rem !important;
+    height: 2rem !important;
+    min-width: 2rem !important;
+    min-height: 2rem !important;
+    max-width: 2rem !important;
+    max-height: 2rem !important;
   }
 }
 
