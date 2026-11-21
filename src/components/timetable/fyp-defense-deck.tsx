@@ -345,42 +345,38 @@ export function FypDefenseDeck({ teacherId, teacherName }: FypDefenseDeckProps) 
   const currentTotalCalculated = Math.min(100, Math.round((groupSum + indivAvg) * 10) / 10);
 
   return (
-    <div className="fyp-defense-deck stack" style={{ gap: "1.5rem" }}>
+    <div className="fyp-shell">
       {/* Top Banner */}
-      <div
-        className="faculty-day-summary-card"
-        style={{
-          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(99, 102, 241, 0.04))",
-          borderColor: "rgba(245, 158, 11, 0.25)",
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+      <div className="fyp-hero-banner">
+        <div className="fyp-hero-header">
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-              <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#d97706" }}>
-                Phase 3: 6th Semester Defense & Evaluation
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.35rem", flexWrap: "wrap" }}>
+              <span className="fyp-badge warning">
+                Phase 3: 6th Semester Defense &amp; Evaluation
               </span>
-              <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+              <span className="fyp-badge primary">
+                <span className="fyp-pulse-dot" />
                 Independent Blind Scoring Rubric
               </span>
             </div>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: "0.25rem 0" }}>
-              Defense Panels & Presentations
-            </h2>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: 0 }}>
-              {teacherName} • Evaluator & Panelist Workspace
+            <h1 className="fyp-hero-title">
+              Defense Panels &amp; Presentations
+            </h1>
+            <p className="fyp-hero-subtitle">
+              {teacherName} • Evaluator &amp; Panelist Workspace
             </p>
           </div>
 
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
               type="button"
-              className="btn secondary tap"
+              className="fyp-btn secondary"
               onClick={loadData}
               disabled={loading}
               title="Refresh defense data"
             >
               <RefreshCw size={15} className={loading ? "spin" : ""} />
+              <span>Sync</span>
             </button>
           </div>
         </div>
@@ -388,61 +384,57 @@ export function FypDefenseDeck({ teacherId, teacherName }: FypDefenseDeckProps) 
 
       {/* Action Alerts */}
       {actionSuccess && (
-        <div className="alert-card success" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10b981" }}>
+        <div className="fyp-badge success" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <CheckCircle2 size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionSuccess}</span>
+          <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="alert-card error" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444" }}>
+        <div className="fyp-badge danger" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <AlertCircle size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionError}</span>
+          <span>{actionError}</span>
         </div>
       )}
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid var(--border)", paddingBottom: "0.5rem", flexWrap: "wrap" }}>
+      <div className="fyp-tabs-bar">
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "assigned" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "assigned" ? "active" : ""}`}
           onClick={() => setActiveTab("assigned")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Scale size={15} />
           <span>My Assigned Defenses</span>
-          <span className="tab-badge">{assignedDefenses.length}</span>
+          <span className="tab-count">{assignedDefenses.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "coordinator_panels" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "coordinator_panels" ? "active" : ""}`}
           onClick={() => setActiveTab("coordinator_panels")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Users size={15} />
           <span>Panel Allocator</span>
-          <span className="tab-badge">{allPanels.length}</span>
+          <span className="tab-count">{allPanels.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "coordinator_schedules" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "coordinator_schedules" ? "active" : ""}`}
           onClick={() => setActiveTab("coordinator_schedules")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Calendar size={15} />
-          <span>Defense Logistics & Scheduler</span>
-          <span className="tab-badge">{allSchedules.length}</span>
+          <span>Defense Logistics &amp; Scheduler</span>
+          <span className="tab-count">{allSchedules.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "results" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "results" ? "active" : ""}`}
           onClick={() => setActiveTab("results")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Award size={15} />
-          <span>Marks & Result Publishing</span>
+          <span>Marks &amp; Result Publishing</span>
         </button>
       </div>
 
@@ -452,10 +444,10 @@ export function FypDefenseDeck({ teacherId, teacherName }: FypDefenseDeckProps) 
       {activeTab === "assigned" && (
         <section className="stack" style={{ gap: "1rem" }}>
           {assignedDefenses.length === 0 ? (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <Scale size={36} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Defenses Assigned Yet</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <Scale size={38} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>No Defenses Assigned Yet</h4>
+              <p style={{ color: "var(--c-muted)", margin: 0, fontSize: "0.88rem", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
                 When the FYP coordinator creates panels and assigns 6th semester presentations, they will appear here.
               </p>
             </div>
@@ -466,10 +458,9 @@ export function FypDefenseDeck({ teacherId, teacherName }: FypDefenseDeckProps) 
               return (
                 <div
                   key={item.schedule.id}
-                  className="card"
+                  className={`fyp-card elevated-hover ${isEvaluated ? "emerald-edge" : "accent-edge"}`}
                   style={{
-                    padding: "1.25rem",
-                    borderLeft: `4px solid ${isEvaluated ? "#10b981" : "var(--accent)"}`,
+                    padding: "1.35rem",
                     display: "flex",
                     flexDirection: "column",
                     gap: "0.75rem",
@@ -477,34 +468,30 @@ export function FypDefenseDeck({ teacherId, teacherName }: FypDefenseDeckProps) 
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
                     <div>
-                      <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                        <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                      <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                        <span className="fyp-badge primary">
                           {item.group.domain}
                         </span>
                         <span
-                          className="badge"
-                          style={{
-                            background: isEvaluated ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                            color: isEvaluated ? "#10b981" : "#d97706",
-                          }}
+                          className={`fyp-badge ${isEvaluated ? "success" : "warning"}`}
                         >
-                          {isEvaluated ? `✓ Evaluated (${item.myEvaluation?.totalScore}/100)` : "⏳ Scoring Pending"}
+                          <span className="fyp-pulse-dot" />
+                          {isEvaluated ? `✓ Evaluated (${item.myEvaluation?.totalScore}/100)` : "Scoring Pending"}
                         </span>
                       </div>
 
-                      <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                      <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.15rem 0" }}>
                         {item.group.title}
                       </h3>
-                      <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
+                      <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: 0 }}>
                         Panel: <strong>{item.panel.name}</strong> • Supervisor: <strong>{item.group.supervisorName}</strong>
                       </p>
                     </div>
 
                     <button
                       type="button"
-                      className="btn primary tap"
+                      className="fyp-btn primary"
                       onClick={() => handleOpenEvaluation(item)}
-                      style={{ fontSize: "0.85rem", padding: "6px 14px" }}
                     >
                       <FileCheck size={14} />
                       <span>{isEvaluated ? "View / Edit Rubric Marks" : "Score Defense Presentation"}</span>
@@ -512,33 +499,28 @@ export function FypDefenseDeck({ teacherId, teacherName }: FypDefenseDeckProps) 
                   </div>
 
                   {/* Defense Logistics Card */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "1.25rem",
-                      background: "var(--surface)",
-                      padding: "0.75rem",
-                      borderRadius: "6px",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    <div>
-                      📅 <strong>Date:</strong> {item.schedule.defenseDate}
+                  <div className="fyp-kpi-grid" style={{ margin: "0.35rem 0" }}>
+                    <div className="fyp-kpi-tile">
+                      <span className="kpi-label">Defense Date</span>
+                      <span className="kpi-value" style={{ fontSize: "0.98rem" }}>📅 {item.schedule.defenseDate}</span>
                     </div>
-                    <div>
-                      ⏰ <strong>Time:</strong> {item.schedule.startTime} - {item.schedule.endTime}
+                    <div className="fyp-kpi-tile">
+                      <span className="kpi-label">Time Window</span>
+                      <span className="kpi-value" style={{ fontSize: "0.95rem" }}>⏰ {item.schedule.startTime} - {item.schedule.endTime}</span>
                     </div>
-                    <div>
-                      📍 <strong>Venue:</strong> {item.schedule.venue}
+                    <div className="fyp-kpi-tile">
+                      <span className="kpi-label">Venue</span>
+                      <span className="kpi-value" style={{ fontSize: "0.95rem" }}>📍 {item.schedule.venue}</span>
                     </div>
-                    <div>
-                      👑 <strong>Leader:</strong> {item.group.leader.fullName} ({item.group.leader.regNo})
+                    <div className="fyp-kpi-tile">
+                      <span className="kpi-label">Team Leader</span>
+                      <span className="kpi-value" style={{ fontSize: "0.95rem" }}>👑 {item.group.leader.fullName}</span>
+                      <span style={{ fontSize: "0.75rem", color: "var(--c-muted)" }}>{item.group.leader.regNo}</span>
                     </div>
                   </div>
 
                   {item.myEvaluation && (
-                    <div style={{ fontSize: "0.82rem", color: "var(--muted)", background: "rgba(16, 185, 129, 0.06)", padding: "0.5rem 0.75rem", borderRadius: "4px" }}>
+                    <div className="fyp-badge success" style={{ padding: "0.6rem 0.85rem", borderRadius: "0.5rem", width: "100%", fontSize: "0.83rem" }}>
                       <strong>Your Recommendation:</strong> {item.myEvaluation.recommendation.replace(/_/g, " ").toUpperCase()} • Remarks: &ldquo;{item.myEvaluation.remarks}&rdquo;
                     </div>
                   )}

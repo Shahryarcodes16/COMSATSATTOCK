@@ -226,81 +226,66 @@ export function FypFacultyDeck() {
   const quotaPercent = Math.min(100, Math.round((currentSupervised / maxSlots) * 100));
 
   return (
-    <div className="fyp-faculty-deck stack" style={{ gap: "1.5rem" }}>
+    <div className="fyp-shell">
       {/* Top Banner & Capacity Meter */}
-      <div
-        className="faculty-day-summary-card"
-        style={{
-          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.04))",
-          borderColor: "rgba(99, 102, 241, 0.25)",
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" }}>
+      <div className="fyp-hero-banner">
+        <div className="fyp-hero-header">
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-              <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
-                6th Semester Supervisor Allocation
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span className="fyp-badge primary">
+                <Sparkles size={13} />
+                6th &amp; 7th Semester FYP Studio
               </span>
-              <span className="badge" style={{ background: settings?.isAccepting ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)", color: settings?.isAccepting ? "#10b981" : "#ef4444" }}>
-                {settings?.isAccepting ? "● Accepting Requests" : "○ Requests Paused"}
+              <span className={`fyp-badge ${settings?.isAccepting ? "success" : "ruby"}`}>
+                <span className="fyp-pulse-dot" />
+                {settings?.isAccepting ? "Accepting Proposals" : "Quota Filled"}
               </span>
             </div>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: "0.25rem 0" }}>
-              Final Year Project (FYP) Studio
-            </h2>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: 0 }}>
-              {settings?.teacherName || "Faculty Member"} • {settings?.department || "Department of Computer Science"}
+            <h1 className="fyp-hero-title">
+              Final Year Project (FYP) Faculty Studio
+            </h1>
+            <p className="fyp-hero-subtitle">
+              {settings?.teacherName || "Faculty Member"} • {settings?.department || "Department of Computer Science"} • COMSATS University Islamabad (Attock Campus)
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="btn secondary tap"
+              className="fyp-btn secondary"
               onClick={loadDeck}
               disabled={loading}
               title="Refresh FYP deck"
             >
               <RefreshCw size={15} className={loading ? "spin" : ""} />
+              <span>Sync</span>
             </button>
             <button
               type="button"
-              className={`btn tap ${activeTab === "settings" ? "primary" : "secondary"}`}
+              className={`fyp-btn ${activeTab === "settings" ? "primary" : "secondary"}`}
               onClick={() => setActiveTab(activeTab === "settings" ? "requests" : "settings")}
             >
               <Sliders size={15} />
-              <span>Configure Quotas & Ideas</span>
+              <span>Configure Capacity</span>
             </button>
           </div>
         </div>
 
         {/* Quota Meter */}
-        <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", fontWeight: 600, marginBottom: "0.4rem" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-              <Users size={15} color="var(--accent)" />
-              Supervision Capacity
+        <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid color-mix(in srgb, var(--c-accent) 20%, var(--c-line))" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.88rem", fontWeight: 700, marginBottom: "0.45rem" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "var(--c-ink)" }}>
+              <Users size={16} color="var(--c-accent)" />
+              Supervision Cohort Capacity
             </span>
-            <span>
-              <strong>{currentSupervised}</strong> of <strong>{maxSlots}</strong> slots filled ({remainingSlots} remaining)
+            <span style={{ color: "var(--c-muted)", fontSize: "0.85rem" }}>
+              <strong style={{ color: "var(--c-ink)" }}>{currentSupervised}</strong> of <strong style={{ color: "var(--c-ink)" }}>{maxSlots}</strong> slots allocated ({remainingSlots} remaining)
             </span>
           </div>
-          <div
-            style={{
-              height: "8px",
-              width: "100%",
-              backgroundColor: "var(--border)",
-              borderRadius: "4px",
-              overflow: "hidden",
-            }}
-          >
+          <div className="fyp-progress-track">
             <div
-              style={{
-                height: "100%",
-                width: `${quotaPercent}%`,
-                backgroundColor: quotaPercent >= 100 ? "#ef4444" : quotaPercent > 60 ? "#f59e0b" : "var(--accent)",
-                transition: "width 0.4s ease",
-              }}
+              className={`fyp-progress-fill ${quotaPercent >= 100 ? "ruby" : quotaPercent > 60 ? "amber" : "emerald"}`}
+              style={{ width: `${quotaPercent}%` }}
             />
           </div>
         </div>
@@ -308,81 +293,53 @@ export function FypFacultyDeck() {
 
       {/* Action Alerts */}
       {actionSuccess && (
-        <div className="alert-card success" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10b981" }}>
+        <div className="fyp-badge success" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <CheckCircle2 size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionSuccess}</span>
+          <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="alert-card error" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444" }}>
+        <div className="fyp-badge danger" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <AlertCircle size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionError}</span>
+          <span>{actionError}</span>
         </div>
       )}
 
       {/* Tab Selectors */}
-      <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid var(--border)", paddingBottom: "0.5rem" }}>
+      <div className="fyp-tabs-bar">
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "requests" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "requests" ? "active" : ""}`}
           onClick={() => setActiveTab("requests")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Clock size={16} />
           <span>Incoming Requests</span>
-          {pendingRequests.length > 0 && (
-            <span
-              style={{
-                background: "var(--accent)",
-                color: "#fff",
-                fontSize: "0.75rem",
-                padding: "1px 6px",
-                borderRadius: "10px",
-                fontWeight: 700,
-              }}
-            >
-              {pendingRequests.length}
-            </span>
-          )}
+          {pendingRequests.length > 0 && <span className="tab-count">{pendingRequests.length}</span>}
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "groups" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "groups" ? "active" : ""}`}
           onClick={() => setActiveTab("groups")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <GraduationCap size={16} />
-          <span>Active Supervised Groups</span>
-          <span
-            style={{
-              background: "rgba(16, 185, 129, 0.2)",
-              color: "#10b981",
-              fontSize: "0.75rem",
-              padding: "1px 6px",
-              borderRadius: "10px",
-              fontWeight: 700,
-            }}
-          >
-            {acceptedGroups.length}
-          </span>
+          <span>Supervised Groups</span>
+          <span className="tab-count">{acceptedGroups.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "defense" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "defense" ? "active" : ""}`}
           onClick={() => setActiveTab("defense")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Award size={16} />
-          <span>Defense & Panels</span>
+          <span>Defense Panels</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "committee" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "committee" ? "active" : ""}`}
           onClick={() => setActiveTab("committee")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <FileSpreadsheet size={16} />
           <span>7th Sem Committee</span>
@@ -390,12 +347,11 @@ export function FypFacultyDeck() {
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "settings" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "settings" ? "active" : ""}`}
           onClick={() => setActiveTab("settings")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Sliders size={16} />
-          <span>Capacity & Research Tags</span>
+          <span>Settings &amp; Quotas</span>
         </button>
       </div>
 
@@ -403,62 +359,60 @@ export function FypFacultyDeck() {
       {activeTab === "requests" && (
         <section className="stack" style={{ gap: "1rem" }}>
           {pendingRequests.length === 0 ? (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <Sparkles size={36} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Pending Requests</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
-                Student groups requesting you as their FYP supervisor will appear here.
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <Sparkles size={38} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>No Pending Requests</h4>
+              <p style={{ color: "var(--c-muted)", margin: 0, fontSize: "0.88rem", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
+                Student groups requesting you as their FYP supervisor will appear here with preference rankings and team credentials.
               </p>
             </div>
           ) : (
             pendingRequests.map((req) => (
               <div
                 key={req.id}
-                className="card"
-                style={{
-                  padding: "1.25rem",
-                  borderLeft: "4px solid var(--accent)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                }}
+                className="fyp-card elevated-hover accent-edge"
+                style={{ padding: "1.35rem" }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                      <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                    <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                      <span className="fyp-badge primary">
                         {req.groupDomain}
                       </span>
-                      <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#d97706" }}>
-                        Choice #{req.preferenceOrder}
+                      <span className="fyp-badge warning">
+                        Choice #{req.preferenceOrder} Priority
                       </span>
                     </div>
-                    <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.15rem 0 0.35rem" }}>
                       {req.groupTitle}
                     </h3>
                   </div>
 
-                  <span style={{ fontSize: "0.78rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
-                    {new Date(req.createdAt).toLocaleDateString()}
+                  <span style={{ fontSize: "0.8rem", color: "var(--c-muted)", whiteSpace: "nowrap" }}>
+                    Received {new Date(req.createdAt).toLocaleDateString()}
                   </span>
                 </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", fontSize: "0.85rem", color: "var(--muted)" }}>
-                  <div>
-                    <strong>Team Leader:</strong> {req.leaderName} ({req.leaderRegNo})
+                <div className="fyp-kpi-grid" style={{ margin: "0.75rem 0" }}>
+                  <div className="fyp-kpi-tile">
+                    <span className="kpi-label">Team Leader</span>
+                    <span className="kpi-value" style={{ fontSize: "0.98rem" }}>{req.leaderName}</span>
+                    <span style={{ fontSize: "0.78rem", color: "var(--c-muted)" }}>{req.leaderRegNo}</span>
                   </div>
-                  <div>
-                    <strong>Contact:</strong> {req.leaderEmail}
+                  <div className="fyp-kpi-tile">
+                    <span className="kpi-label">Contact Email</span>
+                    <span className="kpi-value" style={{ fontSize: "0.92rem", wordBreak: "break-all" }}>{req.leaderEmail}</span>
                   </div>
-                  <div>
-                    <strong>Team Size:</strong> {req.memberCount} Students
+                  <div className="fyp-kpi-tile">
+                    <span className="kpi-label">Cohort Size</span>
+                    <span className="kpi-value" style={{ fontSize: "1.1rem" }}>{req.memberCount} Students</span>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem", marginTop: "0.25rem" }}>
                   <button
                     type="button"
-                    className="btn secondary tap"
+                    className="fyp-btn secondary"
                     onClick={() => {
                       setDecliningReq(req);
                       setDeclineReason("");
@@ -467,11 +421,11 @@ export function FypFacultyDeck() {
                     style={{ color: "#ef4444" }}
                   >
                     <XCircle size={15} />
-                    <span>Decline</span>
+                    <span>Decline Request</span>
                   </button>
                   <button
                     type="button"
-                    className="btn primary tap"
+                    className="fyp-btn primary"
                     onClick={() => handleAccept(req)}
                     disabled={isPending || remainingSlots <= 0}
                     title={remainingSlots <= 0 ? "Supervision quota reached" : "Accept Group"}
@@ -493,12 +447,12 @@ export function FypFacultyDeck() {
             <div className="stack" style={{ gap: "1rem" }}>
               <button
                 type="button"
-                className="btn secondary tap"
+                className="fyp-btn secondary"
                 onClick={() => setSelectedWorkspaceGroup(null)}
-                style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+                style={{ alignSelf: "flex-start" }}
               >
                 <ArrowLeft size={15} />
-                <span>Back to Supervised Groups List</span>
+                <span>Back to Supervised Cohort</span>
               </button>
 
               <FypWorkspaceHub
@@ -510,86 +464,62 @@ export function FypFacultyDeck() {
               />
             </div>
           ) : acceptedGroups.length === 0 ? (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <Users size={36} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Active Supervised Groups</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
-                Once you accept student proposals, they will appear here along with their milestone progress and meeting minutes.
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <Users size={38} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>No Active Supervised Groups</h4>
+              <p style={{ color: "var(--c-muted)", margin: 0, fontSize: "0.88rem", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
+                Once you accept student proposals, they will appear here along with their milestone progress, sprints, and meeting minutes.
               </p>
             </div>
           ) : (
             acceptedGroups.map((group) => (
               <div
                 key={group.id}
-                className="card"
-                style={{
-                  padding: "1.25rem",
-                  borderLeft: "4px solid #10b981",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                }}
+                className="fyp-card elevated-hover emerald-edge"
+                style={{ padding: "1.35rem" }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                      <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
-                        ✓ Supervised
+                    <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                      <span className="fyp-badge success">
+                        ✓ Supervised Group
                       </span>
-                      <span className="badge" style={{ background: "rgba(99, 102, 241, 0.1)", color: "var(--accent)" }}>
+                      <span className="fyp-badge neutral">
                         {group.domain}
                       </span>
                     </div>
-                    <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.15rem 0 0.35rem" }}>
                       {group.title}
                     </h3>
                   </div>
 
                   <button
                     type="button"
-                    className="btn primary tap"
+                    className="fyp-btn primary"
                     onClick={() => setSelectedWorkspaceGroup(group)}
-                    style={{ fontSize: "0.85rem", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
                   >
-                    <BookOpen size={14} />
+                    <BookOpen size={15} />
                     <span>Open Supervision Workspace</span>
                   </button>
                 </div>
 
-                <p style={{ fontSize: "0.88rem", color: "var(--muted)", margin: "0.25rem 0", lineHeight: 1.5 }}>
+                <p style={{ fontSize: "0.88rem", color: "var(--c-muted)", margin: "0.45rem 0 0.85rem", lineHeight: 1.55 }}>
                   {group.abstract}
                 </p>
 
                 {/* Team Roster */}
-                <div style={{ background: "var(--surface)", padding: "0.75rem", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.4rem" }}>
-                    Project Team
+                <div style={{ borderTop: "1px solid var(--c-line)", paddingTop: "0.75rem" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.45rem" }}>
+                    Project Team Roster
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                    <div
-                      style={{
-                        fontSize: "0.82rem",
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        background: "rgba(99, 102, 241, 0.1)",
-                        border: "1px solid rgba(99, 102, 241, 0.2)",
-                      }}
-                    >
+                  <div className="fyp-chip-roster">
+                    <span className="fyp-chip-item leader">
                       👑 <strong>{group.leader.fullName}</strong> ({group.leader.regNo}) • Leader
-                    </div>
+                    </span>
                     {group.members.map((m) => (
-                      <div
-                        key={m.studentId || m.regNo}
-                        style={{
-                          fontSize: "0.82rem",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          background: "var(--background)",
-                          border: "1px solid var(--border)",
-                        }}
-                      >
+                      <span key={m.studentId || m.regNo} className="fyp-chip-item">
                         <strong>{m.fullName}</strong> ({m.regNo})
-                      </div>
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -601,14 +531,14 @@ export function FypFacultyDeck() {
 
       {/* TAB 3: SETTINGS, CAPACITY & RESEARCH TAGS */}
       {activeTab === "settings" && settings && (
-        <section className="stack" style={{ gap: "1.5rem" }}>
+        <section className="stack" style={{ gap: "1.25rem" }}>
           {/* Capacity Settings */}
-          <div className="card" style={{ padding: "1.25rem" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.75rem" }}>
-              Supervision Quotas & Availability
+          <div className="fyp-card" style={{ padding: "1.35rem" }}>
+            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+              Supervision Quotas &amp; Availability
             </h3>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.25rem" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Maximum Supervision Slots
@@ -619,11 +549,11 @@ export function FypFacultyDeck() {
                   max={15}
                   value={editMaxSlots}
                   onChange={(e) => setEditMaxSlots(parseInt(e.target.value, 10) || 5)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
-                <span style={{ fontSize: "0.78rem", color: "var(--muted)", display: "block", marginTop: "0.25rem" }}>
-                  Default is 5 groups as per university policy (range 1 - 15).
+                <span style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "block", marginTop: "0.3rem" }}>
+                  University standard is 5 groups per faculty member (limit 1 - 15).
                 </span>
               </div>
 
@@ -632,32 +562,32 @@ export function FypFacultyDeck() {
                   Accepting New Student Proposals
                 </label>
                 <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", cursor: "pointer", fontSize: "0.88rem" }}>
                     <input
                       type="radio"
                       name="isAccepting"
                       checked={editIsAccepting}
                       onChange={() => setEditIsAccepting(true)}
                     />
-                    <span>Yes, Open for Requests</span>
+                    <span>Open for Requests</span>
                   </label>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", cursor: "pointer", fontSize: "0.88rem" }}>
                     <input
                       type="radio"
                       name="isAccepting"
                       checked={!editIsAccepting}
                       onChange={() => setEditIsAccepting(false)}
                     />
-                    <span>No, Pause Incoming</span>
+                    <span>Pause Incoming</span>
                   </label>
                 </div>
               </div>
             </div>
 
-            <div style={{ marginTop: "1rem", display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ marginTop: "1.25rem", display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
-                className="btn primary tap"
+                className="fyp-btn primary"
                 onClick={handleSaveSettings}
                 disabled={isPending}
               >
@@ -668,11 +598,11 @@ export function FypFacultyDeck() {
           </div>
 
           {/* Research Areas / Specializations */}
-          <div className="card" style={{ padding: "1.25rem" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-              Research Areas & Domains
+          <div className="fyp-card" style={{ padding: "1.35rem" }}>
+            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.35rem" }}>
+              Research Areas &amp; Specializations
             </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginBottom: "1rem" }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", marginBottom: "1rem" }}>
               These research tags help 6th-semester students find your profile when matching their project proposal ideas.
             </p>
 
@@ -680,23 +610,15 @@ export function FypFacultyDeck() {
               {settings.researchAreas.map((area) => (
                 <span
                   key={area}
-                  className="badge"
-                  style={{
-                    padding: "6px 10px",
-                    background: "rgba(99, 102, 241, 0.12)",
-                    color: "var(--accent)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.4rem",
-                    fontSize: "0.85rem",
-                  }}
+                  className="fyp-badge primary"
+                  style={{ padding: "6px 10px", fontSize: "0.85rem" }}
                 >
                   <Tag size={13} />
                   <span>{area}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveResearchTag(area)}
-                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                    style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, color: "inherit", display: "inline-flex" }}
                   >
                     <X size={13} />
                   </button>
@@ -704,10 +626,10 @@ export function FypFacultyDeck() {
               ))}
             </div>
 
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <input
                 type="text"
-                placeholder="Add research topic (e.g. Deep Reinforcement Learning, Blockchain)"
+                placeholder="Add research topic (e.g. Deep Reinforcement Learning, Web3, Bioinformatics)"
                 value={newAreaInput}
                 onChange={(e) => setNewAreaInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -716,10 +638,10 @@ export function FypFacultyDeck() {
                     handleAddResearchTag();
                   }
                 }}
-                className="input"
-                style={{ flex: 1, padding: "0.5rem" }}
+                className="fyp-input"
+                style={{ flex: 1, minWidth: "220px" }}
               />
-              <button type="button" className="btn secondary tap" onClick={handleAddResearchTag}>
+              <button type="button" className="fyp-btn secondary" onClick={handleAddResearchTag}>
                 <Plus size={15} />
                 <span>Add Tag</span>
               </button>
@@ -727,13 +649,13 @@ export function FypFacultyDeck() {
           </div>
 
           {/* Available Proposed Project Ideas */}
-          <div className="card" style={{ padding: "1.25rem" }}>
+          <div className="fyp-card" style={{ padding: "1.35rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
               <div>
-                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>
                   Available Project Ideas for Students
                 </h3>
-                <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "0.25rem 0 0" }}>
+                <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.25rem 0 0" }}>
                   Publish curated problem statements so students who need an idea can apply directly to yours.
                 </p>
               </div>
@@ -741,42 +663,41 @@ export function FypFacultyDeck() {
 
             <div className="stack" style={{ gap: "0.75rem", margin: "1rem 0" }}>
               {settings.availableIdeas.length === 0 ? (
-                <div style={{ fontSize: "0.85rem", color: "var(--muted)", fontStyle: "italic" }}>
+                <div style={{ fontSize: "0.85rem", color: "var(--c-muted)", fontStyle: "italic" }}>
                   No custom project ideas added yet.
                 </div>
               ) : (
                 settings.availableIdeas.map((idea) => (
                   <div
                     key={idea.id}
+                    className="fyp-card"
                     style={{
-                      padding: "0.75rem",
-                      borderRadius: "6px",
-                      background: "var(--surface)",
-                      border: "1px solid var(--border)",
+                      padding: "0.85rem 1rem",
                       display: "flex",
                       justifyContent: "space-between",
                       gap: "0.5rem",
+                      alignItems: "flex-start",
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: "0.92rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                        <Lightbulb size={15} color="#f59e0b" />
+                      <div style={{ fontWeight: 600, fontSize: "0.95rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                        <Lightbulb size={16} color="var(--c-brass, #f59e0b)" />
                         {idea.title}
                       </div>
                       {idea.description && (
-                        <p style={{ fontSize: "0.83rem", color: "var(--muted)", margin: "0.25rem 0 0" }}>
+                        <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.3rem 0 0", lineHeight: 1.5 }}>
                           {idea.description}
                         </p>
                       )}
                     </div>
                     <button
                       type="button"
-                      className="btn secondary tap"
+                      className="fyp-btn secondary"
                       onClick={() => handleRemoveIdea(idea.id)}
-                      style={{ height: "30px", width: "30px", padding: 0, color: "#ef4444" }}
+                      style={{ padding: "6px", color: "#ef4444" }}
                       title="Remove idea"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 ))
@@ -784,7 +705,7 @@ export function FypFacultyDeck() {
             </div>
 
             {/* Add Idea Input */}
-            <div style={{ background: "var(--surface)", padding: "1rem", borderRadius: "8px", border: "1px dashed var(--border)" }}>
+            <div style={{ background: "color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper))", padding: "1rem", borderRadius: "0.75rem", border: "1px dashed var(--c-line)" }}>
               <div style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: "0.5rem" }}>
                 Add New Project Proposal Idea
               </div>
@@ -793,20 +714,20 @@ export function FypFacultyDeck() {
                 placeholder="Project Idea Title..."
                 value={newIdeaTitle}
                 onChange={(e) => setNewIdeaTitle(e.target.value)}
-                className="input"
-                style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+                className="fyp-input"
+                style={{ width: "100%", marginBottom: "0.5rem" }}
               />
               <textarea
                 placeholder="Brief description or requirements for students..."
                 value={newIdeaDesc}
                 onChange={(e) => setNewIdeaDesc(e.target.value)}
                 rows={2}
-                className="input"
-                style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+                className="fyp-input"
+                style={{ width: "100%", marginBottom: "0.5rem" }}
               />
               <button
                 type="button"
-                className="btn secondary tap"
+                className="fyp-btn secondary"
                 onClick={handleAddIdea}
                 disabled={!newIdeaTitle.trim()}
               >
@@ -836,23 +757,12 @@ export function FypFacultyDeck() {
 
       {/* Decline Reason Modal */}
       {decliningReq && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "1rem",
-          }}
-        >
-          <div className="card" style={{ maxWidth: "480px", width: "100%", padding: "1.5rem" }}>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+        <div className="fyp-modal-backdrop">
+          <div className="fyp-modal-card">
+            <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>
               Decline Supervision Request
             </h3>
-            <p style={{ fontSize: "0.88rem", color: "var(--muted)", marginBottom: "1rem" }}>
+            <p style={{ fontSize: "0.88rem", color: "var(--c-muted)", marginBottom: "1rem" }}>
               Please provide feedback or a reason to <strong>{decliningReq.leaderName}</strong> for why their proposal &ldquo;{decliningReq.groupTitle}&rdquo; cannot be accommodated:
             </p>
 
@@ -861,14 +771,14 @@ export function FypFacultyDeck() {
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
               placeholder="e.g. Quota capacity filled for this semester, or proposal domain does not align with my research lab."
-              className="input"
-              style={{ width: "100%", padding: "0.6rem", marginBottom: "1rem" }}
+              className="fyp-input"
+              style={{ width: "100%", marginBottom: "1.25rem" }}
             />
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
               <button
                 type="button"
-                className="btn secondary tap"
+                className="fyp-btn secondary"
                 onClick={() => setDecliningReq(null)}
                 disabled={isPending}
               >
@@ -876,8 +786,7 @@ export function FypFacultyDeck() {
               </button>
               <button
                 type="button"
-                className="btn tap"
-                style={{ background: "#ef4444", color: "#fff" }}
+                className="fyp-btn danger"
                 onClick={handleDeclineConfirm}
                 disabled={isPending}
               >

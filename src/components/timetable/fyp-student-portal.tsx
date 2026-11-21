@@ -238,36 +238,32 @@ export function FypStudentPortal() {
   const isGroupSupervised = group?.status === "supervisor_accepted" || group?.status === "locked";
 
   return (
-    <div className="fyp-student-portal stack" style={{ gap: "1.5rem" }}>
+    <div className="fyp-shell">
       {/* Top Banner */}
-      <div
-        className="faculty-day-summary-card"
-        style={{
-          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.04))",
-          borderColor: "rgba(99, 102, 241, 0.25)",
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "1rem", alignItems: "center" }}>
+      <div className="fyp-hero-banner">
+        <div className="fyp-hero-header">
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-              <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.35rem", flexWrap: "wrap" }}>
+              <span className="fyp-badge primary">
+                <Sparkles size={13} />
                 6th Semester FYP Module (Supervisor Selection &amp; Defense)
               </span>
-              <span className="badge" style={{ background: isGroupSupervised ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)", color: isGroupSupervised ? "#10b981" : "#d97706" }}>
-                {isGroupSupervised ? "✓ Supervisor Confirmed" : group ? "⏳ Supervisor Selection in Progress" : "○ Group Formation"}
+              <span className={`fyp-badge ${isGroupSupervised ? "success" : group ? "warning" : "neutral"}`}>
+                <span className="fyp-pulse-dot" />
+                {isGroupSupervised ? "Supervisor Confirmed" : group ? "Supervisor Selection in Progress" : "Group Formation Required"}
               </span>
             </div>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: "0.25rem 0" }}>
-              Final Year Project (FYP) Portal
-            </h2>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: 0 }}>
-              {student.fullName} ({student.regNo}) • {student.programTitle || "Bachelor of Science"}
+            <h1 className="fyp-hero-title">
+              Final Year Project (FYP) Student Portal
+            </h1>
+            <p className="fyp-hero-subtitle">
+              {student.fullName} ({student.regNo}) • {student.programTitle || "Bachelor of Science in Computer Science"} • CUI Attock
             </p>
           </div>
 
           <button
             type="button"
-            className="btn secondary tap"
+            className="fyp-btn secondary"
             onClick={loadData}
             disabled={loading}
             title="Refresh status"
@@ -280,49 +276,49 @@ export function FypStudentPortal() {
 
       {/* Action Alerts */}
       {actionSuccess && (
-        <div className="alert-card success" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10b981" }}>
+        <div className="fyp-badge success" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <CheckCircle2 size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionSuccess}</span>
+          <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="alert-card error" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444" }}>
+        <div className="fyp-badge danger" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <AlertCircle size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionError}</span>
+          <span>{actionError}</span>
         </div>
       )}
 
       {/* STATE 1: NO GROUP CREATED YET */}
       {!group && (
-        <div className="card" style={{ padding: "1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+        <div className="fyp-card elevated-hover accent-edge" style={{ padding: "1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", marginBottom: "1.25rem" }}>
             <div
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                background: "rgba(99, 102, 241, 0.12)",
-                color: "var(--accent)",
+                width: "44px",
+                height: "44px",
+                borderRadius: "12px",
+                background: "color-mix(in srgb, var(--c-accent) 15%, transparent)",
+                color: "var(--c-accent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Users size={20} />
+              <Users size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
                 Step 1: Register Your FYP Group
               </h3>
-              <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
-                Form your project group (leader + 1-3 members) before selecting an official supervisor.
+              <p style={{ fontSize: "0.88rem", color: "var(--c-muted)", margin: "0.15rem 0 0" }}>
+                Form your project group (leader + 1-3 members) before selecting an official faculty supervisor.
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateGroup} className="stack" style={{ gap: "1rem" }}>
+          <form onSubmit={handleCreateGroup} className="stack" style={{ gap: "1.25rem" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.35rem" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                 Proposed Project Title *
               </label>
               <input
@@ -331,21 +327,21 @@ export function FypStudentPortal() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="input"
-                style={{ width: "100%", padding: "0.6rem" }}
+                className="fyp-input"
+                style={{ width: "100%" }}
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1.25rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.35rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Specialization Domain *
                 </label>
                 <select
                   value={domain}
                   onChange={(e) => setDomain(e.target.value as FypDomain)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.6rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 >
                   {FYP_DOMAINS.map((d) => (
                     <option key={d} value={d}>
@@ -356,21 +352,21 @@ export function FypStudentPortal() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.35rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Group Leader
                 </label>
                 <input
                   type="text"
                   disabled
                   value={`${student.fullName} (${student.regNo})`}
-                  className="input"
-                  style={{ width: "100%", padding: "0.6rem", opacity: 0.8, background: "var(--surface)" }}
+                  className="fyp-input"
+                  style={{ width: "100%", opacity: 0.85, background: "color-mix(in srgb, var(--c-canvas) 40%, var(--c-paper))" }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.35rem" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                 Project Abstract / Scope Description *
               </label>
               <textarea
@@ -379,46 +375,47 @@ export function FypStudentPortal() {
                 value={abstract}
                 onChange={(e) => setAbstract(e.target.value)}
                 required
-                className="input"
-                style={{ width: "100%", padding: "0.6rem" }}
+                className="fyp-input"
+                style={{ width: "100%" }}
               />
             </div>
 
             {/* Additional Members */}
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
                 <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                   Team Members (Optional, up to 3 additional members)
                 </label>
                 {additionalMembers.length < 3 && (
                   <button
                     type="button"
-                    className="btn secondary tap"
+                    className="fyp-btn secondary"
                     onClick={handleAddMemberRow}
-                    style={{ fontSize: "0.78rem", padding: "4px 8px" }}
+                    style={{ fontSize: "0.8rem", padding: "4px 10px" }}
                   >
-                    <UserPlus size={13} />
+                    <UserPlus size={14} />
                     <span>Add Member</span>
                   </button>
                 )}
               </div>
 
               {additionalMembers.length === 0 ? (
-                <div style={{ fontSize: "0.82rem", color: "var(--muted)", fontStyle: "italic", background: "var(--surface)", padding: "0.6rem", borderRadius: "6px" }}>
+                <div style={{ fontSize: "0.85rem", color: "var(--c-muted)", fontStyle: "italic", background: "color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper))", padding: "0.85rem", borderRadius: "0.75rem", border: "1px dashed var(--c-line)" }}>
                   No extra members added. Click &ldquo;Add Member&rdquo; above if you are a multi-student team (standard group size is 2-3 members).
                 </div>
               ) : (
-                <div className="stack" style={{ gap: "0.5rem" }}>
+                <div className="stack" style={{ gap: "0.6rem" }}>
                   {additionalMembers.map((m, idx) => (
                     <div
                       key={idx}
                       style={{
                         display: "flex",
-                        gap: "0.5rem",
+                        gap: "0.6rem",
                         alignItems: "center",
-                        background: "var(--surface)",
-                        padding: "0.5rem",
-                        borderRadius: "6px",
+                        background: "color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper))",
+                        padding: "0.6rem 0.85rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--c-line)",
                       }}
                     >
                       <input
@@ -426,21 +423,21 @@ export function FypStudentPortal() {
                         placeholder="Reg No (e.g. FA22-BCS-099)"
                         value={m.regNo}
                         onChange={(e) => handleUpdateMember(idx, "regNo", e.target.value)}
-                        className="input"
-                        style={{ width: "180px", padding: "0.4rem" }}
+                        className="fyp-input"
+                        style={{ width: "180px" }}
                       />
                       <input
                         type="text"
                         placeholder="Member Full Name"
                         value={m.fullName}
                         onChange={(e) => handleUpdateMember(idx, "fullName", e.target.value)}
-                        className="input"
-                        style={{ flex: 1, padding: "0.4rem" }}
+                        className="fyp-input"
+                        style={{ flex: 1 }}
                       />
                       <button
                         type="button"
                         onClick={() => handleRemoveMemberRow(idx)}
-                        style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: "4px" }}
+                        style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: "6px" }}
                         title="Remove member"
                       >
                         <Trash2 size={16} />
@@ -451,8 +448,8 @@ export function FypStudentPortal() {
               )}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
-              <button type="submit" className="btn primary tap" disabled={isPending}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+              <button type="submit" className="fyp-btn primary" disabled={isPending}>
                 <CheckCircle2 size={16} />
                 <span>Register FYP Group</span>
               </button>
@@ -463,65 +460,43 @@ export function FypStudentPortal() {
 
       {/* STATE 2: GROUP REGISTERED */}
       {group && (
-        <section className="stack" style={{ gap: "1.5rem" }}>
+        <section className="stack" style={{ gap: "1.25rem" }}>
           {/* Group Overview Card */}
-          <div className="card" style={{ padding: "1.25rem", borderLeft: `4px solid ${isGroupSupervised ? "#10b981" : "var(--accent)"}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+          <div className={`fyp-card elevated-hover ${isGroupSupervised ? "emerald-edge" : "accent-edge"}`} style={{ padding: "1.35rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
               <div>
-                <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                  <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                  <span className="fyp-badge primary">
                     {group.domain}
                   </span>
-                  <span
-                    className="badge"
-                    style={{
-                      background: isGroupSupervised ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                      color: isGroupSupervised ? "#10b981" : "#d97706",
-                    }}
-                  >
-                    {isGroupSupervised ? "✓ Supervisor Confirmed" : "⏳ Pending Supervisor"}
+                  <span className={`fyp-badge ${isGroupSupervised ? "success" : "warning"}`}>
+                    <span className="fyp-pulse-dot" />
+                    {isGroupSupervised ? "✓ Supervisor Confirmed" : "⏳ Pending Supervisor Confirmation"}
                   </span>
                 </div>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0.15rem 0 0.35rem" }}>
                   {group.title}
                 </h3>
               </div>
             </div>
 
-            <p style={{ fontSize: "0.88rem", color: "var(--muted)", margin: "0.5rem 0", lineHeight: 1.5 }}>
+            <p style={{ fontSize: "0.88rem", color: "var(--c-muted)", margin: "0.45rem 0 0.85rem", lineHeight: 1.55 }}>
               {group.abstract}
             </p>
 
             {/* Team Roster */}
-            <div style={{ background: "var(--surface)", padding: "0.75rem", borderRadius: "6px", marginTop: "0.5rem" }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.4rem" }}>
-                Group Members ({group.members.length + 1})
+            <div style={{ borderTop: "1px solid var(--c-line)", paddingTop: "0.75rem" }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.45rem" }}>
+                Group Cohort Roster ({group.members.length + 1} Members)
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                <div
-                  style={{
-                    fontSize: "0.82rem",
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    background: "rgba(99, 102, 241, 0.1)",
-                    border: "1px solid rgba(99, 102, 241, 0.2)",
-                  }}
-                >
+              <div className="fyp-chip-roster">
+                <span className="fyp-chip-item leader">
                   👑 <strong>{group.leader.fullName}</strong> ({group.leader.regNo}) • Leader
-                </div>
+                </span>
                 {group.members.map((m) => (
-                  <div
-                    key={m.studentId || m.regNo}
-                    style={{
-                      fontSize: "0.82rem",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      background: "var(--background)",
-                      border: "1px solid var(--border)",
-                    }}
-                  >
+                  <span key={m.studentId || m.regNo} className="fyp-chip-item">
                     <strong>{m.fullName}</strong> ({m.regNo})
-                  </div>
+                  </span>
                 ))}
               </div>
             </div>
@@ -539,9 +514,9 @@ export function FypStudentPortal() {
             <>
               {/* Requests Status Trackers */}
               {requests.length > 0 && (
-                <div className="card" style={{ padding: "1.25rem" }}>
-                  <h4 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                    <Clock size={16} />
+                <div className="fyp-card" style={{ padding: "1.35rem" }}>
+                  <h4 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                    <Clock size={17} color="var(--c-accent)" />
                     Supervision Requests Status
                   </h4>
 
@@ -549,51 +524,44 @@ export function FypStudentPortal() {
                     {requests.map((req) => (
                       <div
                         key={req.id}
+                        className="fyp-card"
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          padding: "0.75rem",
-                          borderRadius: "6px",
-                          background: "var(--surface)",
-                          border: "1px solid var(--border)",
+                          padding: "0.85rem 1rem",
+                          gap: "0.75rem",
+                          flexWrap: "wrap",
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>
                             {req.teacherName} (Choice #{req.preferenceOrder})
                           </div>
-                          <div style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+                          <div style={{ fontSize: "0.8rem", color: "var(--c-muted)" }}>
                             Submitted {new Date(req.createdAt).toLocaleDateString()}
                           </div>
                           {req.facultyRemark && (
-                            <div style={{ fontSize: "0.82rem", color: req.status === "declined" ? "#ef4444" : "var(--muted)", marginTop: "0.25rem" }}>
+                            <div style={{ fontSize: "0.83rem", color: req.status === "declined" ? "#ef4444" : "var(--c-muted)", marginTop: "0.25rem" }}>
                               <strong>Faculty Note:</strong> {req.facultyRemark}
                             </div>
                           )}
                         </div>
 
                         <span
-                          className="badge"
-                          style={{
-                            background:
-                              req.status === "pending"
-                                ? "rgba(245, 158, 11, 0.15)"
-                                : req.status === "accepted"
-                                ? "rgba(16, 185, 129, 0.15)"
-                                : "rgba(239, 68, 68, 0.15)",
-                            color:
-                              req.status === "pending"
-                                ? "#d97706"
-                                : req.status === "accepted"
-                                ? "#10b981"
-                                : "#ef4444",
-                          }}
+                          className={`fyp-badge ${
+                            req.status === "pending"
+                              ? "warning"
+                              : req.status === "accepted"
+                              ? "success"
+                              : "ruby"
+                          }`}
                         >
-                          {req.status === "pending" && "⏳ Review Pending"}
-                          {req.status === "accepted" && "✓ Accepted"}
-                          {req.status === "declined" && "✕ Declined"}
-                          {req.status === "cancelled" && "○ Cancelled"}
+                          <span className="fyp-pulse-dot" />
+                          {req.status === "pending" && "Review Pending"}
+                          {req.status === "accepted" && "Accepted"}
+                          {req.status === "declined" && "Declined"}
+                          {req.status === "cancelled" && "Cancelled"}
                         </span>
                       </div>
                     ))}
@@ -602,27 +570,27 @@ export function FypStudentPortal() {
               )}
 
               {/* Faculty Directory for Supervisor Selection */}
-              <div className="card" style={{ padding: "1.25rem" }}>
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+              <div className="fyp-card" style={{ padding: "1.35rem" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
                   <div>
                     <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>
                       Select a Faculty Supervisor
                     </h3>
-                    <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "0.2rem 0 0" }}>
+                    <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0" }}>
                       Browse faculty by research areas, remaining slot capacity, and proposed project ideas.
                     </p>
                   </div>
 
                   <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                     <div style={{ position: "relative" }}>
-                      <Search size={15} style={{ position: "absolute", left: "10px", top: "10px", color: "var(--muted)" }} />
+                      <Search size={15} style={{ position: "absolute", left: "10px", top: "10px", color: "var(--c-muted)" }} />
                       <input
                         type="text"
                         placeholder="Search supervisor or domain..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input"
-                        style={{ paddingLeft: "32px", fontSize: "0.85rem", width: "220px" }}
+                        className="fyp-input"
+                        style={{ paddingLeft: "32px", fontSize: "0.85rem", width: "230px" }}
                       />
                     </div>
                   </div>
@@ -638,49 +606,41 @@ export function FypStudentPortal() {
                     return (
                       <div
                         key={faculty.teacherId}
+                        className="fyp-card elevated-hover"
                         style={{
-                          padding: "1rem",
-                          borderRadius: "8px",
-                          border: "1px solid var(--border)",
-                          background: faculty.isAvailable ? "var(--background)" : "rgba(0, 0, 0, 0.02)",
+                          padding: "1.1rem",
                           display: "flex",
                           flexDirection: "column",
                           gap: "0.75rem",
+                          borderLeft: `4px solid ${faculty.isAvailable ? "var(--c-accent)" : "var(--c-line)"}`,
                         }}
                       >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
                           <div>
-                            <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.2rem" }}>
-                              <span
-                                className="badge"
-                                style={{
-                                  background: faculty.isAvailable ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                                  color: faculty.isAvailable ? "#10b981" : "#ef4444",
-                                }}
-                              >
+                            <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.3rem" }}>
+                              <span className={`fyp-badge ${faculty.isAvailable ? "success" : "ruby"}`}>
                                 {faculty.isAvailable ? `${faculty.remainingSlots} Slots Available` : "Quota Full"}
                               </span>
-                              <span className="badge" style={{ background: "var(--surface)", color: "var(--muted)" }}>
+                              <span className="fyp-badge neutral">
                                 {faculty.department}
                               </span>
                             </div>
-                            <h4 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                            <h4 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.15rem 0" }}>
                               {faculty.teacherName}
                             </h4>
-                            <span style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                            <span style={{ fontSize: "0.82rem", color: "var(--c-muted)" }}>
                               {faculty.email}
                             </span>
                           </div>
 
                           <button
                             type="button"
-                            className="btn primary tap"
+                            className="fyp-btn primary"
                             onClick={() => {
                               setRequestingTeacher(faculty);
                               setPreferenceOrder(1);
                             }}
                             disabled={!faculty.isAvailable || hasPendingReq || isPending}
-                            style={{ fontSize: "0.85rem", padding: "6px 12px" }}
                           >
                             <Send size={14} />
                             <span>{hasPendingReq ? "Request Sent" : "Request Supervisor"}</span>
@@ -689,17 +649,12 @@ export function FypStudentPortal() {
 
                         {/* Research tags */}
                         {faculty.researchAreas.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                             {faculty.researchAreas.map((area) => (
                               <span
                                 key={area}
-                                style={{
-                                  fontSize: "0.75rem",
-                                  padding: "2px 8px",
-                                  borderRadius: "4px",
-                                  background: "rgba(99, 102, 241, 0.08)",
-                                  color: "var(--accent)",
-                                }}
+                                className="fyp-badge primary"
+                                style={{ fontSize: "0.78rem", padding: "3px 8px" }}
                               >
                                 {area}
                               </span>
@@ -709,7 +664,7 @@ export function FypStudentPortal() {
 
                         {/* Available Ideas Toggle */}
                         {faculty.availableIdeas.length > 0 && (
-                          <div>
+                          <div style={{ marginTop: "0.25rem" }}>
                             <button
                               type="button"
                               onClick={() => setExpandedIdeasTeacherId(isIdeasOpen ? null : faculty.teacherId)}
@@ -719,24 +674,24 @@ export function FypStudentPortal() {
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.35rem",
-                                fontSize: "0.82rem",
-                                color: "var(--accent)",
+                                gap: "0.4rem",
+                                fontSize: "0.83rem",
+                                color: "var(--c-accent)",
                                 padding: 0,
                                 fontWeight: 600,
                               }}
                             >
-                              <Lightbulb size={14} color="#f59e0b" />
+                              <Lightbulb size={14} color="var(--c-brass, #f59e0b)" />
                               <span>{faculty.availableIdeas.length} Available Project Ideas from Faculty</span>
                               {isIdeasOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
 
                             {isIdeasOpen && (
-                              <div className="stack" style={{ gap: "0.5rem", marginTop: "0.5rem", paddingLeft: "0.5rem", borderLeft: "2px solid var(--accent)" }}>
+                              <div className="stack" style={{ gap: "0.5rem", marginTop: "0.5rem", paddingLeft: "0.75rem", borderLeft: "2px solid var(--c-accent)" }}>
                                 {faculty.availableIdeas.map((idea) => (
                                   <div key={idea.id} style={{ fontSize: "0.85rem" }}>
                                     <div style={{ fontWeight: 600 }}>{idea.title}</div>
-                                    <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{idea.description}</div>
+                                    <div style={{ fontSize: "0.8rem", color: "var(--c-muted)" }}>{idea.description}</div>
                                   </div>
                                 ))}
                               </div>
@@ -755,49 +710,38 @@ export function FypStudentPortal() {
 
       {/* Send Request Preference Modal */}
       {requestingTeacher && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "1rem",
-          }}
-        >
-          <div className="card" style={{ maxWidth: "480px", width: "100%", padding: "1.5rem" }}>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+        <div className="fyp-modal-backdrop">
+          <div className="fyp-modal-card">
+            <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>
               Request Supervision
             </h3>
-            <p style={{ fontSize: "0.88rem", color: "var(--muted)", marginBottom: "1rem" }}>
+            <p style={{ fontSize: "0.88rem", color: "var(--c-muted)", marginBottom: "1rem" }}>
               Send your project proposal &ldquo;<strong>{group?.title}</strong>&rdquo; to <strong>{requestingTeacher.teacherName}</strong>.
             </p>
 
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.35rem" }}>
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                 Preference Choice Order
               </label>
               <select
                 value={preferenceOrder}
                 onChange={(e) => setPreferenceOrder(parseInt(e.target.value, 10))}
-                className="input"
-                style={{ width: "100%", padding: "0.5rem" }}
+                className="fyp-input"
+                style={{ width: "100%" }}
               >
                 <option value={1}>1st Choice (Highest Priority)</option>
                 <option value={2}>2nd Choice</option>
                 <option value={3}>3rd Choice</option>
               </select>
-              <span style={{ fontSize: "0.78rem", color: "var(--muted)", display: "block", marginTop: "0.25rem" }}>
+              <span style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "block", marginTop: "0.3rem" }}>
                 Supervisors will see your preference choice ranking when prioritizing incoming proposals.
               </span>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
               <button
                 type="button"
-                className="btn secondary tap"
+                className="fyp-btn secondary"
                 onClick={() => setRequestingTeacher(null)}
                 disabled={isPending}
               >
@@ -805,7 +749,7 @@ export function FypStudentPortal() {
               </button>
               <button
                 type="button"
-                className="btn primary tap"
+                className="fyp-btn primary"
                 onClick={handleSendSupervisorRequest}
                 disabled={isPending}
               >

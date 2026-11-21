@@ -379,29 +379,24 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
   const liveComsatsGrade = calculateComsatsGrade(livePreviewTotal);
 
   return (
-    <div className="fyp-committee-deck stack" style={{ gap: "1.5rem" }}>
+    <div className="fyp-shell">
       {/* Top Banner */}
-      <div
-        className="faculty-day-summary-card"
-        style={{
-          background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.05))",
-          borderColor: "rgba(16, 185, 129, 0.25)",
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start" }}>
+      <div className="fyp-hero-banner">
+        <div className="fyp-hero-header">
           <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-              <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.35rem", flexWrap: "wrap" }}>
+              <span className="fyp-badge success">
                 Phase 4: 7th Semester Module
               </span>
-              <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+              <span className="fyp-badge primary">
+                <span className="fyp-pulse-dot" />
                 COMSATS Examination System
               </span>
             </div>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: "0.25rem 0" }}>
+            <h1 className="fyp-hero-title">
               Internal Evaluation Committee &amp; Marks Aggregator
-            </h2>
-            <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: 0 }}>
+            </h1>
+            <p className="fyp-hero-subtitle">
               7th semester internal marking, divergence moderation, configurable weightages, and final examination marksheets.
             </p>
           </div>
@@ -409,7 +404,7 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button
               type="button"
-              className="btn secondary tap"
+              className="fyp-btn secondary"
               onClick={() => handleExportMarksheet("csv")}
               title="Download CSV Marksheet"
             >
@@ -418,7 +413,7 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
             </button>
             <button
               type="button"
-              className="btn secondary tap"
+              className="fyp-btn secondary"
               onClick={loadData}
               disabled={loading}
               title="Sync status"
@@ -430,80 +425,59 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
         </div>
 
         {/* Quick Stats Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "1rem",
-            marginTop: "1.25rem",
-            paddingTop: "1rem",
-            borderTop: "1px solid var(--border)",
-          }}
-        >
-          <div>
-            <div style={{ fontSize: "0.78rem", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700 }}>
-              Assigned Committees
-            </div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, marginTop: "0.2rem" }}>
-              {myCommittees.length}
-            </div>
+        <div className="fyp-kpi-grid" style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid color-mix(in srgb, var(--c-accent) 20%, var(--c-line))" }}>
+          <div className="fyp-kpi-tile">
+            <span className="kpi-label">Assigned Committees</span>
+            <span className="kpi-value">{myCommittees.length}</span>
           </div>
-          <div>
-            <div style={{ fontSize: "0.78rem", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700 }}>
-              7th Sem Groups
-            </div>
-            <div style={{ fontSize: "1.35rem", fontWeight: 800, marginTop: "0.2rem", color: "var(--accent)" }}>
-              {allGroups.length}
-            </div>
+          <div className="fyp-kpi-tile">
+            <span className="kpi-label">7th Sem Groups</span>
+            <span className="kpi-value">{allGroups.length}</span>
           </div>
-          <div>
-            <div style={{ fontSize: "0.78rem", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700 }}>
-              Official Weightages
-            </div>
-            <div style={{ fontSize: "1rem", fontWeight: 700, marginTop: "0.2rem", color: "#10b981" }}>
+          <div className="fyp-kpi-tile">
+            <span className="kpi-label">Official Weightages</span>
+            <span className="kpi-value" style={{ fontSize: "0.95rem", color: "#10b981" }}>
               {weightage.supervisorWeight}% Sup • {weightage.defenseWeight}% Def • {weightage.committeeWeight}% Comm
-            </div>
+            </span>
           </div>
         </div>
       </div>
 
       {/* Action Alerts */}
       {actionSuccess && (
-        <div className="alert-card success" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10b981" }}>
+        <div className="fyp-badge success" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <CheckCircle2 size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionSuccess}</span>
+          <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="alert-card error" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444" }}>
+        <div className="fyp-badge danger" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <AlertCircle size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionError}</span>
+          <span>{actionError}</span>
         </div>
       )}
 
       {/* Tab Selectors */}
-      <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid var(--border)", paddingBottom: "0.5rem", overflowX: "auto" }}>
+      <div className="fyp-tabs-bar">
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "evaluate" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "evaluate" ? "active" : ""}`}
           onClick={() => setActiveTab("evaluate")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Award size={15} />
           <span>Committee Marking</span>
-          <span className="tab-badge">{myCommittees.reduce((acc, c) => acc + c.groups.length, 0)}</span>
+          <span className="tab-count">{myCommittees.reduce((acc, c) => acc + c.groups.length, 0)}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "moderation" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "moderation" ? "active" : ""}`}
           onClick={() => setActiveTab("moderation")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <AlertTriangle size={15} />
           <span>Moderation Inspector</span>
           {moderationView?.hasDivergenceAlert && (
-            <span style={{ background: "#ef4444", color: "#fff", fontSize: "0.7rem", padding: "1px 5px", borderRadius: "8px" }}>
+            <span className="fyp-badge ruby" style={{ fontSize: "0.7rem", padding: "1px 6px" }}>
               Alert
             </span>
           )}
@@ -511,9 +485,8 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "aggregator" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "aggregator" ? "active" : ""}`}
           onClick={() => setActiveTab("aggregator")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Sliders size={15} />
           <span>Weightages &amp; Marksheet</span>
@@ -521,9 +494,8 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "committees" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "committees" ? "active" : ""}`}
           onClick={() => setActiveTab("committees")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Users size={15} />
           <span>All Committees ({allCommittees.length})</span>
@@ -536,44 +508,44 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
       {activeTab === "evaluate" && (
         <section className="stack" style={{ gap: "1rem" }}>
           {myCommittees.length === 0 ? (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <Users size={40} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Committee Assignments Yet</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <Users size={40} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>No Committee Assignments Yet</h4>
+              <p style={{ color: "var(--c-muted)", margin: 0, fontSize: "0.88rem", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
                 You have not yet been assigned to a 7th semester internal evaluation committee. Committees formed by the coordinator will appear here.
               </p>
             </div>
           ) : (
             myCommittees.map((assignment) => (
-              <div key={assignment.committee.id} className="card stack" style={{ padding: "1.25rem", gap: "1rem" }}>
+              <div key={assignment.committee.id} className="fyp-card elevated-hover stack" style={{ padding: "1.35rem", gap: "1rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
                   <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
-                      <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.35rem" }}>
+                      <span className="fyp-badge primary">
                         {assignment.committee.department}
                       </span>
                       {assignment.isLead && (
-                        <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#d97706" }}>
+                        <span className="fyp-badge warning">
                           👑 Committee Lead
                         </span>
                       )}
                     </div>
-                    <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.15rem 0" }}>
                       {assignment.committee.name}
                     </h3>
-                    <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                    <div style={{ fontSize: "0.82rem", color: "var(--c-muted)" }}>
                       Evaluators: {assignment.committee.members.map((m) => m.teacherName).join(", ")}
                     </div>
                   </div>
 
-                  <span className="badge" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <span className="fyp-badge neutral">
                     {assignment.groups.length} Assigned Groups
                   </span>
                 </div>
 
                 {/* Groups list */}
                 {assignment.groups.length === 0 ? (
-                  <div style={{ padding: "1rem", textAlign: "center", background: "var(--surface)", borderRadius: "6px", color: "var(--muted)", fontSize: "0.85rem" }}>
+                  <div style={{ padding: "1.25rem", textAlign: "center", background: "color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper))", borderRadius: "0.75rem", color: "var(--c-muted)", fontSize: "0.85rem", border: "1px dashed var(--c-line)" }}>
                     No project groups assigned to this committee yet.
                   </div>
                 ) : (
@@ -581,36 +553,33 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
                     {assignment.groups.map((grp) => (
                       <div
                         key={grp.id}
+                        className="fyp-card accent-edge"
                         style={{
                           padding: "1rem",
-                          borderRadius: "8px",
-                          background: "var(--surface)",
-                          border: "1px solid var(--border)",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                           flexWrap: "wrap",
-                          gap: "1rem",
+                          gap: "0.75rem",
                         }}
                       >
                         <div>
                           <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.2rem" }}>
-                            <span className="badge" style={{ fontSize: "0.7rem" }}>{grp.domain}</span>
-                            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+                            <span className="fyp-badge primary" style={{ fontSize: "0.75rem", padding: "2px 6px" }}>{grp.domain}</span>
+                            <span style={{ fontSize: "0.78rem", color: "var(--c-muted)" }}>
                               Leader: {grp.leader.fullName} ({grp.leader.regNo})
                             </span>
                           </div>
-                          <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{grp.title}</div>
-                          <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.2rem" }}>
+                          <div style={{ fontWeight: 700, fontSize: "1.05rem" }}>{grp.title}</div>
+                          <div style={{ fontSize: "0.8rem", color: "var(--c-muted)", marginTop: "0.2rem" }}>
                             Team: {[grp.leader, ...grp.members].map((m) => m.fullName).join(", ")}
                           </div>
                         </div>
 
                         <button
                           type="button"
-                          className="btn primary tap"
+                          className="fyp-btn primary"
                           onClick={() => handleOpenEvaluationModal(grp, assignment.committee.id)}
-                          style={{ fontSize: "0.82rem" }}
                         >
                           <FileCheck size={14} />
                           <span>Score Group (7th Sem)</span>
@@ -631,13 +600,13 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
       {activeTab === "moderation" && (
         <section className="stack" style={{ gap: "1rem" }}>
           {/* Group selector */}
-          <div className="card" style={{ padding: "1rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+          <div className="fyp-card" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
             <label style={{ fontWeight: 600, fontSize: "0.88rem" }}>Select FYP Group for Moderation Analysis:</label>
             <select
               value={selectedModerationGroupId}
               onChange={(e) => setSelectedModerationGroupId(e.target.value)}
-              className="input"
-              style={{ flex: 1, minWidth: "260px", padding: "0.5rem" }}
+              className="fyp-input"
+              style={{ flex: 1, minWidth: "260px" }}
             >
               {allGroups.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -648,22 +617,22 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
           </div>
 
           {moderationView && (
-            <div className="card stack" style={{ padding: "1.25rem", gap: "1rem" }}>
+            <div className="fyp-card elevated-hover stack" style={{ padding: "1.35rem", gap: "1rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
                 <div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 0.25rem" }}>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0 0 0.25rem" }}>
                     Committee Score Divergence Analysis
                   </h3>
-                  <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                  <div style={{ fontSize: "0.85rem", color: "var(--c-muted)" }}>
                     {moderationView.groupTitle} • {moderationView.evaluationsCount} of {moderationView.totalCommitteeMembers} Evaluations Submitted
                   </div>
                 </div>
 
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--c-muted)" }}>
                     Committee Average
                   </div>
-                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--accent)" }}>
+                  <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--c-accent)" }}>
                     {moderationView.averageScore}
                     <span style={{ fontSize: "0.85rem", fontWeight: 500 }}> / 100</span>
                   </div>
@@ -673,21 +642,20 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
               {/* Divergence Alert Banner */}
               {moderationView.hasDivergenceAlert ? (
                 <div
-                  className="alert-card"
+                  className="fyp-badge ruby"
                   style={{
                     padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    background: "rgba(239, 68, 68, 0.1)",
-                    border: "1px solid rgba(239, 68, 68, 0.3)",
-                    color: "#ef4444",
+                    borderRadius: "0.75rem",
+                    width: "100%",
                     display: "flex",
                     alignItems: "center",
                     gap: "0.75rem",
+                    fontSize: "0.88rem",
                   }}
                 >
                   <AlertTriangle size={20} />
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
                       High Score Divergence Alert: {moderationView.maxDivergence} Marks Difference!
                     </div>
                     <div style={{ fontSize: "0.82rem", opacity: 0.9 }}>
@@ -697,12 +665,11 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
                 </div>
               ) : (
                 <div
+                  className="fyp-badge success"
                   style={{
-                    padding: "0.75rem 1rem",
-                    borderRadius: "8px",
-                    background: "rgba(16, 185, 129, 0.1)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
-                    color: "#10b981",
+                    padding: "0.85rem 1rem",
+                    borderRadius: "0.75rem",
+                    width: "100%",
                     display: "flex",
                     alignItems: "center",
                     gap: "0.6rem",
@@ -716,11 +683,11 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
 
               {/* Member breakdown */}
               <div style={{ marginTop: "0.5rem" }}>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.5rem" }}>
                   Individual Evaluator Scores
                 </div>
                 {moderationView.scores.length === 0 ? (
-                  <div style={{ padding: "1rem", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>
+                  <div style={{ padding: "1rem", textAlign: "center", color: "var(--c-muted)", fontSize: "0.85rem" }}>
                     No evaluations submitted for this group yet.
                   </div>
                 ) : (
@@ -728,21 +695,19 @@ export function FypCommitteeDeck({ teacherId, teacherName }: FypCommitteeDeckPro
                     {moderationView.scores.map((s) => (
                       <div
                         key={s.evaluatorId}
+                        className="fyp-card"
                         style={{
-                          padding: "0.75rem",
-                          borderRadius: "6px",
-                          background: "var(--surface)",
-                          border: "1px solid var(--border)",
+                          padding: "0.75rem 1rem",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{s.evaluatorName}</div>
-                          <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Committee Member</div>
+                          <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>{s.evaluatorName}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--c-muted)" }}>Committee Member</div>
                         </div>
-                        <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--accent)" }}>
+                        <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--c-accent)" }}>
                           {s.totalScore}
                         </div>
                       </div>

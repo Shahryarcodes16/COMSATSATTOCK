@@ -351,95 +351,76 @@ export function FypWorkspaceHub({
   const isMeetingMet = summary?.isMeetingRequirementMet ?? false;
 
   return (
-    <div className="fyp-workspace-hub stack" style={{ gap: "1.25rem" }}>
-      {/* Overview Progress & Compliance Bar */}
-      <div
-        className="card"
-        style={{
-          padding: "1.25rem",
-          background: "linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(16, 185, 129, 0.03))",
-          borderColor: "rgba(99, 102, 241, 0.2)",
-        }}
-      >
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+    <div className="fyp-shell">
+      {/* Overview Progress & Compliance Hero Card */}
+      <div className="fyp-hero-banner">
+        <div className="fyp-hero-header">
           <div>
-            <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-              <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.35rem", flexWrap: "wrap" }}>
+              <span className="fyp-badge primary">
                 {group.domain}
               </span>
-              <span
-                className="badge"
-                style={{
-                  background: summary?.isOnTrack ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                  color: summary?.isOnTrack ? "#10b981" : "#ef4444",
-                }}
-              >
-                {summary?.isOnTrack ? "● On Track" : "▲ Attention Needed"}
+              <span className={`fyp-badge ${summary?.isOnTrack ? "success" : "ruby"}`}>
+                <span className="fyp-pulse-dot" />
+                {summary?.isOnTrack ? "Cohort On Track" : "Action Required"}
               </span>
             </div>
-            <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.2rem 0" }}>
+            <h1 className="fyp-hero-title">
               {group.title}
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
-              Supervisor: <strong>{group.supervisorName}</strong> • Team Leader: <strong>{group.leader.fullName}</strong>
+            </h1>
+            <p className="fyp-hero-subtitle">
+              Supervisor: <strong>{group.supervisorName}</strong> • Team Leader: <strong>{group.leader.fullName}</strong> ({group.leader.regNo})
             </p>
           </div>
 
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
               type="button"
-              className="btn secondary tap"
+              className="fyp-btn secondary"
               onClick={loadHubData}
               disabled={loading}
               title="Refresh workspace"
             >
               <RefreshCw size={14} className={loading ? "spin" : ""} />
+              <span>Refresh</span>
             </button>
           </div>
         </div>
 
         {/* Milestone Progress Bar & Monthly Meeting Tracker */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid var(--border)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem", marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid color-mix(in srgb, var(--c-accent) 20%, var(--c-line))" }}>
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.35rem" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                <Award size={14} color="var(--accent)" />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "var(--c-ink)" }}>
+                <Award size={15} color="var(--c-accent)" />
                 Project Milestone Completion
               </span>
-              <span>
-                <strong>{summary?.completedMilestones || 0}</strong> of <strong>{summary?.totalMilestones || 6}</strong> Approved ({percentComplete}%)
+              <span style={{ color: "var(--c-muted)", fontSize: "0.83rem" }}>
+                <strong style={{ color: "var(--c-ink)" }}>{summary?.completedMilestones || 0}</strong> of <strong style={{ color: "var(--c-ink)" }}>{summary?.totalMilestones || 6}</strong> Approved ({percentComplete}%)
               </span>
             </div>
-            <div style={{ height: "7px", width: "100%", background: "var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+            <div className="fyp-progress-track">
               <div
-                style={{
-                  height: "100%",
-                  width: `${percentComplete}%`,
-                  background: percentComplete === 100 ? "#10b981" : "var(--accent)",
-                  transition: "width 0.4s ease",
-                }}
+                className={`fyp-progress-fill ${percentComplete === 100 ? "emerald" : "accent"}`}
+                style={{ width: `${percentComplete}%` }}
               />
             </div>
           </div>
 
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", fontWeight: 600, marginBottom: "0.35rem" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                <Calendar size={14} color={isMeetingMet ? "#10b981" : "#f59e0b"} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "var(--c-ink)" }}>
+                <Calendar size={15} color={isMeetingMet ? "#10b981" : "var(--c-brass, #f59e0b)"} />
                 Monthly Supervision Compliance
               </span>
-              <span style={{ color: isMeetingMet ? "#10b981" : "#d97706" }}>
+              <span style={{ color: isMeetingMet ? "#10b981" : "#d97706", fontSize: "0.83rem" }}>
                 <strong>{summary?.monthlyMeetingCount || 0} / 2 Meetings</strong> {isMeetingMet ? "✓ Met" : "(Min 2 Required)"}
               </span>
             </div>
-            <div style={{ height: "7px", width: "100%", background: "var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+            <div className="fyp-progress-track">
               <div
-                style={{
-                  height: "100%",
-                  width: `${Math.min(100, ((summary?.monthlyMeetingCount || 0) / 2) * 100)}%`,
-                  background: isMeetingMet ? "#10b981" : "#f59e0b",
-                  transition: "width 0.4s ease",
-                }}
+                className={`fyp-progress-fill ${isMeetingMet ? "emerald" : "amber"}`}
+                style={{ width: `${Math.min(100, ((summary?.monthlyMeetingCount || 0) / 2) * 100)}%` }}
               />
             </div>
           </div>
@@ -448,85 +429,63 @@ export function FypWorkspaceHub({
 
       {/* Action Alerts */}
       {actionSuccess && (
-        <div className="alert-card success" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#10b981" }}>
+        <div className="fyp-badge success" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <CheckCircle2 size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionSuccess}</span>
+          <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="alert-card error" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444" }}>
+        <div className="fyp-badge danger" style={{ padding: "0.75rem 1rem", width: "100%", borderRadius: "0.75rem", fontSize: "0.88rem" }}>
           <AlertCircle size={18} />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{actionError}</span>
+          <span>{actionError}</span>
         </div>
       )}
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid var(--border)", paddingBottom: "0.5rem" }}>
+      <div className="fyp-tabs-bar">
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "milestones" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "milestones" ? "active" : ""}`}
           onClick={() => setActiveTab("milestones")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Award size={15} />
-          <span>Milestones & Sprints</span>
-          <span className="tab-badge">{milestones.length}</span>
+          <span>Milestones &amp; Sprints</span>
+          <span className="tab-count">{milestones.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "meetings" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "meetings" ? "active" : ""}`}
           onClick={() => setActiveTab("meetings")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Calendar size={15} />
-          <span>Meeting Minutes & Log</span>
-          <span className="tab-badge">{meetings.length}</span>
+          <span>Meeting Minutes &amp; Log</span>
+          <span className="tab-count">{meetings.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "documents" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "documents" ? "active" : ""}`}
           onClick={() => setActiveTab("documents")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <FileText size={15} />
-          <span>Document Vault & Turnitin</span>
-          <span className="tab-badge">{documents.length}</span>
+          <span>Document Vault &amp; Turnitin</span>
+          <span className="tab-count">{documents.length}</span>
         </button>
 
         <button
           type="button"
-          className={`faculty-tab-pill ${activeTab === "defense" ? "active" : ""}`}
+          className={`fyp-tab-btn ${activeTab === "defense" ? "active" : ""}`}
           onClick={() => setActiveTab("defense")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
         >
           <Award size={15} />
           <span>6th Sem Defense</span>
           {defenseResult?.published ? (
-            <span
-              style={{
-                background: "rgba(16, 185, 129, 0.2)",
-                color: "#10b981",
-                fontSize: "0.72rem",
-                padding: "1px 6px",
-                borderRadius: "10px",
-                fontWeight: 700,
-              }}
-            >
+            <span className="fyp-badge success" style={{ fontSize: "0.72rem", padding: "1px 6px" }}>
               Published
             </span>
           ) : defenseSchedule ? (
-            <span
-              style={{
-                background: "rgba(99, 102, 241, 0.2)",
-                color: "var(--accent)",
-                fontSize: "0.72rem",
-                padding: "1px 6px",
-                borderRadius: "10px",
-                fontWeight: 700,
-              }}
-            >
+            <span className="fyp-badge primary" style={{ fontSize: "0.72rem", padding: "1px 6px" }}>
               Scheduled
             </span>
           ) : null}
@@ -548,53 +507,43 @@ export function FypWorkspaceHub({
             return (
               <div
                 key={ms.id}
-                className="card"
-                style={{
-                  padding: "1.25rem",
-                  borderLeft: `4px solid ${isApproved ? "#10b981" : isRevision ? "#ef4444" : isSubmitted ? "var(--accent)" : "var(--border)"}`,
-                }}
+                className={`fyp-card elevated-hover ${isApproved ? "emerald-edge" : isRevision ? "ruby-edge" : isSubmitted ? "accent-edge" : ""}`}
+                style={{ padding: "1.35rem" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                      <span className="badge" style={{ background: "var(--surface)", color: "var(--muted)" }}>
+                    <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                      <span className="fyp-badge neutral">
                         Milestone {index + 1} ({ms.weightage}%)
                       </span>
                       <span
-                        className="badge"
-                        style={{
-                          background: isApproved
-                            ? "rgba(16, 185, 129, 0.15)"
+                        className={`fyp-badge ${
+                          isApproved
+                            ? "success"
                             : isRevision
-                            ? "rgba(239, 68, 68, 0.15)"
+                            ? "ruby"
                             : isSubmitted
-                            ? "rgba(99, 102, 241, 0.15)"
-                            : "var(--surface)",
-                          color: isApproved
-                            ? "#10b981"
-                            : isRevision
-                            ? "#ef4444"
-                            : isSubmitted
-                            ? "var(--accent)"
-                            : "var(--muted)",
-                        }}
+                            ? "primary"
+                            : "neutral"
+                        }`}
                       >
-                        {isApproved && "✓ Approved by Supervisor"}
-                        {isRevision && "▲ Revision Requested"}
-                        {isSubmitted && "⏳ Submitted (Under Review)"}
-                        {ms.status === "not_started" && "○ Not Submitted"}
+                        <span className="fyp-pulse-dot" />
+                        {isApproved && "Approved by Supervisor"}
+                        {isRevision && "Revision Requested"}
+                        {isSubmitted && "Submitted (Under Review)"}
+                        {ms.status === "not_started" && "Not Submitted"}
                       </span>
                     </div>
 
-                    <h4 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    <h4 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.15rem 0" }}>
                       {ms.title}
                     </h4>
-                    <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "0.2rem 0 0.5rem" }}>
+                    <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0.5rem", lineHeight: 1.5 }}>
                       {ms.description}
                     </p>
-                    <div style={{ fontSize: "0.8rem", color: "var(--muted)", display: "flex", gap: "0.75rem" }}>
-                      <span>📅 Deadline: <strong>{new Date(ms.deadline).toLocaleDateString()}</strong></span>
-                      {latestSub && <span>📄 Latest Version: <strong>v{latestSub.version}</strong></span>}
+                    <div style={{ fontSize: "0.82rem", color: "var(--c-muted)", display: "flex", gap: "1rem" }}>
+                      <span>📅 Deadline: <strong style={{ color: "var(--c-ink)" }}>{new Date(ms.deadline).toLocaleDateString()}</strong></span>
+                      {latestSub && <span>📄 Latest Version: <strong style={{ color: "var(--c-ink)" }}>v{latestSub.version}</strong></span>}
                     </div>
                   </div>
 
@@ -603,12 +552,11 @@ export function FypWorkspaceHub({
                     {role === "student" && !isApproved && (
                       <button
                         type="button"
-                        className="btn primary tap"
+                        className="fyp-btn primary"
                         onClick={() => {
                           setSubmittingMilestone(ms);
                           setSubmitFileName(`${group.title.substring(0, 15)}_${ms.key}_draft.pdf`);
                         }}
-                        style={{ fontSize: "0.82rem", padding: "6px 12px" }}
                       >
                         <Upload size={14} />
                         <span>{ms.submissions.length > 0 ? "Submit Revision" : "Submit Deliverable"}</span>
@@ -618,13 +566,12 @@ export function FypWorkspaceHub({
                     {role === "supervisor" && isSubmitted && (
                       <button
                         type="button"
-                        className="btn primary tap"
+                        className="fyp-btn primary"
                         onClick={() => {
                           setReviewingMilestone(ms);
                           setReviewDecision("approved");
                           setReviewFeedback("");
                         }}
-                        style={{ fontSize: "0.82rem", padding: "6px 12px" }}
                       >
                         <FileCheck size={14} />
                         <span>Review Submission</span>
@@ -636,13 +583,14 @@ export function FypWorkspaceHub({
                 {/* Supervisor Feedback Note Alert */}
                 {ms.supervisorFeedback && (
                   <div
+                    className={`fyp-badge ${isApproved ? "success" : "ruby"}`}
                     style={{
-                      marginTop: "0.75rem",
-                      padding: "0.6rem 0.75rem",
-                      borderRadius: "6px",
-                      background: isApproved ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)",
-                      border: `1px solid ${isApproved ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"}`,
-                      fontSize: "0.84rem",
+                      marginTop: "0.85rem",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "0.6rem",
+                      width: "100%",
+                      fontSize: "0.86rem",
+                      lineHeight: 1.45,
                     }}
                   >
                     <strong>Supervisor Remarks:</strong> {ms.supervisorFeedback}
@@ -652,26 +600,24 @@ export function FypWorkspaceHub({
                 {/* Latest Submission Card */}
                 {latestSub && (
                   <div
+                    className="fyp-card"
                     style={{
-                      marginTop: "0.75rem",
-                      padding: "0.75rem",
-                      borderRadius: "6px",
-                      background: "var(--surface)",
-                      border: "1px solid var(--border)",
+                      marginTop: "0.85rem",
+                      padding: "0.85rem 1rem",
                       display: "flex",
                       flexWrap: "wrap",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      gap: "0.5rem",
+                      gap: "0.6rem",
                     }}
                   >
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontWeight: 600, fontSize: "0.88rem" }}>
-                        <FileText size={15} color="var(--accent)" />
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontWeight: 600, fontSize: "0.92rem" }}>
+                        <FileText size={16} color="var(--c-accent)" />
                         <span>{latestSub.fileName}</span>
-                        <span className="badge" style={{ fontSize: "0.75rem", padding: "1px 6px" }}>v{latestSub.version}</span>
+                        <span className="fyp-badge neutral" style={{ fontSize: "0.75rem", padding: "1px 6px" }}>v{latestSub.version}</span>
                       </div>
-                      <div style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.15rem" }}>
+                      <div style={{ fontSize: "0.8rem", color: "var(--c-muted)", marginTop: "0.2rem" }}>
                         Submitted by {latestSub.submittedBy} on {new Date(latestSub.submittedAt).toLocaleDateString()} • &ldquo;{latestSub.changeSummary}&rdquo;
                       </div>
                     </div>
@@ -679,14 +625,7 @@ export function FypWorkspaceHub({
                     <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                       {/* Plagiarism Badge */}
                       <span
-                        className="badge"
-                        style={{
-                          background: latestSub.similarityStatus === "passed" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                          color: latestSub.similarityStatus === "passed" ? "#10b981" : "#ef4444",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.3rem",
-                        }}
+                        className={`fyp-badge ${latestSub.similarityStatus === "passed" ? "success" : "ruby"}`}
                       >
                         {latestSub.similarityStatus === "passed" ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
                         <span>Turnitin: {latestSub.plagiarismScore}% (AI: {latestSub.aiScore}%)</span>
@@ -696,8 +635,8 @@ export function FypWorkspaceHub({
                         href={latestSub.documentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn secondary tap"
-                        style={{ fontSize: "0.78rem", padding: "4px 8px" }}
+                        className="fyp-btn secondary"
+                        style={{ fontSize: "0.8rem", padding: "4px 10px" }}
                       >
                         <ExternalLink size={13} />
                         <span>Open Document</span>
@@ -708,7 +647,7 @@ export function FypWorkspaceHub({
 
                 {/* Submissions Version History Toggle */}
                 {ms.submissions && ms.submissions.length > 1 && (
-                  <div style={{ marginTop: "0.5rem" }}>
+                  <div style={{ marginTop: "0.6rem" }}>
                     <button
                       type="button"
                       onClick={() => setExpandedMilestoneId(isExpanded ? null : ms.id)}
@@ -716,12 +655,12 @@ export function FypWorkspaceHub({
                         background: "transparent",
                         border: "none",
                         cursor: "pointer",
-                        fontSize: "0.8rem",
-                        color: "var(--accent)",
+                        fontSize: "0.82rem",
+                        color: "var(--c-accent)",
                         padding: 0,
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "0.3rem",
+                        gap: "0.35rem",
                         fontWeight: 600,
                       }}
                     >
@@ -731,23 +670,22 @@ export function FypWorkspaceHub({
                     </button>
 
                     {isExpanded && (
-                      <div className="stack" style={{ gap: "0.4rem", marginTop: "0.5rem", paddingLeft: "0.5rem", borderLeft: "2px solid var(--accent)" }}>
+                      <div className="stack" style={{ gap: "0.45rem", marginTop: "0.5rem", paddingLeft: "0.75rem", borderLeft: "2px solid var(--c-accent)" }}>
                         {ms.submissions.map((sub) => (
                           <div
                             key={sub.id}
+                            className="fyp-card"
                             style={{
-                              fontSize: "0.8rem",
+                              fontSize: "0.82rem",
                               display: "flex",
                               justifyContent: "space-between",
-                              background: "var(--background)",
-                              padding: "0.4rem 0.6rem",
-                              borderRadius: "4px",
+                              padding: "0.5rem 0.75rem",
                             }}
                           >
                             <span>
                               <strong>v{sub.version}</strong>: {sub.fileName} ({sub.changeSummary})
                             </span>
-                            <span style={{ color: "var(--muted)" }}>
+                            <span style={{ color: "var(--c-muted)" }}>
                               {new Date(sub.submittedAt).toLocaleDateString()}
                             </span>
                           </div>
@@ -767,21 +705,20 @@ export function FypWorkspaceHub({
           ========================================================================= */}
       {activeTab === "meetings" && (
         <section className="stack" style={{ gap: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h4 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0 }}>
+              <h4 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
                 Supervision Meeting Records
               </h4>
-              <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "0.15rem 0 0" }}>
+              <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.15rem 0 0" }}>
                 Keep an official log of supervision discussions, deliverables, and action items.
               </p>
             </div>
 
             <button
               type="button"
-              className="btn primary tap"
+              className="fyp-btn primary"
               onClick={() => setIsMeetingModalOpen(true)}
-              style={{ fontSize: "0.85rem" }}
             >
               <Plus size={15} />
               <span>Log Meeting Minutes</span>
@@ -789,10 +726,10 @@ export function FypWorkspaceHub({
           </div>
 
           {meetings.length === 0 ? (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <Calendar size={36} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Meeting Minutes Recorded</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <Calendar size={38} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>No Meeting Minutes Recorded</h4>
+              <p style={{ color: "var(--c-muted)", margin: 0, fontSize: "0.88rem", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
                 Log your supervision meetings to fulfill the monthly university supervision requirement (min 2 meetings/month).
               </p>
             </div>
@@ -803,33 +740,25 @@ export function FypWorkspaceHub({
               return (
                 <div
                   key={m.id}
-                  className="card"
-                  style={{
-                    padding: "1.25rem",
-                    borderLeft: `4px solid ${isConfirmed ? "#10b981" : "#f59e0b"}`,
-                  }}
+                  className={`fyp-card elevated-hover ${isConfirmed ? "emerald-edge" : "amber-edge"}`}
+                  style={{ padding: "1.35rem" }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
                     <div>
-                      <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                        <span
-                          className="badge"
-                          style={{
-                            background: isConfirmed ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                            color: isConfirmed ? "#10b981" : "#d97706",
-                          }}
-                        >
-                          {isConfirmed ? "✓ Confirmed by Supervisor" : "⏳ Pending Supervisor Confirmation"}
+                      <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                        <span className={`fyp-badge ${isConfirmed ? "success" : "warning"}`}>
+                          <span className="fyp-pulse-dot" />
+                          {isConfirmed ? "✓ Confirmed by Supervisor" : "Pending Supervisor Confirmation"}
                         </span>
-                        <span className="badge" style={{ background: "var(--surface)", color: "var(--muted)" }}>
+                        <span className="fyp-badge neutral">
                           📅 {m.meetingDate}
                         </span>
                       </div>
 
-                      <h4 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                      <h4 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.15rem 0" }}>
                         Supervision Session with {group.supervisorName}
                       </h4>
-                      <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                      <div style={{ fontSize: "0.82rem", color: "var(--c-muted)" }}>
                         Logged by {m.schedulerName} ({m.scheduledBy}) • Attendees: {m.attendees.join(", ")}
                       </div>
                     </div>
@@ -837,12 +766,11 @@ export function FypWorkspaceHub({
                     {role === "supervisor" && !isConfirmed && (
                       <button
                         type="button"
-                        className="btn primary tap"
+                        className="fyp-btn primary"
                         onClick={() => {
                           setConfirmingMeeting(m);
                           setConfirmNotes("Meeting minutes reviewed and confirmed.");
                         }}
-                        style={{ fontSize: "0.82rem", padding: "6px 12px" }}
                       >
                         <CheckCircle2 size={14} />
                         <span>Confirm Minutes</span>
@@ -851,34 +779,34 @@ export function FypWorkspaceHub({
                   </div>
 
                   {/* Discussion Points & Action Items */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginTop: "0.75rem", background: "var(--surface)", padding: "0.75rem", borderRadius: "6px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginTop: "1rem", background: "color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper))", padding: "1rem", borderRadius: "0.75rem", border: "1px solid var(--c-line)" }}>
                     <div>
-                      <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.25rem" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.3rem" }}>
                         Discussion Points
                       </div>
-                      <p style={{ fontSize: "0.86rem", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                      <p style={{ fontSize: "0.88rem", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
                         {m.discussionPoints}
                       </p>
                     </div>
 
                     <div>
-                      <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.25rem" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.3rem" }}>
                         Assigned Action Items
                       </div>
-                      <p style={{ fontSize: "0.86rem", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                      <p style={{ fontSize: "0.88rem", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
                         {m.actionItems}
                       </p>
                     </div>
                   </div>
 
                   {m.nextMeetingDate && (
-                    <div style={{ fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-                      📌 Next Follow-up Date: <strong>{m.nextMeetingDate}</strong>
+                    <div style={{ fontSize: "0.82rem", color: "var(--c-muted)", marginTop: "0.6rem" }}>
+                      📌 Next Follow-up Date: <strong style={{ color: "var(--c-ink)" }}>{m.nextMeetingDate}</strong>
                     </div>
                   )}
 
                   {m.supervisorNotes && (
-                    <div style={{ marginTop: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: "6px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", fontSize: "0.82rem" }}>
+                    <div className="fyp-badge success" style={{ marginTop: "0.6rem", padding: "0.6rem 0.85rem", borderRadius: "0.5rem", width: "100%", fontSize: "0.85rem" }}>
                       <strong>Supervisor Note:</strong> {m.supervisorNotes}
                     </div>
                   )}
@@ -894,21 +822,20 @@ export function FypWorkspaceHub({
           ========================================================================= */}
       {activeTab === "documents" && (
         <section className="stack" style={{ gap: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h4 style={{ fontSize: "1.05rem", fontWeight: 700, margin: 0 }}>
-                Project Document Vault & Similarity Reports
+              <h4 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>
+                Project Document Vault &amp; Similarity Reports
               </h4>
-              <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: "0.15rem 0 0" }}>
+              <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.15rem 0 0" }}>
                 Central storage for SRS, code repositories, presentation slides, and Turnitin similarity checks.
               </p>
             </div>
 
             <button
               type="button"
-              className="btn primary tap"
+              className="fyp-btn primary"
               onClick={() => setIsDocModalOpen(true)}
-              style={{ fontSize: "0.85rem" }}
             >
               <Upload size={15} />
               <span>Add Document / Repo Link</span>
@@ -916,10 +843,10 @@ export function FypWorkspaceHub({
           </div>
 
           {documents.length === 0 ? (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <FileText size={36} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>No Documents Uploaded Yet</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem" }}>
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <FileText size={38} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>No Documents Uploaded Yet</h4>
+              <p style={{ color: "var(--c-muted)", margin: 0, fontSize: "0.88rem", maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
                 Add your project proposal, SRS, architecture designs, or code repository link above.
               </p>
             </div>
@@ -927,40 +854,36 @@ export function FypWorkspaceHub({
             documents.map((doc) => (
               <div
                 key={doc.id}
-                className="card"
+                className="fyp-card elevated-hover"
                 style={{
-                  padding: "1.25rem",
+                  padding: "1.35rem",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.75rem",
+                  gap: "0.85rem",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.25rem" }}>
-                      <span className="badge" style={{ background: "rgba(99, 102, 241, 0.12)", color: "var(--accent)" }}>
+                    <div style={{ display: "inline-flex", gap: "0.45rem", alignItems: "center", marginBottom: "0.35rem" }}>
+                      <span className="fyp-badge primary">
                         {doc.category.toUpperCase()}
                       </span>
-                      <span className="badge" style={{ background: "var(--surface)", color: "var(--muted)" }}>
+                      <span className="fyp-badge neutral">
                         v{doc.version}
                       </span>
                       {doc.plagiarismScore !== undefined && (
                         <span
-                          className="badge"
-                          style={{
-                            background: doc.similarityStatus === "passed" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                            color: doc.similarityStatus === "passed" ? "#10b981" : "#ef4444",
-                          }}
+                          className={`fyp-badge ${doc.similarityStatus === "passed" ? "success" : "ruby"}`}
                         >
                           {doc.similarityStatus === "passed" ? "✓" : "▲"} Turnitin {doc.plagiarismScore}% (AI: {doc.aiScore}%)
                         </span>
                       )}
                     </div>
 
-                    <h4 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                    <h4 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0.15rem 0" }}>
                       {doc.title}
                     </h4>
-                    <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+                    <div style={{ fontSize: "0.82rem", color: "var(--c-muted)" }}>
                       Uploaded by {doc.uploadedBy} on {new Date(doc.uploadedAt).toLocaleDateString()}
                     </div>
                   </div>
@@ -969,8 +892,7 @@ export function FypWorkspaceHub({
                     href={doc.documentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn secondary tap"
-                    style={{ fontSize: "0.82rem", padding: "6px 12px" }}
+                    className="fyp-btn secondary"
                   >
                     <ExternalLink size={14} />
                     <span>Open Resource</span>
@@ -978,28 +900,27 @@ export function FypWorkspaceHub({
                 </div>
 
                 {/* Inline Comment Thread */}
-                <div style={{ background: "var(--surface)", padding: "0.75rem", borderRadius: "6px" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.4rem" }}>
-                    Supervisor & Student Review Thread ({doc.comments?.length || 0})
+                <div style={{ background: "color-mix(in srgb, var(--c-canvas) 60%, var(--c-paper))", padding: "1rem", borderRadius: "0.75rem", border: "1px solid var(--c-line)" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.5rem" }}>
+                    Supervisor &amp; Student Review Thread ({doc.comments?.length || 0})
                   </div>
 
                   {doc.comments && doc.comments.length > 0 && (
-                    <div className="stack" style={{ gap: "0.4rem", marginBottom: "0.6rem" }}>
+                    <div className="stack" style={{ gap: "0.5rem", marginBottom: "0.75rem" }}>
                       {doc.comments.map((comm) => (
                         <div
                           key={comm.id}
+                          className="fyp-card"
                           style={{
-                            padding: "0.4rem 0.6rem",
-                            borderRadius: "4px",
-                            background: comm.authorRole === "supervisor" ? "rgba(99, 102, 241, 0.08)" : "var(--background)",
-                            border: "1px solid var(--border)",
-                            fontSize: "0.83rem",
+                            padding: "0.5rem 0.75rem",
+                            background: comm.authorRole === "supervisor" ? "color-mix(in srgb, var(--c-accent) 10%, var(--c-paper))" : "var(--c-paper)",
+                            fontSize: "0.85rem",
                           }}
                         >
-                          <div style={{ fontWeight: 600, fontSize: "0.78rem", color: comm.authorRole === "supervisor" ? "var(--accent)" : "inherit" }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.8rem", color: comm.authorRole === "supervisor" ? "var(--c-accent)" : "inherit" }}>
                             {comm.authorRole === "supervisor" ? "🎓" : "👤"} {comm.authorName} ({comm.authorRole}):
                           </div>
-                          <div style={{ marginTop: "0.15rem" }}>{comm.text}</div>
+                          <div style={{ marginTop: "0.2rem" }}>{comm.text}</div>
                         </div>
                       ))}
                     </div>
@@ -1022,15 +943,14 @@ export function FypWorkspaceHub({
                           handleAddComment(doc.id);
                         }
                       }}
-                      className="input"
-                      style={{ flex: 1, padding: "0.4rem 0.6rem", fontSize: "0.85rem" }}
+                      className="fyp-input"
+                      style={{ flex: 1 }}
                     />
                     <button
                       type="button"
-                      className="btn secondary tap"
+                      className="fyp-btn secondary"
                       onClick={() => handleAddComment(doc.id)}
                       disabled={!commentText.trim() || activeDocForComment !== doc.id || isPending}
-                      style={{ padding: "0 10px" }}
                     >
                       <Send size={14} />
                     </button>
@@ -1048,113 +968,91 @@ export function FypWorkspaceHub({
       {activeTab === "defense" && (
         <section className="stack" style={{ gap: "1.25rem" }}>
           {!defenseSchedule && (
-            <div className="faculty-empty-slate" style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-              <Clock size={40} style={{ opacity: 0.3, margin: "0 auto 0.75rem" }} />
-              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700 }}>Defense Allocation in Progress</h4>
-              <p style={{ color: "var(--muted)", margin: 0, fontSize: "0.88rem", maxWidth: "480px" }}>
+            <div className="fyp-card" style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+              <Clock size={40} style={{ opacity: 0.35, margin: "0 auto 0.75rem", color: "var(--c-accent)" }} />
+              <h4 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.1rem" }}>Defense Allocation in Progress</h4>
+              <p style={{ color: "var(--c-muted)", margin: "0 auto", fontSize: "0.88rem", maxWidth: "480px" }}>
                 The FYP Coordinator is currently forming evaluation panels and scheduling defense slots across departmental venues. You will see your exact presentation date, room, and panelist roster once published.
               </p>
             </div>
           )}
 
           {defenseSchedule && (
-            <div className="card" style={{ padding: "1.25rem", borderLeft: "4px solid var(--accent)" }}>
+            <div className="fyp-card elevated-hover accent-edge" style={{ padding: "1.35rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.3rem" }}>
-                    <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.35rem" }}>
+                    <span className="fyp-badge primary">
                       6th Semester Defense
                     </span>
                     <span
-                      className="badge"
-                      style={{
-                        background:
-                          defenseSchedule.status === "completed"
-                            ? "rgba(16, 185, 129, 0.15)"
-                            : "rgba(245, 158, 11, 0.15)",
-                        color: defenseSchedule.status === "completed" ? "#10b981" : "#d97706",
-                      }}
+                      className={`fyp-badge ${defenseSchedule.status === "completed" ? "success" : "warning"}`}
                     >
                       {defenseSchedule.status.toUpperCase()}
                     </span>
                   </div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.2rem 0" }}>
-                    Presentation Logistics & Venue
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0.15rem 0" }}>
+                    Presentation Logistics &amp; Venue
                   </h3>
                 </div>
 
                 <div style={{ textAlign: "right", fontSize: "0.85rem" }}>
-                  <div style={{ fontWeight: 700, color: "var(--accent)", fontSize: "0.95rem" }}>
+                  <div style={{ fontWeight: 700, color: "var(--c-accent)", fontSize: "1rem" }}>
                     📅 {defenseSchedule.defenseDate}
                   </div>
-                  <div style={{ color: "var(--muted)" }}>
+                  <div style={{ color: "var(--c-muted)" }}>
                     ⏰ {defenseSchedule.startTime} – {defenseSchedule.endTime}
                   </div>
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                  gap: "1rem",
-                  marginTop: "1rem",
-                  padding: "0.85rem",
-                  background: "var(--surface)",
-                  borderRadius: "8px",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)" }}>
-                    Defense Venue
-                  </div>
-                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
-                    <MapPin size={16} color="var(--accent)" />
+              <div className="fyp-kpi-grid" style={{ margin: "1rem 0" }}>
+                <div className="fyp-kpi-tile">
+                  <span className="kpi-label">Defense Venue</span>
+                  <span className="kpi-value" style={{ fontSize: "1.05rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                    <MapPin size={16} color="var(--c-accent)" />
                     {defenseSchedule.venue}
-                  </div>
+                  </span>
                 </div>
 
-                <div>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--muted)" }}>
-                    Assigned Panel
-                  </div>
-                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
-                    <Users size={16} color="var(--accent)" />
+                <div className="fyp-kpi-tile">
+                  <span className="kpi-label">Assigned Panel</span>
+                  <span className="kpi-value" style={{ fontSize: "1.05rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                    <Users size={16} color="var(--c-accent)" />
                     {defensePanel ? `${defensePanel.panelCode} (${defensePanel.members.length} Evaluators)` : "Assigned"}
-                  </div>
+                  </span>
                 </div>
               </div>
 
               {/* Panel Evaluators List */}
               {defensePanel && (
                 <div style={{ marginTop: "1rem" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.5rem" }}>
                     Evaluation Committee Members
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.75rem" }}>
                     {defensePanel.members.map((member) => (
                       <div
                         key={member.teacherId}
+                        className="fyp-card"
                         style={{
-                          padding: "0.6rem 0.8rem",
-                          borderRadius: "6px",
-                          background: member.isChairperson ? "rgba(99, 102, 241, 0.08)" : "var(--background)",
-                          border: member.isChairperson ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid var(--border)",
+                          padding: "0.75rem 1rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
+                          borderLeft: member.isChairperson ? "3px solid var(--c-accent)" : undefined,
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>
                             {member.isChairperson ? "👑 " : "👤 "} {member.teacherName}
                           </div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                          <div style={{ fontSize: "0.78rem", color: "var(--c-muted)" }}>
                             {member.designation} • {member.department}
                           </div>
                         </div>
                         {member.isChairperson && (
-                          <span className="badge" style={{ background: "var(--accent)", color: "#fff", fontSize: "0.7rem" }}>
+                          <span className="fyp-badge primary" style={{ fontSize: "0.72rem" }}>
                             Chair
                           </span>
                         )}
@@ -1168,44 +1066,29 @@ export function FypWorkspaceHub({
 
           {/* Published Results & Rubric Summary */}
           {defenseResult?.published && (
-            <div
-              className="card"
-              style={{
-                padding: "1.25rem",
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.04), rgba(99, 102, 241, 0.04))",
-                borderLeft: "4px solid #10b981",
-              }}
-            >
+            <div className="fyp-card elevated-hover emerald-edge" style={{ padding: "1.35rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
-                    <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.35rem" }}>
+                    <span className="fyp-badge success">
                       Official Published Results
                     </span>
                     <span
-                      className="badge"
-                      style={{
-                        background:
-                          defenseResult.consensusRecommendation === "accepted"
-                            ? "rgba(16, 185, 129, 0.2)"
-                            : defenseResult.consensusRecommendation === "accepted_with_minor_changes"
-                            ? "rgba(59, 130, 246, 0.2)"
-                            : "rgba(239, 68, 68, 0.2)",
-                        color:
-                          defenseResult.consensusRecommendation === "accepted"
-                            ? "#10b981"
-                            : defenseResult.consensusRecommendation === "accepted_with_minor_changes"
-                            ? "#2563eb"
-                            : "#ef4444",
-                      }}
+                      className={`fyp-badge ${
+                        defenseResult.consensusRecommendation === "accepted"
+                          ? "success"
+                          : defenseResult.consensusRecommendation === "accepted_with_minor_changes"
+                          ? "primary"
+                          : "ruby"
+                      }`}
                     >
                       {defenseResult.consensusRecommendation.replace(/_/g, " ").toUpperCase()}
                     </span>
                   </div>
-                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0.2rem 0" }}>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: "0.15rem 0" }}>
                     6th Semester Defense Evaluation Scorecard
                   </h3>
-                  <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--c-muted)" }}>
                     Published on {new Date(defenseResult.publishedAt || "").toLocaleDateString()} by {defenseResult.publishedBy}
                   </div>
                 </div>
@@ -1213,8 +1096,8 @@ export function FypWorkspaceHub({
                 <div
                   style={{
                     textAlign: "center",
-                    padding: "0.6rem 1.25rem",
-                    borderRadius: "8px",
+                    padding: "0.75rem 1.5rem",
+                    borderRadius: "0.75rem",
                     background: "rgba(16, 185, 129, 0.1)",
                     border: "1px solid rgba(16, 185, 129, 0.3)",
                   }}
@@ -1222,7 +1105,7 @@ export function FypWorkspaceHub({
                   <div style={{ fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700, color: "#10b981" }}>
                     Panel Average
                   </div>
-                  <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#10b981", lineHeight: 1.1 }}>
+                  <div style={{ fontSize: "1.9rem", fontWeight: 800, color: "#10b981", lineHeight: 1.1 }}>
                     {defenseResult.panelAverageScore}
                     <span style={{ fontSize: "0.9rem", fontWeight: 500 }}> / 100</span>
                   </div>
@@ -1231,24 +1114,20 @@ export function FypWorkspaceHub({
 
               {/* Rubric Breakdown */}
               <div style={{ marginTop: "1.25rem" }}>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.5rem" }}>
                   Defense Rubric Breakdown
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
                   {Object.entries(defenseResult.rubricBreakdown).map(([critId, score]) => (
                     <div
                       key={critId}
-                      style={{
-                        padding: "0.6rem 0.8rem",
-                        background: "var(--surface)",
-                        borderRadius: "6px",
-                        border: "1px solid var(--border)",
-                      }}
+                      className="fyp-card"
+                      style={{ padding: "0.75rem 1rem" }}
                     >
-                      <div style={{ fontSize: "0.78rem", color: "var(--muted)", textTransform: "capitalize" }}>
+                      <div style={{ fontSize: "0.78rem", color: "var(--c-muted)", textTransform: "capitalize" }}>
                         {critId.replace(/_/g, " ")}
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: "1.05rem", marginTop: "0.2rem", color: "var(--accent)" }}>
+                      <div style={{ fontWeight: 700, fontSize: "1.1rem", marginTop: "0.25rem", color: "var(--c-accent)" }}>
                         {score} pts
                       </div>
                     </div>
@@ -1258,32 +1137,30 @@ export function FypWorkspaceHub({
 
               {/* Per-Student Individual Marks */}
               <div style={{ marginTop: "1.25rem" }}>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.5rem" }}>
                   Individual Student Performance Marks
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0.75rem" }}>
                   {defenseResult.studentScores.map((st) => (
                     <div
                       key={st.studentId}
+                      className="fyp-card"
                       style={{
-                        padding: "0.6rem 0.8rem",
-                        background: "var(--surface)",
-                        borderRadius: "6px",
-                        border: "1px solid var(--border)",
+                        padding: "0.75rem 1rem",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>{st.studentName}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{st.regNo}</div>
+                        <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>{st.studentName}</div>
+                        <div style={{ fontSize: "0.78rem", color: "var(--c-muted)" }}>{st.regNo}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent)" }}>
+                        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-accent)" }}>
                           {st.individualMarks} / 15
                         </div>
-                        <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>Individual</div>
+                        <div style={{ fontSize: "0.72rem", color: "var(--c-muted)" }}>Individual</div>
                       </div>
                     </div>
                   ))}
@@ -1293,20 +1170,18 @@ export function FypWorkspaceHub({
               {/* Panel Remarks */}
               {defenseResult.panelRemarks.length > 0 && (
                 <div style={{ marginTop: "1.25rem" }}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted)", marginBottom: "0.5rem" }}>
-                    Consolidated Panel Feedback & Directions
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--c-muted)", marginBottom: "0.5rem" }}>
+                    Consolidated Panel Feedback &amp; Directions
                   </div>
                   <div className="stack" style={{ gap: "0.5rem" }}>
                     {defenseResult.panelRemarks.map((remark, idx) => (
                       <div
                         key={idx}
+                        className="fyp-card accent-edge"
                         style={{
-                          padding: "0.6rem 0.8rem",
-                          borderRadius: "6px",
-                          background: "var(--surface)",
-                          borderLeft: "3px solid var(--accent)",
-                          fontSize: "0.85rem",
-                          lineHeight: 1.45,
+                          padding: "0.75rem 1rem",
+                          fontSize: "0.88rem",
+                          lineHeight: 1.5,
                         }}
                       >
                         &ldquo;{remark}&rdquo;
@@ -1320,71 +1195,60 @@ export function FypWorkspaceHub({
 
           {/* Phase 4: Official Final Aggregated Grades (When Published) */}
           {finalGrades.length > 0 && finalGrades.some((g) => g.isPublished) && (
-            <div
-              className="card"
-              style={{
-                padding: "1.25rem",
-                background: "linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(16, 185, 129, 0.06))",
-                borderLeft: "4px solid #10b981",
-              }}
-            >
+            <div className="fyp-card elevated-hover emerald-edge" style={{ padding: "1.35rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
-                    <span className="badge" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#10b981" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.35rem" }}>
+                    <span className="fyp-badge success">
                       Official Final Marksheet
                     </span>
-                    <span className="badge" style={{ background: "rgba(99, 102, 241, 0.15)", color: "var(--accent)" }}>
+                    <span className="fyp-badge primary">
                       CUI Exam Department
                     </span>
                   </div>
-                  <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.2rem 0" }}>
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.15rem 0" }}>
                     Final Year Project Official Marks &amp; GPA
                   </h3>
-                  <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--c-muted)" }}>
                     Published by {finalGrades[0]?.publishedBy || "Exam Board"} on {new Date(finalGrades[0]?.publishedAt || "").toLocaleDateString()}
                   </div>
                 </div>
               </div>
 
-              <div style={{ overflowX: "auto", marginTop: "0.5rem" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem", textAlign: "left" }}>
+              <div className="fyp-table-wrapper" style={{ marginTop: "0.5rem" }}>
+                <table className="fyp-table">
                   <thead>
-                    <tr style={{ borderBottom: "2px solid var(--border)", background: "var(--surface)" }}>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Student</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Reg No</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Supervisor (30%)</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Defense (30%)</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Committee (40%)</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Total Score</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>Letter Grade</th>
-                      <th style={{ padding: "0.5rem 0.75rem" }}>GPA</th>
+                    <tr>
+                      <th>Student</th>
+                      <th>Reg No</th>
+                      <th>Supervisor (30%)</th>
+                      <th>Defense (30%)</th>
+                      <th>Committee (40%)</th>
+                      <th>Total Score</th>
+                      <th>Letter Grade</th>
+                      <th>GPA</th>
                     </tr>
                   </thead>
                   <tbody>
                     {finalGrades.map((g) => (
-                      <tr key={g.studentId} style={{ borderBottom: "1px solid var(--border)" }}>
-                        <td style={{ padding: "0.6rem 0.75rem", fontWeight: 600 }}>{g.studentName}</td>
-                        <td style={{ padding: "0.6rem 0.75rem", color: "var(--muted)" }}>{g.regNo}</td>
-                        <td style={{ padding: "0.6rem 0.75rem" }}>{g.supervisorScore}</td>
-                        <td style={{ padding: "0.6rem 0.75rem" }}>{g.defenseScore}</td>
-                        <td style={{ padding: "0.6rem 0.75rem" }}>{g.committeeScore}</td>
-                        <td style={{ padding: "0.6rem 0.75rem", fontWeight: 800, color: "var(--accent)" }}>
+                      <tr key={g.studentId}>
+                        <td style={{ fontWeight: 600 }}>{g.studentName}</td>
+                        <td style={{ color: "var(--c-muted)" }}>{g.regNo}</td>
+                        <td>{g.supervisorScore}</td>
+                        <td>{g.defenseScore}</td>
+                        <td>{g.committeeScore}</td>
+                        <td style={{ fontWeight: 800, color: "var(--c-accent)" }}>
                           {g.weightedTotal} / 100
                         </td>
-                        <td style={{ padding: "0.6rem 0.75rem" }}>
+                        <td>
                           <span
-                            className="badge"
-                            style={{
-                              background: g.letterGrade.startsWith("A") ? "rgba(16, 185, 129, 0.2)" : "rgba(99, 102, 241, 0.2)",
-                              color: g.letterGrade.startsWith("A") ? "#10b981" : "var(--accent)",
-                              fontWeight: 800,
-                            }}
+                            className={`fyp-badge ${g.letterGrade.startsWith("A") ? "success" : "primary"}`}
+                            style={{ fontWeight: 800 }}
                           >
                             {g.letterGrade}
                           </span>
                         </td>
-                        <td style={{ padding: "0.6rem 0.75rem", fontWeight: 700 }}>{g.gradePoint.toFixed(2)}</td>
+                        <td style={{ fontWeight: 700 }}>{g.gradePoint.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1399,19 +1263,19 @@ export function FypWorkspaceHub({
           MODAL 1: SUBMIT MILESTONE (STUDENT)
           ========================================================================= */}
       {submittingMilestone && (
-        <div className="modal-backdrop" style={{ zIndex: 1000 }} onClick={() => setSubmittingMilestone(null)}>
-          <div className="modal-card" style={{ maxWidth: "520px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="fyp-modal-backdrop" onClick={() => setSubmittingMilestone(null)}>
+          <div className="fyp-modal-card" style={{ maxWidth: "520px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
               <div>
-                <h3>Submit Deliverable</h3>
-                <p className="fine quiet">{submittingMilestone.title}</p>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Submit Deliverable</h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0" }}>{submittingMilestone.title}</p>
               </div>
-              <button type="button" className="close-btn" onClick={() => setSubmittingMilestone(null)}>×</button>
+              <button type="button" className="fyp-btn secondary" style={{ padding: "4px 8px" }} onClick={() => setSubmittingMilestone(null)}>×</button>
             </div>
 
-            <form onSubmit={handleSubmitMilestone} className="modal-body stack" style={{ gap: "1rem" }}>
+            <form onSubmit={handleSubmitMilestone} className="stack" style={{ gap: "1rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Deliverable File Name *
                 </label>
                 <input
@@ -1420,13 +1284,13 @@ export function FypWorkspaceHub({
                   placeholder="e.g. FYP_SRS_Document_v1.pdf"
                   value={submitFileName}
                   onChange={(e) => setSubmitFileName(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Document URL / Cloud Link (Google Drive, OneDrive, GitHub) *
                 </label>
                 <input
@@ -1435,16 +1299,16 @@ export function FypWorkspaceHub({
                   placeholder="https://drive.google.com/file/... or https://github.com/..."
                   value={submitDocUrl}
                   onChange={(e) => setSubmitDocUrl(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
-                <span style={{ fontSize: "0.78rem", color: "var(--muted)", display: "block", marginTop: "0.25rem" }}>
+                <span style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "block", marginTop: "0.3rem" }}>
                   Ensure sharing permissions are open for university evaluators.
                 </span>
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Version Change Summary / Release Notes
                 </label>
                 <textarea
@@ -1452,18 +1316,18 @@ export function FypWorkspaceHub({
                   placeholder="e.g. Added section 3.2 for database normalization and revised sequence diagrams."
                   value={submitChangeSummary}
                   onChange={(e) => setSubmitChangeSummary(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                <button type="button" className="btn secondary tap" onClick={() => setSubmittingMilestone(null)} disabled={isPending}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
+                <button type="button" className="fyp-btn secondary" onClick={() => setSubmittingMilestone(null)} disabled={isPending}>
                   Cancel
                 </button>
-                <button type="submit" className="btn primary tap" disabled={isPending}>
+                <button type="submit" className="fyp-btn primary" disabled={isPending}>
                   <Upload size={14} />
-                  <span>Upload & Run Turnitin Scan</span>
+                  <span>Upload &amp; Run Turnitin Scan</span>
                 </button>
               </div>
             </form>
@@ -1475,23 +1339,23 @@ export function FypWorkspaceHub({
           MODAL 2: REVIEW MILESTONE (SUPERVISOR)
           ========================================================================= */}
       {reviewingMilestone && (
-        <div className="modal-backdrop" style={{ zIndex: 1000 }} onClick={() => setReviewingMilestone(null)}>
-          <div className="modal-card" style={{ maxWidth: "520px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="fyp-modal-backdrop" onClick={() => setReviewingMilestone(null)}>
+          <div className="fyp-modal-card" style={{ maxWidth: "520px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
               <div>
-                <h3>Supervisor Evaluation</h3>
-                <p className="fine quiet">{reviewingMilestone.title}</p>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Supervisor Evaluation</h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0" }}>{reviewingMilestone.title}</p>
               </div>
-              <button type="button" className="close-btn" onClick={() => setReviewingMilestone(null)}>×</button>
+              <button type="button" className="fyp-btn secondary" style={{ padding: "4px 8px" }} onClick={() => setReviewingMilestone(null)}>×</button>
             </div>
 
-            <div className="modal-body stack" style={{ gap: "1rem" }}>
+            <div className="stack" style={{ gap: "1.25rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Review Decision
                 </label>
                 <div style={{ display: "flex", gap: "1rem" }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", cursor: "pointer", fontSize: "0.88rem" }}>
                     <input
                       type="radio"
                       name="decision"
@@ -1500,7 +1364,7 @@ export function FypWorkspaceHub({
                     />
                     <span>✓ Approve Milestone</span>
                   </label>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", cursor: "pointer", fontSize: "0.88rem" }}>
                     <input
                       type="radio"
                       name="decision"
@@ -1513,24 +1377,24 @@ export function FypWorkspaceHub({
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
-                  Supervisor Feedback & Guidance Remarks
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
+                  Supervisor Feedback &amp; Guidance Remarks
                 </label>
                 <textarea
                   rows={3}
                   placeholder="Provide detailed comments, required corrections, or approval notes for the students..."
                   value={reviewFeedback}
                   onChange={(e) => setReviewFeedback(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                <button type="button" className="btn secondary tap" onClick={() => setReviewingMilestone(null)} disabled={isPending}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
+                <button type="button" className="fyp-btn secondary" onClick={() => setReviewingMilestone(null)} disabled={isPending}>
                   Cancel
                 </button>
-                <button type="button" className="btn primary tap" onClick={handleReviewMilestone} disabled={isPending}>
+                <button type="button" className="fyp-btn primary" onClick={handleReviewMilestone} disabled={isPending}>
                   <CheckCircle2 size={14} />
                   <span>Submit Evaluation</span>
                 </button>
@@ -1544,20 +1408,20 @@ export function FypWorkspaceHub({
           MODAL 3: LOG MEETING MINUTES
           ========================================================================= */}
       {isMeetingModalOpen && (
-        <div className="modal-backdrop" style={{ zIndex: 1000 }} onClick={() => setIsMeetingModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="fyp-modal-backdrop" onClick={() => setIsMeetingModalOpen(false)}>
+          <div className="fyp-modal-card" style={{ maxWidth: "540px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
               <div>
-                <h3>Log Supervision Meeting Minutes</h3>
-                <p className="fine quiet">{group.title}</p>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Log Supervision Meeting Minutes</h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0" }}>{group.title}</p>
               </div>
-              <button type="button" className="close-btn" onClick={() => setIsMeetingModalOpen(false)}>×</button>
+              <button type="button" className="fyp-btn secondary" style={{ padding: "4px 8px" }} onClick={() => setIsMeetingModalOpen(false)}>×</button>
             </div>
 
-            <form onSubmit={handleCreateMeetingLog} className="modal-body stack" style={{ gap: "1rem" }}>
+            <form onSubmit={handleCreateMeetingLog} className="stack" style={{ gap: "1rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                     Meeting Date *
                   </label>
                   <input
@@ -1565,27 +1429,27 @@ export function FypWorkspaceHub({
                     required
                     value={meetingDate}
                     onChange={(e) => setMeetingDate(e.target.value)}
-                    className="input"
-                    style={{ width: "100%", padding: "0.5rem" }}
+                    className="fyp-input"
+                    style={{ width: "100%" }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                     Next Meeting Target Date
                   </label>
                   <input
                     type="date"
                     value={nextMeetingDate}
                     onChange={(e) => setNextMeetingDate(e.target.value)}
-                    className="input"
-                    style={{ width: "100%", padding: "0.5rem" }}
+                    className="fyp-input"
+                    style={{ width: "100%" }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Key Discussion Points *
                 </label>
                 <textarea
@@ -1594,14 +1458,14 @@ export function FypWorkspaceHub({
                   placeholder="Outline topics discussed, architecture choices, literature review feedback, etc."
                   value={discussionPoints}
                   onChange={(e) => setDiscussionPoints(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
-                  Action Items & Deliverables for Next Sprint *
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
+                  Action Items &amp; Deliverables for Next Sprint *
                 </label>
                 <textarea
                   rows={2}
@@ -1609,16 +1473,16 @@ export function FypWorkspaceHub({
                   placeholder="List specific tasks assigned to team members..."
                   value={actionItems}
                   onChange={(e) => setActionItems(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                <button type="button" className="btn secondary tap" onClick={() => setIsMeetingModalOpen(false)} disabled={isPending}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
+                <button type="button" className="fyp-btn secondary" onClick={() => setIsMeetingModalOpen(false)} disabled={isPending}>
                   Cancel
                 </button>
-                <button type="submit" className="btn primary tap" disabled={isPending}>
+                <button type="submit" className="fyp-btn primary" disabled={isPending}>
                   <CheckCircle2 size={14} />
                   <span>Save Meeting Minutes</span>
                 </button>
@@ -1632,23 +1496,23 @@ export function FypWorkspaceHub({
           MODAL 4: CONFIRM MEETING (SUPERVISOR)
           ========================================================================= */}
       {confirmingMeeting && (
-        <div className="modal-backdrop" style={{ zIndex: 1000 }} onClick={() => setConfirmingMeeting(null)}>
-          <div className="modal-card" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="fyp-modal-backdrop" onClick={() => setConfirmingMeeting(null)}>
+          <div className="fyp-modal-card" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
               <div>
-                <h3>Confirm Meeting Minutes</h3>
-                <p className="fine quiet">Meeting on {confirmingMeeting.meetingDate}</p>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Confirm Meeting Minutes</h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0" }}>Meeting on {confirmingMeeting.meetingDate}</p>
               </div>
-              <button type="button" className="close-btn" onClick={() => setConfirmingMeeting(null)}>×</button>
+              <button type="button" className="fyp-btn secondary" style={{ padding: "4px 8px" }} onClick={() => setConfirmingMeeting(null)}>×</button>
             </div>
 
-            <div className="modal-body stack" style={{ gap: "1rem" }}>
-              <p style={{ fontSize: "0.88rem", color: "var(--muted)", margin: 0 }}>
+            <div className="stack" style={{ gap: "1.25rem" }}>
+              <p style={{ fontSize: "0.88rem", color: "var(--c-muted)", margin: 0, lineHeight: 1.5 }}>
                 Confirm that this supervision session took place and endorse the recorded action items for the group.
               </p>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Supervisor Endorsement Notes (Optional)
                 </label>
                 <textarea
@@ -1656,18 +1520,18 @@ export function FypWorkspaceHub({
                   value={confirmNotes}
                   onChange={(e) => setConfirmNotes(e.target.value)}
                   placeholder="e.g. Minutes confirmed. Ensure API tests are completed before next week."
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                <button type="button" className="btn secondary tap" onClick={() => setConfirmingMeeting(null)} disabled={isPending}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
+                <button type="button" className="fyp-btn secondary" onClick={() => setConfirmingMeeting(null)} disabled={isPending}>
                   Cancel
                 </button>
-                <button type="button" className="btn primary tap" onClick={handleConfirmMeeting} disabled={isPending}>
+                <button type="button" className="fyp-btn primary" onClick={handleConfirmMeeting} disabled={isPending}>
                   <CheckCircle2 size={14} />
-                  <span>Confirm & Endorse</span>
+                  <span>Confirm &amp; Endorse</span>
                 </button>
               </div>
             </div>
@@ -1679,26 +1543,26 @@ export function FypWorkspaceHub({
           MODAL 5: UPLOAD DOCUMENT / REPO LINK
           ========================================================================= */}
       {isDocModalOpen && (
-        <div className="modal-backdrop" style={{ zIndex: 1000 }} onClick={() => setIsDocModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: "500px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="fyp-modal-backdrop" onClick={() => setIsDocModalOpen(false)}>
+          <div className="fyp-modal-card" style={{ maxWidth: "500px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
               <div>
-                <h3>Add Document or Repository</h3>
-                <p className="fine quiet">{group.title}</p>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Add Document or Repository</h3>
+                <p style={{ fontSize: "0.85rem", color: "var(--c-muted)", margin: "0.2rem 0 0" }}>{group.title}</p>
               </div>
-              <button type="button" className="close-btn" onClick={() => setIsDocModalOpen(false)}>×</button>
+              <button type="button" className="fyp-btn secondary" style={{ padding: "4px 8px" }} onClick={() => setIsDocModalOpen(false)}>×</button>
             </div>
 
-            <form onSubmit={handleUploadDocument} className="modal-body stack" style={{ gap: "1rem" }}>
+            <form onSubmit={handleUploadDocument} className="stack" style={{ gap: "1rem" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Document Category *
                 </label>
                 <select
                   value={docCategory}
                   onChange={(e) => setDocCategory(e.target.value as FypDocumentCategory)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 >
                   {FYP_DOCUMENT_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
@@ -1709,7 +1573,7 @@ export function FypWorkspaceHub({
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Document Title *
                 </label>
                 <input
@@ -1718,13 +1582,13 @@ export function FypWorkspaceHub({
                   placeholder="e.g. SRS Final Draft, GitHub Repo, Presentation Slides"
                   value={docTitle}
                   onChange={(e) => setDocTitle(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>
                   Resource URL / Link *
                 </label>
                 <input
@@ -1733,18 +1597,18 @@ export function FypWorkspaceHub({
                   placeholder="https://github.com/... or https://drive.google.com/..."
                   value={docUrl}
                   onChange={(e) => setDocUrl(e.target.value)}
-                  className="input"
-                  style={{ width: "100%", padding: "0.5rem" }}
+                  className="fyp-input"
+                  style={{ width: "100%" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                <button type="button" className="btn secondary tap" onClick={() => setIsDocModalOpen(false)} disabled={isPending}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
+                <button type="button" className="fyp-btn secondary" onClick={() => setIsDocModalOpen(false)} disabled={isPending}>
                   Cancel
                 </button>
-                <button type="submit" className="btn primary tap" disabled={isPending}>
+                <button type="submit" className="fyp-btn primary" disabled={isPending}>
                   <Upload size={14} />
-                  <span>Upload & Run Scan</span>
+                  <span>Upload &amp; Run Scan</span>
                 </button>
               </div>
             </form>
