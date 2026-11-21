@@ -587,7 +587,7 @@ export function MyScheduleView() {
                     <div key={subId} className="course-card">
                       <div className="course-card-top">
                         <h3 className="course-name">{subjectName}</h3>
-                        <span className="hours-tag">{items.length * 1.5} hrs / wk</span>
+                        <span className="hours-tag">{items.length * 2} credit hrs / wk</span>
                       </div>
 
                       <div className="course-card-details">

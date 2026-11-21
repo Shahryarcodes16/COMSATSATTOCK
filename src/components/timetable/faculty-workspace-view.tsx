@@ -643,7 +643,7 @@ export function FacultyWorkspaceView({
               <p className="quiet">
                 {todayDayClasses.length === 0
                   ? `No lectures listed for ${DAYS[selectedDay]}. Enjoy your preparation time!`
-                  : `${todayDayClasses.length} lecture${todayDayClasses.length === 1 ? "" : "s"} scheduled for ${DAYS[selectedDay]}.`}
+                  : `${todayDayClasses.length} lecture${todayDayClasses.length === 1 ? "" : "s"} scheduled for ${DAYS[selectedDay]} (${todayDayClasses.length * 2} Credit Hours).`}
               </p>
             </div>
             {selectedDay === clock.dayIndex && clock.liveSlot !== null && (
@@ -846,8 +846,13 @@ export function FacultyWorkspaceView({
           {/* Sub-Toolbar: Table vs Agenda vs Course Summary */}
           <div className="faculty-timetable-toolbar">
             <div className="toolbar-headline">
-              <h3>{teacherName}&apos;s Weekly Schedule</h3>
-              <p className="quiet">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
+                <h3 style={{ margin: 0 }}>{teacherName}&apos;s Weekly Schedule</h3>
+                <span className="chip" style={{ fontWeight: 700, fontSize: "0.78rem", background: "var(--c-surface)", color: "var(--c-accent)" }}>
+                  {teacherEntries.length * 2} Credit Hours ({teacherEntries.length} Slots/Wk)
+                </span>
+              </div>
+              <p className="quiet" style={{ margin: 0 }}>
                 Official weekly teaching allocation across departments, classrooms, and labs.
               </p>
             </div>
@@ -948,7 +953,7 @@ export function FacultyWorkspaceView({
                   return null;
                 }
 
-                const totalCreditHours = (dayClasses.length * 1.5).toFixed(1);
+                const totalCreditHours = dayClasses.length * 2;
 
                 return (
                   <div key={dayName} className={`teacher-day-group ${isToday ? "current-day-group" : ""}`}>
@@ -966,7 +971,7 @@ export function FacultyWorkspaceView({
                         <span className="day-count-badge">
                           {dayClasses.length} {dayClasses.length === 1 ? "Class" : "Classes"}
                         </span>
-                        <span className="day-hours-badge">{totalCreditHours} hrs</span>
+                        <span className="day-hours-badge">{totalCreditHours} credit hrs</span>
                       </div>
                     </div>
 
@@ -1161,7 +1166,7 @@ export function FacultyWorkspaceView({
                         <span>Section{taughtBatches.length === 1 ? "" : "s"}</span>
                       </div>
                       <div className="course-stat">
-                        <strong>{classes.length * 1.5}</strong>
+                        <strong>{classes.length * 2}</strong>
                         <span>Credit Hrs</span>
                       </div>
                     </div>
