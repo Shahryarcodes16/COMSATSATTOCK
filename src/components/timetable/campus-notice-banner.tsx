@@ -281,42 +281,21 @@ export function CampusNoticeBanner() {
             key={c.id}
             className="campus-global-notice cancellation-student-banner"
             role="alert"
-            style={{
-              background: "color-mix(in srgb, #e11d48 12%, var(--c-paper))",
-              border: "1.5px solid #e11d48",
-              color: "var(--c-ink)",
-              borderRadius: "var(--r-md)",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "0.85rem",
-              boxShadow: "0 4px 14px rgba(225, 29, 72, 0.12)",
-            }}
           >
-            <div style={{ color: "#e11d48", marginTop: "2px", flexShrink: 0 }}>
+            <div className="cancellation-student-icon">
               <AlertTriangle size={20} aria-hidden />
             </div>
 
-            <div style={{ flex: 1, fontSize: "0.88rem", lineHeight: 1.45 }}>
-              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.25rem" }}>
-                <span
-                  style={{
-                    background: "#e11d48",
-                    color: "#fff",
-                    fontWeight: 800,
-                    fontSize: "0.72rem",
-                    padding: "0.15rem 0.5rem",
-                    borderRadius: "4px",
-                    letterSpacing: "0.04em",
-                  }}
-                >
+            <div className="cancellation-student-body">
+              <div className="cancellation-student-header">
+                <span className="cancellation-student-tag">
                   🚨 LECTURE CANCELLED
                 </span>
-                <strong style={{ color: "#e11d48" }}>{c.subjectName} ({c.batchName})</strong>
+                <strong className="cancellation-student-subject">{c.subjectName} ({c.batchName})</strong>
                 <span className="fine quiet">• {c.targetDateLabel || dayLabel} at {slotLabel}</span>
               </div>
 
-              <p style={{ margin: "0.2rem 0", color: "var(--c-ink)" }}>
+              <p className="cancellation-student-message">
                 Instructor <strong>{c.teacherName}</strong> has cancelled this lecture.
                 {c.reason && (
                   <span>
@@ -325,22 +304,13 @@ export function CampusNoticeBanner() {
                 )}
               </p>
 
-              <div style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.25rem" }}>
+              <div className="cancellation-student-meta">
                 <span>• Students of <strong>{c.batchName}</strong> are not required to attend.</span>
                 <span>• Venue <strong>{c.roomName}</strong> is released as FREE.</span>
                 <button
                   type="button"
+                  className="cancellation-student-link"
                   onClick={() => setView("notices")}
-                  style={{
-                    background: "rgba(225, 29, 72, 0.14)",
-                    color: "#e11d48",
-                    border: "1px solid rgba(225, 29, 72, 0.35)",
-                    borderRadius: "999px",
-                    padding: "0.15rem 0.65rem",
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
                 >
                   Open Teacher Messages Screen →
                 </button>
@@ -352,13 +322,6 @@ export function CampusNoticeBanner() {
               className="campus-notice-close"
               onClick={() => handleDismissCancellation(c.id)}
               aria-label="Dismiss cancellation alert"
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: "0.25rem",
-                color: "var(--c-muted)",
-              }}
             >
               <X size={16} aria-hidden />
             </button>
@@ -381,42 +344,21 @@ export function CampusNoticeBanner() {
             key={m.id}
             className="campus-global-notice makeup-student-banner"
             role="status"
-            style={{
-              background: "color-mix(in srgb, var(--c-accent) 12%, var(--c-paper))",
-              border: "1.5px solid var(--c-accent)",
-              color: "var(--c-ink)",
-              borderRadius: "var(--r-md)",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "0.85rem",
-              boxShadow: "0 4px 14px rgba(8, 127, 121, 0.14)",
-            }}
           >
-            <div style={{ color: "var(--c-accent)", marginTop: "2px", flexShrink: 0 }}>
+            <div className="makeup-student-icon">
               <Sparkles size={20} aria-hidden />
             </div>
 
-            <div style={{ flex: 1, fontSize: "0.88rem", lineHeight: 1.45 }}>
-              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.25rem" }}>
-                <span
-                  style={{
-                    background: "var(--c-accent)",
-                    color: "var(--c-on-accent)",
-                    fontWeight: 800,
-                    fontSize: "0.72rem",
-                    padding: "0.15rem 0.5rem",
-                    borderRadius: "4px",
-                    letterSpacing: "0.04em",
-                  }}
-                >
+            <div className="makeup-student-body">
+              <div className="makeup-student-header">
+                <span className="makeup-student-tag">
                   ⭐ MAKE-UP CLASS ARRANGED
                 </span>
-                <strong style={{ color: "var(--c-accent)" }}>{subjName} ({bName})</strong>
+                <strong className="makeup-student-subject">{subjName} ({bName})</strong>
                 <span className="fine quiet">• {dayLabel} at {slotLabel}</span>
               </div>
 
-              <p style={{ margin: "0.2rem 0", color: "var(--c-ink)" }}>
+              <p className="makeup-student-message">
                 Instructor <strong>{tName}</strong> scheduled this make-up class in{" "}
                 <strong>{rName}</strong>.
                 {m.note && (
@@ -426,21 +368,12 @@ export function CampusNoticeBanner() {
                 )}
               </p>
 
-              <div style={{ fontSize: "0.78rem", color: "var(--c-muted)", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.25rem" }}>
+              <div className="makeup-student-meta">
                 <span>• Students of <strong>{bName}</strong> should attend in <strong>{rName}</strong>.</span>
                 <button
                   type="button"
+                  className="makeup-student-link"
                   onClick={() => setView("notices")}
-                  style={{
-                    background: "color-mix(in srgb, var(--c-accent) 14%, transparent)",
-                    color: "var(--c-accent)",
-                    border: "1px solid color-mix(in srgb, var(--c-accent) 35%, transparent)",
-                    borderRadius: "999px",
-                    padding: "0.15rem 0.65rem",
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
                 >
                   Open Teacher Messages Screen →
                 </button>
@@ -452,13 +385,6 @@ export function CampusNoticeBanner() {
               className="campus-notice-close"
               onClick={() => handleDismissMakeup(m.id)}
               aria-label="Dismiss makeup class alert"
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                padding: "0.25rem",
-                color: "var(--c-muted)",
-              }}
             >
               <X size={16} aria-hidden />
             </button>

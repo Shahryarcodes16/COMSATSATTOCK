@@ -254,10 +254,9 @@ export function MyScheduleView() {
 
         <button
           type="button"
-          className={`btn tap zero-clash-toolbar-btn ${viewTab === "zeroclash" ? "active" : ""}`}
+          className={`btn tap zero-clash-toolbar-btn btn-zeroclash ${viewTab === "zeroclash" ? "active" : ""}`}
           onClick={() => setViewTab(viewTab === "zeroclash" ? "week" : "zeroclash")}
           title="Resolve repeat and elective course clashes"
-          style={{ borderColor: "var(--c-accent)", color: "var(--c-accent)" }}
         >
           <Sparkles size={16} aria-hidden />
           <span>FORTIS ZeroClash</span>
@@ -265,10 +264,9 @@ export function MyScheduleView() {
 
         <button
           type="button"
-          className="btn tap zero-clash-toolbar-btn"
+          className="btn tap zero-clash-toolbar-btn btn-livesync"
           onClick={() => setIsLiveSyncModalOpen(true)}
           title="Dynamic WebCal Cloud Sync for Apple Calendar, Google Calendar & Outlook"
-          style={{ borderColor: "var(--c-emerald, #10b981)", color: "var(--c-emerald, #10b981)" }}
         >
           <Radio size={16} className="animate-pulse" aria-hidden />
           <span>FORTIS LiveSync</span>
@@ -276,10 +274,9 @@ export function MyScheduleView() {
 
         <button
           type="button"
-          className="btn tap zero-clash-toolbar-btn"
+          className="btn tap zero-clash-toolbar-btn btn-quickshare"
           onClick={() => setIsQuickShareOpen(true)}
           title="Share your schedule via 1-click WhatsApp link or QR code"
-          style={{ borderColor: "var(--c-accent)", color: "var(--c-accent)" }}
         >
           <Share2 size={16} aria-hidden />
           <span>FORTIS QuickShare</span>
@@ -332,12 +329,11 @@ export function MyScheduleView() {
               </li>
             ))}
           </ul>
-          <div style={{ marginTop: "0.85rem" }}>
+          <div className="clash-alert-actions">
             <button
               type="button"
-              className="btn solid tap"
+              className="btn solid tap clash-fix-btn"
               onClick={() => setViewTab("zeroclash")}
-              style={{ fontSize: "0.84rem", padding: "0.45rem 0.95rem", display: "inline-flex", alignItems: "center", gap: 6, background: "var(--c-accent)", color: "#fff" }}
             >
               <Sparkles size={15} />
               <span>Fix All Clashes with FORTIS ZeroClash →</span>
@@ -475,10 +471,10 @@ export function MyScheduleView() {
                         className={`today-card ${cancellation ? "cancelled-class-card" : entry.isMakeup ? "makeup-card-highlight" : ""} ${!cancellation && isLive ? "today-live" : ""} ${isPast && !cancellation ? "today-past" : ""}`}
                       >
                         <div className="today-time-badge">
-                          <span className="slot-badge" style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                          <span className={`slot-badge ${cancellation ? "cancelled-text-strike" : ""}`}>
                             {SLOTS[entry.slot]?.label}
                           </span>
-                          <span className="time-range" style={{ textDecoration: cancellation ? "line-through" : undefined }}>
+                          <span className={`time-range ${cancellation ? "cancelled-text-strike" : ""}`}>
                             {rangeLabel(entry.slot)}
                           </span>
                           {cancellation ? (
@@ -494,12 +490,12 @@ export function MyScheduleView() {
 
                         <div className="today-class-info">
                           {entry.isMakeup && entry.makeupNote && !cancellation && (
-                            <p className="fine" style={{ color: "var(--gold, #eab308)", marginBottom: "0.35rem" }}>
+                            <p className="fine student-makeup-note-alert">
                               📢 {entry.makeupNote}
                             </p>
                           )}
                           {cancellation && (
-                            <div className="cancelled-class-notice-box" style={{ marginBottom: "0.45rem" }}>
+                            <div className="cancelled-class-notice-box">
                               <p className="cancelled-notice-text">
                                 <strong>🚨 Class Cancelled by {cancellation.teacherName || teacherName || "Instructor"}</strong>
                                 {cancellation.reason ? ` · "${cancellation.reason}"` : ""}
@@ -511,7 +507,7 @@ export function MyScheduleView() {
                           )}
 
                           <h3 className="course-title">
-                            <span style={{ textDecoration: cancellation ? "line-through" : undefined, opacity: cancellation ? 0.7 : 1 }}>
+                            <span className={cancellation ? "cancelled-course-title" : ""}>
                               {subjects[entry.subject]}
                             </span>
                             {entry.repeater ? (
@@ -652,9 +648,8 @@ export function MyScheduleView() {
           <div className="empty-buttons">
             <button
               type="button"
-              className="btn solid tap btn-lg"
+              className="btn solid tap btn-lg btn-zeroclash-hero"
               onClick={() => setViewTab("zeroclash")}
-              style={{ background: "var(--c-accent)", color: "#fff" }}
             >
               <Sparkles size={18} aria-hidden />
               <span>Auto-Build with FORTIS ZeroClash</span>
@@ -677,9 +672,8 @@ export function MyScheduleView() {
             </button>
             <button
               type="button"
-              className="btn tap btn-lg"
+              className="btn tap btn-lg btn-livesync-hero"
               onClick={() => setIsLiveSyncModalOpen(true)}
-              style={{ borderColor: "var(--c-emerald, #10b981)", color: "var(--c-emerald, #10b981)" }}
             >
               <Radio size={18} className="animate-pulse" aria-hidden />
               <span>FORTIS LiveSync</span>

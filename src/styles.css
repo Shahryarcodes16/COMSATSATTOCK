@@ -3396,124 +3396,280 @@
 
 /* --- My Schedule (CUSTOM) Timetable View --- */
 .my-schedule-page {
-  padding-bottom: 3rem;
+  padding-bottom: 3.5rem;
 }
 
 .my-schedule-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--c-paper) 80%, var(--c-canvas));
+  border: 1px solid var(--c-line);
+  border-radius: 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.my-schedule-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.825rem;
+  font-weight: 700;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.65rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-zeroclash {
+  border-color: color-mix(in srgb, var(--c-accent) 50%, var(--c-line)) !important;
+  color: var(--c-accent) !important;
+  background: color-mix(in srgb, var(--c-accent) 8%, var(--c-paper)) !important;
+}
+
+.btn-zeroclash:hover,
+.btn-zeroclash.active {
+  background: var(--c-accent) !important;
+  color: var(--c-on-accent) !important;
+  border-color: var(--c-accent) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--c-accent) 35%, transparent);
+}
+
+.btn-livesync {
+  border-color: color-mix(in srgb, var(--c-emerald, #10b981) 50%, var(--c-line)) !important;
+  color: var(--c-emerald, #10b981) !important;
+  background: color-mix(in srgb, var(--c-emerald, #10b981) 8%, var(--c-paper)) !important;
+}
+
+.btn-livesync:hover {
+  background: var(--c-emerald, #10b981) !important;
+  color: #ffffff !important;
+  border-color: var(--c-emerald, #10b981) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.btn-quickshare {
+  border-color: color-mix(in srgb, var(--c-accent) 50%, var(--c-line)) !important;
+  color: var(--c-accent) !important;
+  background: color-mix(in srgb, var(--c-accent) 6%, var(--c-paper)) !important;
+}
+
+.btn-quickshare:hover {
+  background: color-mix(in srgb, var(--c-accent) 15%, var(--c-paper)) !important;
 }
 
 .my-schedule-clear-btn {
   color: var(--c-muted);
   margin-left: auto;
+  border-color: transparent !important;
 }
 
 .my-schedule-clear-btn:hover {
-  color: #e53e3e;
-  border-color: #e53e3e;
+  color: #e11d48 !important;
+  background: rgba(225, 29, 72, 0.08) !important;
+  border-color: rgba(225, 29, 72, 0.25) !important;
 }
 
+/* Clash Alert Notice */
 .clash-alert-banner {
-  background: color-mix(in srgb, #e53e3e 10%, var(--c-paper));
-  border: 1px solid color-mix(in srgb, #e53e3e 35%, transparent);
-  border-radius: 0.85rem;
-  padding: 0.85rem 1rem;
-  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, color-mix(in srgb, #e11d48 12%, var(--c-paper)), color-mix(in srgb, #f43f5e 6%, var(--c-paper)));
+  border: 1px solid color-mix(in srgb, #e11d48 40%, transparent);
+  border-left: 4px solid #e11d48;
+  border-radius: 1rem;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.08);
 }
 
 .clash-alert-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #e53e3e;
-  font-size: 0.95rem;
-  margin-bottom: 0.25rem;
+  gap: 0.6rem;
+  color: #e11d48;
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
 }
 
 .clash-icon {
-  color: #e53e3e;
+  color: #e11d48;
   flex-shrink: 0;
+  animation: pulse-beacon 1.5s ease-in-out infinite;
 }
 
 .clash-list {
-  margin: 0.5rem 0 0 1.25rem;
-  font-size: 0.825rem;
-  line-height: 1.5;
+  margin: 0.6rem 0 0.85rem 1.35rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
   color: var(--c-ink);
 }
 
+.clash-list li {
+  margin-bottom: 0.35rem;
+}
+
+.clash-alert-actions {
+  margin-top: 0.85rem;
+}
+
+.clash-fix-btn {
+  font-size: 0.84rem;
+  padding: 0.5rem 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--c-accent), color-mix(in srgb, var(--c-accent) 80%, #000)) !important;
+  color: var(--c-on-accent) !important;
+  border-radius: 0.65rem;
+  font-weight: 800;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--c-accent) 35%, transparent);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clash-fix-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--c-accent) 45%, transparent);
+}
+
+/* Today's Lectures List */
 .today-class-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .today-card {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 1.25rem;
+  padding: 1.15rem 1.35rem;
   background: var(--c-paper);
   border: 1px solid var(--c-line);
-  border-radius: 0.85rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border-left: 4px solid var(--c-line);
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.today-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--c-accent) 40%, var(--c-line));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 
 .today-card.today-live {
   border-color: var(--c-accent);
-  box-shadow: 0 0 0 1px var(--c-accent);
-  background: color-mix(in srgb, var(--c-accent) 6%, var(--c-paper));
+  border-left: 4px solid var(--c-accent);
+  box-shadow: 0 0 0 1px var(--c-accent), 0 6px 20px color-mix(in srgb, var(--c-accent) 18%, transparent);
+  background: radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--c-accent) 8%, var(--c-paper)), var(--c-paper));
+}
+
+.today-card.makeup-card-highlight {
+  border-color: var(--c-emerald, #10b981);
+  border-left: 4px solid var(--c-emerald, #10b981);
+  background: color-mix(in srgb, var(--c-emerald, #10b981) 6%, var(--c-paper));
+}
+
+.today-card.cancelled-class-card {
+  border-color: rgba(225, 29, 72, 0.35);
+  border-left: 4px solid #e11d48;
+  background: color-mix(in srgb, #e11d48 5%, var(--c-paper));
 }
 
 .today-card.today-past {
   opacity: 0.65;
+  filter: grayscale(0.2);
 }
 
 .today-time-badge {
-  min-width: 90px;
+  min-width: 100px;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   flex-shrink: 0;
+  border-right: 1px solid var(--c-line);
+  padding-right: 1.15rem;
 }
 
 .slot-badge {
-  font-weight: 700;
-  font-size: 0.825rem;
+  font-weight: 800;
+  font-size: 0.88rem;
   color: var(--c-accent);
+  letter-spacing: -0.01em;
 }
 
 .time-range {
-  font-size: 0.725rem;
+  font-size: 0.74rem;
+  font-weight: 600;
   color: var(--c-muted);
 }
 
 .live-pill {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 800;
   background: var(--c-accent);
   color: var(--c-on-accent);
   border-radius: 999px;
-  padding: 0.1rem 0.45rem;
+  padding: 0.15rem 0.6rem;
   text-align: center;
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--c-accent) 35%, transparent);
+}
+
+.live-pill::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: pulse-beacon 1.5s ease-in-out infinite;
 }
 
 .past-pill {
   display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 600;
-  background: var(--c-line);
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--c-canvas);
+  border: 1px solid var(--c-line);
   color: var(--c-muted);
   border-radius: 999px;
-  padding: 0.1rem 0.45rem;
+  padding: 0.12rem 0.55rem;
   text-align: center;
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
+}
+
+.cancelled-side-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #e11d48;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  text-align: center;
+  margin-top: 0.25rem;
+  letter-spacing: 0.03em;
+}
+
+.makeup-badge-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  text-align: center;
+  margin-top: 0.25rem;
 }
 
 .today-class-info {
@@ -3521,205 +3677,341 @@
   min-width: 0;
 }
 
-.course-title {
-  font-size: 1.05rem;
+.student-makeup-note-alert {
+  color: var(--c-accent);
   font-weight: 600;
+  margin-bottom: 0.45rem;
+  font-size: 0.8rem;
+}
+
+.cancelled-class-notice-box {
+  background: rgba(225, 29, 72, 0.08);
+  border: 1px solid rgba(225, 29, 72, 0.25);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.cancelled-notice-text {
+  font-size: 0.82rem;
+  color: #e11d48;
+  margin: 0 0 0.3rem;
+  line-height: 1.4;
+}
+
+.room-freed-indicator {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--c-emerald, #10b981);
+}
+
+.course-title {
+  font-size: 1.12rem;
+  font-weight: 800;
   color: var(--c-ink);
-  margin: 0 0 0.35rem;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.45rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
 
+.cancelled-course-title {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.cancelled-text-strike {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
 .repeater-tag {
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   background: #d97706;
-  color: #fff;
-  padding: 0.1rem 0.45rem;
+  color: #ffffff;
+  padding: 0.12rem 0.55rem;
   border-radius: 999px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .meta-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.35rem;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
 }
 
 .meta-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 0.45rem;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.55rem;
   background: var(--c-canvas);
   color: var(--c-muted);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   border: 1px solid var(--c-line);
+  transition: all 0.15s ease;
 }
 
 .teacher-pill {
   cursor: pointer;
-  background: var(--c-canvas);
+  background: color-mix(in srgb, var(--c-accent) 6%, var(--c-canvas));
+  color: var(--c-ink);
+  border-color: color-mix(in srgb, var(--c-accent) 25%, var(--c-line));
 }
 
 .teacher-pill:hover {
-  color: var(--c-accent);
+  background: var(--c-accent);
+  color: var(--c-on-accent);
   border-color: var(--c-accent);
+  transform: translateY(-1px);
 }
 
 .quick-email-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 600;
   color: var(--c-accent);
   text-decoration: none;
-  margin-top: 0.2rem;
-  word-break: break-all;
+  margin-top: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.4rem;
+  transition: background 0.15s;
 }
 
 .quick-email-link:hover {
-  text-decoration: underline;
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
 }
 
 .remove-class-btn {
   align-self: flex-start;
-  opacity: 0.6;
-  transition: opacity 0.2s, color 0.2s;
-  padding: 0.35rem;
+  opacity: 0.5;
+  transition: all 0.2s;
+  padding: 0.45rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
 }
 
 .remove-class-btn:hover {
   opacity: 1;
-  color: #e53e3e;
+  color: #e11d48;
+  background: rgba(225, 29, 72, 0.08);
+  border-color: rgba(225, 29, 72, 0.25);
+  transform: scale(1.05);
 }
 
+/* Enrolled Courses Grid */
 .courses-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 1.15rem;
 }
 
 .course-card {
   background: var(--c-paper);
   border: 1px solid var(--c-line);
-  border-radius: 0.85rem;
-  padding: 1rem;
+  border-radius: 1rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--c-accent) 35%, var(--c-line));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 .course-card-top {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.65rem;
 }
 
 .course-name {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.08rem;
+  font-weight: 800;
   color: var(--c-ink);
   margin: 0;
+  letter-spacing: -0.02em;
   flex: 1;
+  line-height: 1.35;
 }
 
 .hours-tag {
-  font-size: 0.725rem;
-  font-weight: 600;
+  font-size: 0.74rem;
+  font-weight: 800;
   color: var(--c-accent);
   background: color-mix(in srgb, var(--c-accent) 12%, transparent);
-  padding: 0.15rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .course-card-details {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
+  gap: 0.35rem;
+  font-size: 0.82rem;
   color: var(--c-muted);
 }
 
 .detail-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .course-slots-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.25rem;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--c-line);
 }
 
 .slots-chips-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .slot-chip {
-  font-size: 0.725rem;
+  font-size: 0.74rem;
+  font-weight: 600;
   background: var(--c-canvas);
   border: 1px solid var(--c-line);
-  border-radius: 0.4rem;
-  padding: 0.15rem 0.45rem;
+  border-radius: 0.45rem;
+  padding: 0.2rem 0.55rem;
+  color: var(--c-ink);
 }
 
 .remove-course-btn {
   margin-top: auto;
   border: 1px solid var(--c-line);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   justify-content: center;
   color: var(--c-muted);
+  padding: 0.5rem;
+  border-radius: 0.6rem;
+  transition: all 0.2s;
 }
 
 .remove-course-btn:hover {
-  color: #e53e3e;
-  border-color: #e53e3e;
+  color: #e11d48;
+  border-color: rgba(225, 29, 72, 0.4);
+  background: rgba(225, 29, 72, 0.06);
 }
 
+/* My Schedule Empty State */
 .my-schedule-empty-state {
   text-align: center;
-  padding: 3rem 1.5rem;
-  background: var(--c-paper);
-  border: 1px dashed var(--c-line);
-  border-radius: 1rem;
+  padding: 3.5rem 1.75rem;
+  background: radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--c-accent) 8%, var(--c-paper)), var(--c-paper));
+  border: 1px dashed color-mix(in srgb, var(--c-accent) 40%, var(--c-line));
+  border-radius: 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .empty-icon-wrap {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  border: 2px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
   color: var(--c-accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--c-accent) 25%, transparent);
 }
 
 .empty-buttons {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.85rem;
   flex-wrap: wrap;
   justify-content: center;
-  margin: 0.5rem 0;
+  margin: 0.75rem 0;
+}
+
+.btn-zeroclash-hero {
+  background: linear-gradient(135deg, var(--c-accent), color-mix(in srgb, var(--c-accent) 75%, #000)) !important;
+  color: var(--c-on-accent) !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--c-accent) 40%, transparent) !important;
+}
+
+.btn-zeroclash-hero:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--c-accent) 55%, transparent) !important;
+}
+
+.btn-livesync-hero {
+  border-color: var(--c-emerald, #10b981) !important;
+  color: var(--c-emerald, #10b981) !important;
+  background: color-mix(in srgb, var(--c-emerald, #10b981) 8%, var(--c-paper)) !important;
+}
+
+.btn-livesync-hero:hover {
+  background: var(--c-emerald, #10b981) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4) !important;
 }
 
 .btn-lg {
   padding: 0.7rem 1.25rem;
   font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .my-schedule-actions {
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
+  .my-schedule-actions .btn {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.78rem;
+  }
+  .today-card {
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+  }
+  .today-time-badge {
+    border-right: none;
+    border-bottom: 1px solid var(--c-line);
+    padding-right: 0;
+    padding-bottom: 0.65rem;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Modals */
@@ -11627,6 +11919,239 @@ article.mini.makeup-class .mini-label > span:first-child {
 .cancelled-next-panel-card {
   border: 1px solid rgba(225, 29, 72, 0.3) !important;
   background: color-mix(in srgb, #e11d48 3%, var(--c-paper)) !important;
+}
+
+.next-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-emerald, #10b981);
+  box-shadow: 0 0 8px var(--c-emerald, #10b981);
+  animation: pulse-beacon 1.8s ease-in-out infinite;
+  margin-right: 0.45rem;
+  vertical-align: middle;
+}
+
+.next-makeup-strip {
+  background: color-mix(in srgb, var(--c-accent) 12%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 40%, transparent);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.next-makeup-pill {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--c-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  letter-spacing: 0.03em;
+}
+
+.next-makeup-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--c-ink);
+  font-style: italic;
+}
+
+.cancelled-next-title {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.venue-freed-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--c-emerald, #10b981);
+  margin-left: 0.45rem;
+}
+
+.next-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--c-muted);
+  font-size: 0.8125rem;
+  margin: 0.5rem 0;
+}
+
+/* Campus Notice Banner: Student Cancellation & Make-up Cards */
+.cancellation-student-banner {
+  background: color-mix(in srgb, #e11d48 10%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, #e11d48 40%, transparent);
+  border-left: 4px solid #e11d48;
+  color: var(--c-ink);
+  border-radius: var(--r-md);
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cancellation-student-banner:hover {
+  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.16);
+}
+
+.cancellation-student-icon {
+  color: #e11d48;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.cancellation-student-body {
+  flex: 1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.cancellation-student-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.cancellation-student-tag {
+  background: #e11d48;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.cancellation-student-subject {
+  color: #e11d48;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.cancellation-student-message {
+  margin: 0.25rem 0;
+  color: var(--c-ink);
+}
+
+.cancellation-student-meta {
+  font-size: 0.78rem;
+  color: var(--c-muted);
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.cancellation-student-link {
+  background: rgba(225, 29, 72, 0.12);
+  color: #e11d48;
+  border: 1px solid rgba(225, 29, 72, 0.35);
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancellation-student-link:hover {
+  background: #e11d48;
+  color: #ffffff;
+}
+
+.makeup-student-banner {
+  background: color-mix(in srgb, var(--c-accent) 10%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 40%, transparent);
+  border-left: 4px solid var(--c-accent);
+  color: var(--c-ink);
+  border-radius: var(--r-md);
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--c-accent) 15%, transparent);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.makeup-student-banner:hover {
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--c-accent) 22%, transparent);
+}
+
+.makeup-student-icon {
+  color: var(--c-accent);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.makeup-student-body {
+  flex: 1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.makeup-student-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.makeup-student-tag {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 800;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.makeup-student-subject {
+  color: var(--c-accent);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.makeup-student-message {
+  margin: 0.25rem 0;
+  color: var(--c-ink);
+}
+
+.makeup-student-meta {
+  font-size: 0.78rem;
+  color: var(--c-muted);
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.makeup-student-link {
+  background: color-mix(in srgb, var(--c-accent) 14%, transparent);
+  color: var(--c-accent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 35%, transparent);
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.makeup-student-link:hover {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
 }
 
 .next-cancellation-strip {

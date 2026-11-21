@@ -67,21 +67,12 @@ export function NextClassPanel() {
           )}
 
           {next.entry.isMakeup && !cancellationRecord && (
-            <div
-              className="next-makeup-strip"
-              style={{
-                background: "color-mix(in srgb, var(--c-accent) 12%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--c-accent) 40%, transparent)",
-                borderRadius: "var(--r-sm)",
-                padding: "0.5rem 0.7rem",
-                marginBottom: "0.45rem",
-              }}
-            >
-              <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--c-accent)" }}>
+            <div className="next-makeup-strip">
+              <span className="next-makeup-pill">
                 ⭐ MAKE-UP CLASS ARRANGED
               </span>
               {next.entry.makeupNote && (
-                <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "var(--c-ink)" }}>
+                <p className="next-makeup-note">
                   &ldquo;{next.entry.makeupNote}&rdquo;
                 </p>
               )}
@@ -89,24 +80,25 @@ export function NextClassPanel() {
           )}
 
           <span className="schedule-badge">
+            {active && !cancellationRecord && <span className="next-live-dot" aria-hidden />}
             {cancellationRecord
               ? `${active ? "Scheduled now (Cancelled)" : DAYS[clock.focusDay]} · ${spanLabel(next.start, next.end)}`
               : `${next.entry.isMakeup ? "Make-up · " : ""}${active ? "In progress" : DAYS[clock.focusDay]} · ${spanLabel(next.start, next.end)}`}
           </span>
-          <h3 style={{ textDecoration: cancellationRecord ? "line-through" : undefined, opacity: cancellationRecord ? 0.75 : 1 }}>
+          <h3 className={cancellationRecord ? "cancelled-next-title" : ""}>
             {subjects[next.entry.subject]}
           </h3>
           {next.entry.teacher >= 0 ? (
-            <p>
+            <p className="next-meta-row">
               <GraduationCap size={16} aria-hidden />
-              {teachers[next.entry.teacher]}
+              <span>{teachers[next.entry.teacher]}</span>
             </p>
           ) : null}
           {next.entry.room >= 0 ? (
-            <p>
+            <p className="next-meta-row">
               <DoorOpen size={16} aria-hidden />
-              {rooms[next.entry.room]}
-              {cancellationRecord ? <span className="fine" style={{ marginLeft: "0.5rem" }}>(Freed)</span> : null}
+              <span>{rooms[next.entry.room]}</span>
+              {cancellationRecord ? <span className="venue-freed-tag">(Freed)</span> : null}
             </p>
           ) : null}
           {blocks.filter((block) => block.start <= next.end && block.end >= next.start).length >
