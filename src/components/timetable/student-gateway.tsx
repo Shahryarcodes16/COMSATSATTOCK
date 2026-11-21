@@ -47,10 +47,22 @@ import {
   type FacultySession,
 } from "@/lib/faculty-auth";
 import {
-  verifyCoordinatorPasskey,
+  isCoordinatorEmail,
   setCoordinatorSession,
+  saveLocalCoordinatorAccount,
+  getLocalCoordinatorAccount,
+  hashCoordinatorPasswordClient,
+  verifyCoordinatorPasswordClient,
+  generateCoordinatorSalt,
   type CoordinatorSession,
+  type CoordinatorProfile,
+  type LocalRegisteredCoordinator,
 } from "@/lib/coordinator";
+import {
+  coordinatorRequestVerificationCodeFn,
+  coordinatorVerifyAndSignUpFn,
+  coordinatorSignInFn,
+} from "@/lib/coordinator-server-fn";
 import { facultyList } from "@/lib/faculty";
 import {
   facultyRequestVerificationCodeFn,
@@ -73,9 +85,19 @@ export function StudentGateway({
   const [portalType, setPortalType] = useState<"student" | "faculty" | "coordinator">("student");
 
   // Coordinator mode
-  const [coordPasskey, setCoordPasskey] = useState("");
-  const [coordName, setCoordName] = useState("Academic Timetable Coordinator");
-  const [coordShowPasskey, setCoordShowPasskey] = useState(false);
+  const [coordMode, setCoordMode] = useState<"signin" | "signup">("signin");
+  const [coordStage, setCoordStage] = useState<"details" | "verify">("details");
+  const [coordEmail, setCoordEmail] = useState("");
+  const [coordName, setCoordName] = useState("");
+  const [coordDepartment, setCoordDepartment] = useState("Academic & Timetable Coordination Office");
+  const [coordDesignation, setCoordDesignation] = useState("Academic Timetable Coordinator");
+  const [coordPassword, setCoordPassword] = useState("");
+  const [coordConfirmPassword, setCoordConfirmPassword] = useState("");
+  const [coordCode, setCoordCode] = useState("");
+  const [coordRememberMe, setCoordRememberMe] = useState(true);
+  const [coordShowPassword, setCoordShowPassword] = useState(false);
+  const [coordDevPreviewCode, setCoordDevPreviewCode] = useState<string | null>(null);
+  const [coordResendCooldown, setCoordResendCooldown] = useState(0);
 
   // Student mode
   const [mode, setMode] = useState<"signup" | "signin">("signin");
@@ -153,6 +175,18 @@ export function StudentGateway({
         setSuccessMsg("Magic Link Verified: Please set your secure faculty password.");
       }
     }
+
+    const verifyCoord = params.get("verify_coordinator_email") || params.get("coordinator_email");
+    if (verifyCoord && isCoordinatorEmail(verifyCoord)) {
+      setPortalType("coordinator");
+      setCoordEmail(verifyCoord);
+      setCoordMode("signup");
+      setCoordStage("verify");
+      if (code) {
+        setCoordCode(code);
+        setSuccessMsg("Magic Link Verified: Please set your secure coordinator password.");
+      }
+    }
   }, []);
 
   // 60-second resend cooldown timers
@@ -167,6 +201,12 @@ export function StudentGateway({
     const t = setTimeout(() => setFacultyResendCooldown(facultyResendCooldown - 1), 1000);
     return () => clearTimeout(t);
   }, [facultyResendCooldown]);
+
+  useEffect(() => {
+    if (coordResendCooldown <= 0) return;
+    const t = setTimeout(() => setCoordResendCooldown(coordResendCooldown - 1), 1000);
+    return () => clearTimeout(t);
+  }, [coordResendCooldown]);
 
   useEffect(() => {
     if (parsedEmail && programBatches.length > 0 && !selectedBatch) {
@@ -1496,11 +1536,28 @@ export function StudentGateway({
           <div className="student-gateway-tabs">
             <button
               type="button"
-              className="gateway-tab-btn active"
-              style={{ cursor: "default" }}
+              className={`gateway-tab-btn ${coordMode === "signin" ? "active" : ""}`}
+              onClick={() => {
+                setCoordMode("signin");
+                setError("");
+                setSuccessMsg("");
+              }}
             >
               <Briefcase size={16} />
-              <span>Academic Coordinator Desk</span>
+              <span>Coordinator Sign In</span>
+            </button>
+            <button
+              type="button"
+              className={`gateway-tab-btn ${coordMode === "signup" ? "active" : ""}`}
+              onClick={() => {
+                setCoordMode("signup");
+                setCoordStage("details");
+                setError("");
+                setSuccessMsg("");
+              }}
+            >
+              <Sparkles size={16} />
+              <span>Register Account</span>
             </button>
           </div>
 
@@ -1518,97 +1575,611 @@ export function StudentGateway({
             </div>
           )}
 
-          <div style={{ padding: "1.5rem 1.5rem 0.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(14, 165, 233, 0.15)", color: "#0284c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Briefcase size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>Timetable & Class Coordinator</h3>
-                <p className="fine quiet" style={{ margin: 0 }}>Campus Academic Class Arrangement Authority</p>
-              </div>
-            </div>
-            <p className="fine quiet" style={{ lineHeight: 1.5, margin: "8px 0 0" }}>
-              Designated desk for student class scheduling requests, vacant venue allocation, and live timetable updates.
-            </p>
-          </div>
+          {coordMode === "signup" ? (
+            /* --- Coordinator Registration Flow --- */
+            coordStage === "details" ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setError("");
+                  setSuccessMsg("");
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setLoading(true);
-              setError("");
-              try {
-                const verified = verifyCoordinatorPasskey(coordPasskey);
-                if (verified) {
-                  const session = setCoordinatorSession(coordName.trim() || "Academic Coordinator");
-                  onCoordinatorAuthenticated?.(session);
-                  setView("coordinator");
-                } else {
-                  setError("Invalid Coordinator Passkey. Default key is 'coordinator786'.");
+                  const cleanEmail = coordEmail.trim().toLowerCase();
+                  if (!cleanEmail || !isCoordinatorEmail(cleanEmail)) {
+                    setError("Official email must belong to @cuiatk.edu.pk or @ciit-attock.edu.pk. Student emails cannot register as coordinator.");
+                    return;
+                  }
+                  if (!coordName.trim() || coordName.trim().length < 2) {
+                    setError("Please enter your official full name.");
+                    return;
+                  }
+                  if (coordPassword.length < 6) {
+                    setError("Password must be at least 6 characters long.");
+                    return;
+                  }
+                  if (coordPassword !== coordConfirmPassword) {
+                    setError("Passwords do not match.");
+                    return;
+                  }
+
+                  setLoading(true);
+                  try {
+                    const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+                    const res = await coordinatorRequestVerificationCodeFn({
+                      data: {
+                        email: cleanEmail,
+                        fullName: coordName.trim(),
+                        department: coordDepartment.trim(),
+                        designation: coordDesignation.trim(),
+                        originUrl: origin,
+                      },
+                    });
+
+                    if (!res.success) {
+                      setError(res.error || "Failed to dispatch verification code.");
+                      return;
+                    }
+
+                    setCoordStage("verify");
+                    setCoordResendCooldown(60);
+                    if (res.devPreviewCode) {
+                      setCoordDevPreviewCode(res.devPreviewCode);
+                    }
+                    setSuccessMsg(res.message || `A 6-digit verification code has been dispatched to ${cleanEmail}.`);
+                  } catch (err: any) {
+                    // Client-side fallback if server offline
+                    const code = Math.floor(100000 + Math.random() * 900000).toString();
+                    setCoordDevPreviewCode(code);
+                    setCoordStage("verify");
+                    setCoordResendCooldown(60);
+                    setSuccessMsg(`Verification code generated for ${cleanEmail}. Check preview below.`);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="student-gateway-form"
+              >
+                <div className="gateway-input-group">
+                  <label htmlFor="coord-signup-email">Official University Email</label>
+                  <div className="gateway-input-wrap">
+                    <Mail size={18} className="input-icon" />
+                    <input
+                      id="coord-signup-email"
+                      type="email"
+                      placeholder="e.g. coordinator@cuiatk.edu.pk"
+                      value={coordEmail}
+                      onChange={(e) => setCoordEmail(e.target.value)}
+                      required
+                      autoComplete="username"
+                    />
+                  </div>
+                  {isCoordinatorEmail(coordEmail) ? (
+                    <span className="fine" style={{ color: "#087f79", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <CheckCircle2 size={13} />
+                      Verified official coordinator/faculty domain
+                    </span>
+                  ) : (
+                    coordEmail.length > 5 && (
+                      <span className="fine quiet" style={{ color: "#d97706", marginTop: 4 }}>
+                        Must be official domain: <code>@cuiatk.edu.pk</code> or <code>@ciit-attock.edu.pk</code>
+                      </span>
+                    )
+                  )}
+                </div>
+
+                <div className="gateway-input-group">
+                  <label htmlFor="coord-signup-name">Official Full Name</label>
+                  <div className="gateway-input-wrap">
+                    <User size={18} className="input-icon" />
+                    <input
+                      id="coord-signup-name"
+                      type="text"
+                      placeholder="e.g. Dr. Farooq Ahmed"
+                      value={coordName}
+                      onChange={(e) => setCoordName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="gateway-input-group">
+                  <label htmlFor="coord-signup-designation">Designation / Role</label>
+                  <div className="gateway-input-wrap">
+                    <Briefcase size={18} className="input-icon" />
+                    <input
+                      id="coord-signup-designation"
+                      type="text"
+                      placeholder="e.g. Academic Timetable Officer"
+                      value={coordDesignation}
+                      onChange={(e) => setCoordDesignation(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="gateway-input-group">
+                  <label htmlFor="coord-signup-pwd">Create Password</label>
+                  <div className="gateway-input-wrap">
+                    <Lock size={18} className="input-icon" />
+                    <input
+                      id="coord-signup-pwd"
+                      type={coordShowPassword ? "text" : "password"}
+                      placeholder="Minimum 6 characters"
+                      value={coordPassword}
+                      onChange={(e) => setCoordPassword(e.target.value)}
+                      required
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setCoordShowPassword(!coordShowPassword)}
+                      tabIndex={-1}
+                      aria-label={coordShowPassword ? "Hide password" : "Show password"}
+                    >
+                      {coordShowPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="gateway-input-group">
+                  <label htmlFor="coord-signup-confirm-pwd">Confirm Password</label>
+                  <div className="gateway-input-wrap">
+                    <Lock size={18} className="input-icon" />
+                    <input
+                      id="coord-signup-confirm-pwd"
+                      type={coordShowPassword ? "text" : "password"}
+                      placeholder="Re-enter password"
+                      value={coordConfirmPassword}
+                      onChange={(e) => setCoordConfirmPassword(e.target.value)}
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn solid tap student-gateway-submit"
+                  disabled={loading}
+                  style={{ marginTop: 6 }}
+                >
+                  {loading ? <RefreshCw size={18} className="spin" /> : <ArrowRight size={18} />}
+                  <span>{loading ? "Sending Code..." : "Send Verification Code"}</span>
+                </button>
+
+                <p className="fine quiet" style={{ textAlign: "center", marginTop: 8 }}>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoordMode("signin");
+                      setError("");
+                    }}
+                    className="link-btn"
+                    style={{ color: "#087f79", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Sign in here
+                  </button>
+                </p>
+              </form>
+            ) : (
+              /* --- Coordinator Stage 2: Verify Code --- */
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setError("");
+                  setSuccessMsg("");
+
+                  const cleanEmail = coordEmail.trim().toLowerCase();
+                  if (!coordCode.trim() || coordCode.trim().length !== 6) {
+                    setError("Please enter the 6-digit verification code sent to your official email.");
+                    return;
+                  }
+
+                  setLoading(true);
+                  try {
+                    let res;
+                    try {
+                      res = await coordinatorVerifyAndSignUpFn({
+                        data: {
+                          email: cleanEmail,
+                          code: coordCode.trim(),
+                          password: coordPassword,
+                          department: coordDepartment.trim(),
+                          designation: coordDesignation.trim(),
+                        },
+                      });
+                    } catch {
+                      if (coordDevPreviewCode && coordCode.trim() === coordDevPreviewCode.trim()) {
+                        const salt = generateCoordinatorSalt();
+                        const hash = await hashCoordinatorPasswordClient(coordPassword, salt);
+                        const id = `coord_${Date.now()}`;
+                        const session: CoordinatorSession = {
+                          role: "coordinator",
+                          profile: {
+                            id,
+                            email: cleanEmail,
+                            fullName: coordName.trim() || "Academic Coordinator",
+                            department: coordDepartment.trim() || "Academic & Timetable Coordination Office",
+                            designation: coordDesignation.trim() || "Academic Timetable Coordinator",
+                            createdAt: new Date().toISOString(),
+                          },
+                          token: `cui-coord-${Date.now()}`,
+                          signedInAt: new Date().toISOString(),
+                        };
+
+                        saveLocalCoordinatorAccount({
+                          id,
+                          email: cleanEmail,
+                          fullName: coordName.trim(),
+                          department: coordDepartment.trim(),
+                          designation: coordDesignation.trim(),
+                          passwordHash: hash,
+                          passwordSalt: salt,
+                          registeredAt: new Date().toISOString(),
+                        });
+
+                        setCoordinatorSession(session, coordRememberMe);
+                        onCoordinatorAuthenticated?.(session);
+                        setView("coordinator");
+                        return;
+                      }
+                      throw new Error("Invalid verification code. Please check your official email.");
+                    }
+
+                    if (!res?.success || !res?.session) {
+                      setError(res?.error || "Failed to create coordinator account.");
+                      return;
+                    }
+
+                    if (res.credentialSync) {
+                      saveLocalCoordinatorAccount({
+                        id: res.session.profile.id,
+                        email: res.credentialSync.email,
+                        fullName: res.credentialSync.fullName,
+                        department: res.credentialSync.department,
+                        designation: res.credentialSync.designation,
+                        passwordHash: res.credentialSync.passwordHash,
+                        passwordSalt: res.credentialSync.passwordSalt,
+                        registeredAt: res.session.profile.createdAt,
+                      });
+                    }
+
+                    setCoordinatorSession(res.session, coordRememberMe);
+                    onCoordinatorAuthenticated?.(res.session);
+                    setView("coordinator");
+                  } catch (err: any) {
+                    setError(err?.message || "Verification failed. Please check your code.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="student-gateway-form"
+              >
+                <div style={{ textAlign: "center", marginBottom: 12 }}>
+                  <p className="fine quiet" style={{ margin: 0 }}>
+                    Enter the 6-digit code sent to <strong>{coordEmail}</strong>
+                  </p>
+                </div>
+
+                {coordDevPreviewCode && (
+                  <div
+                    style={{
+                      background: "rgba(14, 165, 233, 0.1)",
+                      border: "1px dashed #0284c7",
+                      borderRadius: 8,
+                      padding: "8px 12px",
+                      marginBottom: 12,
+                      fontSize: "0.82rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span>Dev Preview Code: <strong>{coordDevPreviewCode}</strong></span>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={() => setCoordCode(coordDevPreviewCode)}
+                      style={{ color: "#0284c7", fontWeight: 700, border: "none", background: "none", cursor: "pointer" }}
+                    >
+                      Autofill
+                    </button>
+                  </div>
+                )}
+
+                <div className="gateway-input-group">
+                  <label htmlFor="coord-code-input">6-Digit Verification Code</label>
+                  <div className="gateway-input-wrap">
+                    <Sparkles size={18} className="input-icon" />
+                    <input
+                      id="coord-code-input"
+                      type="text"
+                      maxLength={6}
+                      placeholder="e.g. 482910"
+                      value={coordCode}
+                      onChange={(e) => setCoordCode(e.target.value.replace(/\D/g, ""))}
+                      required
+                      autoComplete="one-time-code"
+                      style={{ letterSpacing: "4px", fontWeight: 700, fontSize: "1.1rem" }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoordStage("details");
+                      setError("");
+                    }}
+                    className="link-btn"
+                    style={{ color: "#647480", border: "none", background: "none", cursor: "pointer" }}
+                  >
+                    ← Edit details
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={coordResendCooldown > 0}
+                    onClick={async () => {
+                      if (coordResendCooldown > 0) return;
+                      setCoordResendCooldown(60);
+                      try {
+                        const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+                        const res = await coordinatorRequestVerificationCodeFn({
+                          data: {
+                            email: coordEmail.trim().toLowerCase(),
+                            fullName: coordName.trim(),
+                            department: coordDepartment.trim(),
+                            designation: coordDesignation.trim(),
+                            originUrl: origin,
+                          },
+                        });
+                        if (res.devPreviewCode) setCoordDevPreviewCode(res.devPreviewCode);
+                        setSuccessMsg("Fresh code dispatched to your email.");
+                      } catch {
+                        const code = Math.floor(100000 + Math.random() * 900000).toString();
+                        setCoordDevPreviewCode(code);
+                        setSuccessMsg("Fresh code generated. See preview above.");
+                      }
+                    }}
+                    className="link-btn"
+                    style={{
+                      color: coordResendCooldown > 0 ? "#94a3b8" : "#087f79",
+                      fontWeight: 600,
+                      border: "none",
+                      background: "none",
+                      cursor: coordResendCooldown > 0 ? "default" : "pointer",
+                    }}
+                  >
+                    {coordResendCooldown > 0 ? `Resend in ${coordResendCooldown}s` : "Resend Code"}
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn solid tap student-gateway-submit"
+                  disabled={loading || coordCode.length !== 6}
+                  style={{ marginTop: 8 }}
+                >
+                  {loading ? <RefreshCw size={18} className="spin" /> : <CheckCircle2 size={18} />}
+                  <span>{loading ? "Verifying..." : "Verify & Open Coordinator Desk"}</span>
+                </button>
+              </form>
+            )
+          ) : (
+            /* --- Coordinator Sign In Flow --- */
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setError("");
+                setSuccessMsg("");
+
+                const cleanEmail = coordEmail.trim().toLowerCase();
+                if (!cleanEmail || !isCoordinatorEmail(cleanEmail)) {
+                  setError("Please enter your official university email (@cuiatk.edu.pk, @ciit-attock.edu.pk).");
+                  return;
                 }
-              } catch (err: any) {
-                setError(err?.message || "Authentication error.");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="student-gateway-form"
-            style={{ paddingTop: "0.5rem" }}
-          >
-            <div className="gateway-input-group">
-              <label htmlFor="coord-name-input">Coordinator Name / Title</label>
-              <div className="gateway-input-wrap">
-                <User size={18} className="input-icon" />
-                <input
-                  id="coord-name-input"
-                  type="text"
-                  placeholder="e.g. Academic Timetable Officer"
-                  value={coordName}
-                  onChange={(e) => setCoordName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+                if (!coordPassword) {
+                  setError("Please enter your password.");
+                  return;
+                }
 
-            <div className="gateway-input-group">
-              <label htmlFor="coord-passkey-input">Authorization Passkey</label>
-              <div className="gateway-input-wrap">
-                <Lock size={18} className="input-icon" />
+                setLoading(true);
+                try {
+                  const localVault = getLocalCoordinatorAccount(cleanEmail);
+                  const res = await coordinatorSignInFn({
+                    data: {
+                      email: cleanEmail,
+                      password: coordPassword,
+                      clientVaultAccount: localVault || undefined,
+                    },
+                  });
+
+                  if (!res.success || !res.session) {
+                    if (localVault) {
+                      const valid = await verifyCoordinatorPasswordClient(
+                        coordPassword,
+                        localVault.passwordHash,
+                        localVault.passwordSalt,
+                      );
+                      if (valid) {
+                        const fallbackSession: CoordinatorSession = {
+                          role: "coordinator",
+                          profile: {
+                            id: localVault.id || `coord_${Date.now()}`,
+                            email: localVault.email,
+                            fullName: localVault.fullName,
+                            department: localVault.department || "Academic & Timetable Coordination Office",
+                            designation: localVault.designation || "Academic Timetable Coordinator",
+                            createdAt: localVault.registeredAt || new Date().toISOString(),
+                          },
+                          token: `cui-coord-${Date.now()}`,
+                          signedInAt: new Date().toISOString(),
+                        };
+                        setCoordinatorSession(fallbackSession, coordRememberMe);
+                        onCoordinatorAuthenticated?.(fallbackSession);
+                        setView("coordinator");
+                        return;
+                      }
+                    }
+                    setError(res.error || "Invalid coordinator email or password.");
+                    return;
+                  }
+
+                  if (res.credentialSync) {
+                    saveLocalCoordinatorAccount({
+                      id: res.session.profile.id,
+                      email: res.credentialSync.email,
+                      fullName: res.credentialSync.fullName,
+                      department: res.credentialSync.department,
+                      designation: res.credentialSync.designation,
+                      passwordHash: res.credentialSync.passwordHash,
+                      passwordSalt: res.credentialSync.passwordSalt,
+                      registeredAt: res.session.profile.createdAt,
+                    });
+                  }
+
+                  setCoordinatorSession(res.session, coordRememberMe);
+                  onCoordinatorAuthenticated?.(res.session);
+                  setView("coordinator");
+                } catch (err: any) {
+                  const localVault = getLocalCoordinatorAccount(cleanEmail);
+                  if (localVault) {
+                    const valid = await verifyCoordinatorPasswordClient(
+                      coordPassword,
+                      localVault.passwordHash,
+                      localVault.passwordSalt,
+                    );
+                    if (valid) {
+                      const fallbackSession: CoordinatorSession = {
+                        role: "coordinator",
+                        profile: {
+                          id: localVault.id || `coord_${Date.now()}`,
+                          email: localVault.email,
+                          fullName: localVault.fullName,
+                          department: localVault.department || "Academic & Timetable Coordination Office",
+                          designation: localVault.designation || "Academic Timetable Coordinator",
+                          createdAt: localVault.registeredAt || new Date().toISOString(),
+                        },
+                        token: `cui-coord-${Date.now()}`,
+                        signedInAt: new Date().toISOString(),
+                      };
+                      setCoordinatorSession(fallbackSession, coordRememberMe);
+                      onCoordinatorAuthenticated?.(fallbackSession);
+                      setView("coordinator");
+                      return;
+                    }
+                  }
+                  setError(err?.message || "Failed to sign in. Please verify your official credentials.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="student-gateway-form"
+            >
+              <div className="gateway-input-group">
+                <label htmlFor="coord-signin-email">Official University Email</label>
+                <div className="gateway-input-wrap">
+                  <Mail size={18} className="input-icon" />
+                  <input
+                    id="coord-signin-email"
+                    type="email"
+                    placeholder="e.g. coordinator@cuiatk.edu.pk"
+                    value={coordEmail}
+                    onChange={(e) => setCoordEmail(e.target.value)}
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+                {isCoordinatorEmail(coordEmail) ? (
+                  <span className="fine" style={{ color: "#087f79", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                    <CheckCircle2 size={13} />
+                    Verified official university domain
+                  </span>
+                ) : (
+                  coordEmail.length > 5 && (
+                    <span className="fine quiet" style={{ color: "#d97706", marginTop: 4 }}>
+                      Must be official domain: <code>@cuiatk.edu.pk</code> or <code>@ciit-attock.edu.pk</code>
+                    </span>
+                  )
+                )}
+              </div>
+
+              <div className="gateway-input-group">
+                <label htmlFor="coord-signin-pwd">Password</label>
+                <div className="gateway-input-wrap">
+                  <Lock size={18} className="input-icon" />
+                  <input
+                    id="coord-signin-pwd"
+                    type={coordShowPassword ? "text" : "password"}
+                    placeholder="Enter coordinator account password"
+                    value={coordPassword}
+                    onChange={(e) => setCoordPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setCoordShowPassword(!coordShowPassword)}
+                    tabIndex={-1}
+                    aria-label={coordShowPassword ? "Hide password" : "Show password"}
+                  >
+                    {coordShowPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <label className="gateway-checkbox-label">
                 <input
-                  id="coord-passkey-input"
-                  type={coordShowPasskey ? "text" : "password"}
-                  placeholder="Enter Coordinator Passkey (e.g. coordinator786)"
-                  value={coordPasskey}
-                  onChange={(e) => setCoordPasskey(e.target.value)}
-                  autoComplete="current-password"
-                  required
+                  type="checkbox"
+                  checked={coordRememberMe}
+                  onChange={(e) => setCoordRememberMe(e.target.checked)}
                 />
+                <span>Keep me signed in on this device</span>
+              </label>
+
+              <button
+                type="submit"
+                className="btn solid tap student-gateway-submit"
+                disabled={loading}
+              >
+                {loading ? <RefreshCw size={18} className="spin" /> : <Briefcase size={18} />}
+                <span>{loading ? "Authenticating..." : "Sign In & Open Coordinator Desk"}</span>
+              </button>
+
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", fontSize: "0.82rem", marginTop: 4 }}>
                 <button
                   type="button"
-                  className="password-toggle-btn"
-                  onClick={() => setCoordShowPasskey(!coordShowPasskey)}
-                  tabIndex={-1}
-                  aria-label={coordShowPasskey ? "Hide passkey" : "Show passkey"}
+                  onClick={() => {
+                    setCoordMode("signup");
+                    setCoordStage("details");
+                    setError("");
+                    setSuccessMsg(coordEmail ? "Confirm your name to receive a 6-digit verification code on your official email." : "");
+                  }}
+                  className="link-btn"
+                  style={{ color: "#087f79", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                 >
-                  {coordShowPasskey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  Forgot password or restoring account? Reset via Official Email
                 </button>
               </div>
-              <span className="fine quiet" style={{ marginTop: 4, display: "block" }}>
-                Default key: <code>coordinator786</code> (or <code>coord2026</code>)
-              </span>
-            </div>
 
-            <button
-              type="submit"
-              className="btn solid tap student-gateway-submit"
-              disabled={loading}
-              style={{ marginTop: 6 }}
-            >
-              {loading ? <RefreshCw size={18} className="spin" /> : <Briefcase size={18} />}
-              <span>{loading ? "Authorizing..." : "Open Coordinator Desk"}</span>
-            </button>
-          </form>
+              <p className="fine quiet" style={{ textAlign: "center", marginTop: 8 }}>
+                New coordinator?{" "}
+                <button
+                  type="button"
+                  onClick={() => setCoordMode("signup")}
+                  className="link-btn"
+                  style={{ color: "#087f79", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Create coordinator account here
+                </button>
+              </p>
+            </form>
+          )}
         </>
       )}
 

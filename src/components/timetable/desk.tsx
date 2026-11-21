@@ -100,7 +100,7 @@ function Frame() {
   }
 
   // Strict Authentication Gate: User MUST be signed in as either a Student, Faculty member, or Coordinator.
-  // If view is explicitly set to coordinator, the coordinator view has its own internal secure passkey screen.
+  // If view is explicitly set to coordinator, the coordinator view has its own internal secure official email auth screen.
   const isAuthenticated = Boolean(studentSession || facultySession || coordinatorSession || view === "coordinator");
 
   if (!isAuthenticated) {
