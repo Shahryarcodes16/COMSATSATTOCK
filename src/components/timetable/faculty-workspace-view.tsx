@@ -849,7 +849,7 @@ export function FacultyWorkspaceView({
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
                 <h3 style={{ margin: 0 }}>{teacherName}&apos;s Weekly Schedule</h3>
                 <span className="chip" style={{ fontWeight: 700, fontSize: "0.78rem", background: "var(--c-surface)", color: "var(--c-accent)" }}>
-                  {teacherEntries.length * 2} Credit Hours ({teacherEntries.length} Slots/Wk)
+                  {teacherClasses.length * 2} Credit Hours ({teacherClasses.length} Slots/Wk)
                 </span>
               </div>
               <p className="quiet" style={{ margin: 0 }}>
