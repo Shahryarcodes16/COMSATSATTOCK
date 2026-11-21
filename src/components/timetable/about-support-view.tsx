@@ -298,7 +298,7 @@ export function AboutSupportView() {
           <ShieldCheck size={28} color="var(--c-accent)" />
         </div>
         <div className="support-banner-info">
-          <h3>Need Help or Found an Issue?</h3>
+          <h3>Found an Issue?</h3>
           <p className="quiet fine">
             If you notice a timing error in your timetable, an unlisted batch, or have a feature suggestion to make FORTIS even better, please message directly via WhatsApp or email.
           </p>
