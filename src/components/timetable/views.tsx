@@ -8,7 +8,10 @@ import {
   Briefcase,
   Calendar,
   CalendarDays,
+  Check,
+  CheckCircle2,
   Clock,
+  Copy,
   DoorOpen,
   GraduationCap,
   Mail,
@@ -17,6 +20,8 @@ import {
   Printer,
   RefreshCw,
   Search,
+  Share2,
+  ShieldCheck,
   Sparkles,
   Table,
   Users,
@@ -39,6 +44,13 @@ import { getActiveFacultySession, type FacultySession } from "@/lib/faculty-auth
 import { isDatesheetActive } from "@/lib/datesheet";
 import { batchesMatch, isClassCancelled, getClassCancellations, removeClassCancellation } from "@/lib/campus-pulse";
 import { getActiveArrangedMakeupClasses } from "@/lib/makeup-classes";
+import { getActiveStudentSession } from "@/lib/student";
+import {
+  computeScheduleOverlap,
+  computeTwoTeachersScheduleOverlap,
+  type SlotComparisonResult,
+  type FreeRoomInfo,
+} from "@/lib/schedule-matcher";
 import { DayPicker, DaySlotBar, Segment } from "@/components/timetable/chrome";
 import { ClassList } from "@/components/timetable/class-list";
 import { useDesk } from "@/components/timetable/context";
@@ -1519,20 +1531,112 @@ function HitGroup({
 }
 
 export function FindView() {
-  const { open, setView, setBatchId, day, slot, goBack } = useDesk();
+  const { open, setView, setBatchId, pinnedBatch, day, slot, goBack, makeupRevision } = useDesk();
   const [query, setQuery] = useState("");
-  const [meet, setMeet] = useState<"teachers" | "batch">("teachers");
-  const [left, setLeft] = useState("");
+  const [meet, setMeet] = useState<"teachers" | "batch">("batch");
+  const [left, setLeft] = useState<string>(() => {
+    if (pinnedBatch !== null) return String(pinnedBatch);
+    const student = getActiveStudentSession();
+    if (student?.profile?.defaultBatch) {
+      const idx = batches.indexOf(student.profile.defaultBatch);
+      if (idx >= 0) return String(idx);
+    }
+    return "";
+  });
   const [right, setRight] = useState("");
+  const [matcherViewMode, setMatcherViewMode] = useState<"matrix" | "cards">("matrix");
+  const [filterOnlyFree, setFilterOnlyFree] = useState(false);
+  const [selectedSlotDetails, setSelectedSlotDetails] = useState<SlotComparisonResult | null>(null);
+  const [roomCategoryFilter, setRoomCategoryFilter] = useState<"all" | "labs" | "lts" | "crs">("all");
+  const [copiedSlotNotice, setCopiedSlotNotice] = useState(false);
+  const [cancelRevision, setCancelRevision] = useState(0);
   const hits = searchCatalog(query);
+
+  useEffect(() => {
+    const handleUpdate = () => setCancelRevision((r) => r + 1);
+    window.addEventListener("cui:class-cancellations-updated", handleUpdate);
+    window.addEventListener("cui:makeup-classes-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cui:class-cancellations-updated", handleUpdate);
+      window.removeEventListener("cui:makeup-classes-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   const leftId = left === "" ? -1 : Number(left);
   const rightId = right === "" ? -1 : Number(right);
   const ready = leftId >= 0 && rightId >= 0 && (meet === "batch" || leftId !== rightId);
-  const free = ready
-    ? mutualFree(meet === "teachers" ? forTeacher(leftId) : forBatch(leftId), forTeacher(rightId))
-    : [];
-  const freeNow = free.some((cell) => cell.day === day && cell.slot === slot);
+
+  const comparison = useMemo(() => {
+    if (!ready) return null;
+    if (meet === "batch") {
+      // rightId is teacher, leftId is batch
+      return computeScheduleOverlap(rightId, leftId);
+    } else {
+      // leftId is teacher1, rightId is teacher2
+      return computeTwoTeachersScheduleOverlap(leftId, rightId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, meet, leftId, rightId, makeupRevision, cancelRevision]);
+
+  const allMutualFreeSlots = useMemo(() => {
+    if (!comparison) return [];
+    const list: SlotComparisonResult[] = [];
+    for (let d = 0; d < 5; d++) {
+      for (let s = 0; s < 5; s++) {
+        const item = comparison.matrix[d][s];
+        if (item.isBothFree) {
+          list.push(item);
+        }
+      }
+    }
+    return list;
+  }, [comparison]);
+
+  const leftName = meet === "batch" ? (batches[leftId] || "Batch") : (teachers[leftId] || "Teacher 1");
+  const rightName = teachers[rightId] || "Teacher 2";
+
+  const generateStudentNoticeText = (
+    slotItem: SlotComparisonResult,
+    party1Name: string,
+    party2Name: string,
+  ) => {
+    const dayName = DAYS[slotItem.day];
+    const slotInfo = SLOTS[slotItem.slot];
+
+    const freeLabs = slotItem.freeRooms.filter((r) => r.group === "Labs").map((r) => r.name);
+    const freeLTs = slotItem.freeRooms.filter((r) => r.group === "Lecture theatres").map((r) => r.name);
+    const freeCRs = slotItem.freeRooms.filter((r) => r.group === "Classrooms" || r.group === "Lecture halls").map((r) => r.name);
+
+    let text = `📢 *CUI Attock Mutual Free Slot & Vacant Venues*\n\n`;
+    if (meet === "batch") {
+      text += `• *Class/Batch:* ${party1Name}\n• *Instructor:* ${party2Name}\n`;
+    } else {
+      text += `• *Faculty 1:* ${party1Name}\n• *Faculty 2:* ${party2Name}\n`;
+    }
+    text += `• *Day & Time:* ${dayName}, ${slotInfo.start} - ${slotInfo.end} (${slotInfo.label})\n`;
+    text += `• *Total Unoccupied Venues:* ${slotItem.freeRooms.length} rooms free\n`;
+
+    if (freeLabs.length > 0) {
+      text += `  🧪 *Free Labs (${freeLabs.length}):* ${freeLabs.slice(0, 6).join(", ")}${freeLabs.length > 6 ? "..." : ""}\n`;
+    }
+    if (freeLTs.length > 0) {
+      text += `  🏛️ *Free Lecture Theatres (${freeLTs.length}):* ${freeLTs.join(", ")}\n`;
+    }
+    if (freeCRs.length > 0) {
+      text += `  🏫 *Free Classrooms (${freeCRs.length}):* ${freeCRs.slice(0, 6).join(", ")}${freeCRs.length > 6 ? "..." : ""}\n`;
+    }
+    text += `\nShared via FORTIS Timetable App (COMSATS University Islamabad, Attock Campus)`;
+    return text;
+  };
+
+  const handleCopyNotice = (slotItem: SlotComparisonResult) => {
+    const text = generateStudentNoticeText(slotItem, leftName, rightName);
+    navigator.clipboard.writeText(text);
+    setCopiedSlotNotice(true);
+    setTimeout(() => setCopiedSlotNotice(false), 2500);
+  };
 
   return (
     <div className="page search-page">
@@ -1561,7 +1665,7 @@ export function FindView() {
         <div>
           <p className="eyebrow">Everything on the timetable</p>
           <h1 className="page-title">Search & meet</h1>
-          <p className="quiet">Find a class or a shared free lecture.</p>
+          <p className="quiet">Find a class, free consultation slot, or vacant classrooms & labs.</p>
         </div>
       </div>
       <label className="search">
@@ -1604,20 +1708,34 @@ export function FindView() {
         <section className="panel stack">
           <h2>When are they both free?</h2>
           <p className="quiet">
-            Pick two teachers, or a batch and a teacher, and see the lectures where neither is
-            already booked.
+            Pick a batch and teacher (or two teachers) to discover mutual free slots and real-time vacant classrooms, computer labs, and lecture theatres.
           </p>
           <Segment
             label="Who to compare"
             value={meet}
             onChange={(value) => {
-              setMeet(value === "batch" ? "batch" : "teachers");
-              setLeft("");
+              const nextMeet = value === "batch" ? "batch" : "teachers";
+              setMeet(nextMeet);
+              if (nextMeet === "batch") {
+                if (pinnedBatch !== null) setLeft(String(pinnedBatch));
+                else {
+                  const student = getActiveStudentSession();
+                  if (student?.profile?.defaultBatch) {
+                    const idx = batches.indexOf(student.profile.defaultBatch);
+                    setLeft(idx >= 0 ? String(idx) : "");
+                  } else {
+                    setLeft("");
+                  }
+                }
+              } else {
+                setLeft("");
+              }
               setRight("");
+              setSelectedSlotDetails(null);
             }}
             options={[
-              { value: "teachers", label: "Two teachers" },
               { value: "batch", label: "Batch and teacher" },
+              { value: "teachers", label: "Two teachers" },
             ]}
           />
           <label className="stack">
@@ -1625,7 +1743,10 @@ export function FindView() {
             <select
               className="select"
               value={left}
-              onChange={(event) => setLeft(event.target.value)}
+              onChange={(event) => {
+                setLeft(event.target.value);
+                setSelectedSlotDetails(null);
+              }}
             >
               <option value="">Choose</option>
               {meet === "batch"
@@ -1646,7 +1767,10 @@ export function FindView() {
             <select
               className="select"
               value={right}
-              onChange={(event) => setRight(event.target.value)}
+              onChange={(event) => {
+                setRight(event.target.value);
+                setSelectedSlotDetails(null);
+              }}
             >
               <option value="">Choose</option>
               {teachers.map((label, id) => (
@@ -1656,50 +1780,348 @@ export function FindView() {
               ))}
             </select>
           </label>
-          {ready ? (
-            <>
-              <p className="quiet">
-                {free.length} shared free lecture{free.length === 1 ? "" : "s"} this week.
-                {freeNow ? " Both are free in the lecture you are viewing." : ""}
-              </p>
-              <div className="free-grid" role="table" aria-label="Shared free lectures">
-                <div className="week-row" role="row">
-                  <span className="hd" role="columnheader">
-                    Slot
-                  </span>
-                  {["Mon", "Tue", "Wed", "Thu", "Fri"].map((label, index) => (
-                    <span key={`${label}${index}`} className="hd" role="columnheader">
-                      {label}
-                    </span>
-                  ))}
-                </div>
-                {SLOTS.map(({ label }, slotIndex) => (
-                  <div key={label} className="week-row" role="row">
-                    <span className="hd" role="rowheader">
-                      {label}
-                      <small className="shared-slot-time">{rangeLabel(slotIndex)}</small>
-                    </span>
-                    {[0, 1, 2, 3, 4].map((dayIndex) => {
-                      const openCell = free.some(
-                        (cell) => cell.day === dayIndex && cell.slot === slotIndex,
-                      );
-                      return (
-                        <i
-                          key={dayIndex}
-                          role="cell"
-                          aria-label={`${DAYS[dayIndex]} ${label}, ${rangeLabel(slotIndex)} PKT: ${openCell ? "free" : "busy"}`}
-                          className={openCell ? "open" : "shut"}
-                        >
-                          {openCell ? "Free" : "Busy"}
-                        </i>
-                      );
-                    })}
-                  </div>
-                ))}
+
+          {ready && comparison && (
+            <div className="matcher-results-block stack" style={{ gap: "1.25rem", marginTop: "1rem" }}>
+              {/* Overlap Summary Pill */}
+              <div className="matcher-summary-pill">
+                <CheckCircle2 size={18} color="#10b981" />
+                <span>
+                  Matching <strong>{leftName}</strong> with <strong>{rightName}</strong>:{" "}
+                  <strong>{comparison.bothFreeSlotsCount} Mutual Free Slots</strong> found with unoccupied classrooms, labs, and theatres available!
+                </span>
               </div>
-              <p className="fine">Times are in Islamabad time (PKT). Free means neither has a class listed; confirm before arranging a meeting.</p>
-            </>
-          ) : null}
+
+              {/* Filter only free & view mode switcher */}
+              <div className="matcher-layout-switcher">
+                <div className="switcher-tabs">
+                  <button
+                    type="button"
+                    className={`switcher-tab ${matcherViewMode === "matrix" ? "active" : ""}`}
+                    onClick={() => setMatcherViewMode("matrix")}
+                  >
+                    <Table size={14} />
+                    <span>5x5 Matrix Grid</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`switcher-tab ${matcherViewMode === "cards" ? "active" : ""}`}
+                    onClick={() => setMatcherViewMode("cards")}
+                  >
+                    <Sparkles size={14} />
+                    <span>Quick Free Slots ({allMutualFreeSlots.length})</span>
+                  </button>
+                </div>
+
+                <label className="filter-free-label" style={{ marginLeft: "auto" }}>
+                  <input
+                    type="checkbox"
+                    checked={filterOnlyFree}
+                    onChange={(e) => setFilterOnlyFree(e.target.checked)}
+                  />
+                  <span>Only show mutual free slots</span>
+                </label>
+              </div>
+
+              {/* MODE A: 5x5 Matrix Grid */}
+              {matcherViewMode === "matrix" && (
+                <div className="matcher-matrix-scroll-wrapper">
+                  <div className="matcher-matrix-grid">
+                    <div className="matrix-header-cell time-corner">Day / Time</div>
+                    {SLOTS.map((s) => (
+                      <div key={s.label} className="matrix-header-cell slot-col">
+                        <strong>{s.label}</strong>
+                        <span className="slot-hours">{s.start} - {s.end}</span>
+                      </div>
+                    ))}
+
+                    {DAYS.map((dayName, dayIdx) => (
+                      <div key={dayName} className="matrix-row-group">
+                        <div className="matrix-day-cell">
+                          <span className="day-name-full">{dayName}</span>
+                          <span className="day-name-short">{DAY_SHORT[dayIdx]}</span>
+                        </div>
+
+                        {comparison.matrix[dayIdx].map((cell) => {
+                          const isBothFree = cell.isBothFree;
+                          const isSelected =
+                            selectedSlotDetails?.day === cell.day &&
+                            selectedSlotDetails?.slot === cell.slot;
+
+                          if (filterOnlyFree && !isBothFree) {
+                            return (
+                              <div key={cell.slot} className="matrix-cell muted-slot">
+                                <span className="fine quiet">Occupied</span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={cell.slot}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSlotDetails(cell);
+                                setRoomCategoryFilter("all");
+                              }}
+                              className={`matrix-cell ${isBothFree ? "free-match" : "busy-slot"} ${isSelected ? "selected" : ""}`}
+                            >
+                              {isBothFree ? (
+                                <div className="cell-free-content">
+                                  <span className="match-tag">
+                                    <CheckCircle2 size={12} />
+                                    BOTH FREE
+                                  </span>
+                                  <div className="free-rooms-pill">
+                                    <DoorOpen size={11} />
+                                    <span>{cell.freeRooms.length} Rooms Free</span>
+                                  </div>
+                                  {cell.freeLabsCount > 0 && (
+                                    <span className="labs-available-pill">
+                                      🧪 {cell.freeLabsCount} Labs Free
+                                    </span>
+                                  )}
+                                  {cell.freeLTsCount > 0 && (
+                                    <span className="lts-count-chip" style={{ fontSize: "0.68rem", padding: "0.1rem 0.4rem" }}>
+                                      🏛️ {cell.freeLTsCount} LTs Free
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="cell-busy-content">
+                                  <span className="busy-tag">
+                                    <XCircle size={11} />
+                                    BUSY
+                                  </span>
+                                  {!cell.isTeacherFree && cell.teacherEntry && (
+                                    <div className="busy-reason teacher">
+                                      <strong>{meet === "batch" ? "Teacher:" : "Teacher 1:"}</strong> {cell.teacherEntry.batch} ({cell.teacherEntry.room})
+                                    </div>
+                                  )}
+                                  {!cell.isBatchFree && cell.batchEntry && (
+                                    <div className="busy-reason batch">
+                                      <strong>{meet === "batch" ? "Batch:" : "Teacher 2:"}</strong> {cell.batchEntry.subject} ({cell.batchEntry.room})
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MODE B: Quick Free Slots Cards */}
+              {matcherViewMode === "cards" && (
+                <div className="quick-free-slots-list">
+                  {allMutualFreeSlots.length === 0 ? (
+                    <div className="empty-state stack">
+                      <XCircle size={32} aria-hidden />
+                      <h3>No Mutual Free Slots Found</h3>
+                      <p className="quiet">
+                        Every scheduled slot throughout the week is occupied by either {leftName} or {rightName}.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="free-slots-cards-grid">
+                      {allMutualFreeSlots.map((slotItem) => {
+                        const dayName = DAYS[slotItem.day];
+                        const slotInfo = SLOTS[slotItem.slot];
+                        const isSelected =
+                          selectedSlotDetails?.day === slotItem.day &&
+                          selectedSlotDetails?.slot === slotItem.slot;
+
+                        return (
+                          <div
+                            key={`${slotItem.day}-${slotItem.slot}`}
+                            className={`free-slot-card ${isSelected ? "selected" : ""}`}
+                          >
+                            <div className="slot-card-top">
+                              <span className="slot-card-day">{dayName}</span>
+                              <span className="slot-card-time">
+                                {slotInfo.label} ({slotInfo.start} - {slotInfo.end})
+                              </span>
+                            </div>
+
+                            <div className="slot-card-venues-info">
+                              <span className="venues-count-chip">
+                                <DoorOpen size={13} />
+                                <strong>{slotItem.freeRooms.length}</strong> Rooms Vacant
+                              </span>
+                              {slotItem.freeLabsCount > 0 && (
+                                <span className="labs-count-chip">
+                                  🧪 <strong>{slotItem.freeLabsCount}</strong> Labs Free
+                                </span>
+                              )}
+                              {slotItem.freeLTsCount > 0 && (
+                                <span className="lts-count-chip">
+                                  🏛️ <strong>{slotItem.freeLTsCount}</strong> LTs Free
+                                </span>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              className="btn solid sm tap select-slot-btn"
+                              onClick={() => {
+                                setSelectedSlotDetails(slotItem);
+                                setRoomCategoryFilter("all");
+                              }}
+                            >
+                              <Sparkles size={13} />
+                              <span>{isSelected ? "Inspecting Vacant Venues" : "View Free Venues"}</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Selected Free Slot Venue Discovery Drawer (Read-Only) */}
+              {selectedSlotDetails && (
+                <div className="slot-discovery-drawer">
+                  <div className="discovery-header">
+                    <div className="discovery-title">
+                      <Sparkles size={22} color="#10b981" />
+                      <div>
+                        <h3>
+                          {DAYS[selectedSlotDetails.day]} • {SLOTS[selectedSlotDetails.slot].label} (
+                          {SLOTS[selectedSlotDetails.slot].start} - {SLOTS[selectedSlotDetails.slot].end})
+                        </h3>
+                        <p>
+                          {selectedSlotDetails.isBothFree
+                            ? `🎉 Both ${leftName} and ${rightName} are free! Explore available classrooms, computer labs, and lecture theatres below.`
+                            : `One or both parties are occupied in this slot.`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="close-drawer-btn"
+                      onClick={() => setSelectedSlotDetails(null)}
+                    >
+                      ✕ Close
+                    </button>
+                  </div>
+
+                  {selectedSlotDetails.isBothFree && (
+                    <div className="discovery-content stack">
+                      {/* Category Filter Pills */}
+                      <div className="room-category-counters">
+                        <button
+                          type="button"
+                          className={`counter-filter-btn ${roomCategoryFilter === "all" ? "active" : ""}`}
+                          onClick={() => setRoomCategoryFilter("all")}
+                        >
+                          All Venues ({selectedSlotDetails.freeRooms.length})
+                        </button>
+                        <button
+                          type="button"
+                          className={`counter-filter-btn labs ${roomCategoryFilter === "labs" ? "active" : ""}`}
+                          onClick={() => setRoomCategoryFilter("labs")}
+                        >
+                          🧪 Labs ({selectedSlotDetails.freeLabsCount})
+                        </button>
+                        <button
+                          type="button"
+                          className={`counter-filter-btn lts ${roomCategoryFilter === "lts" ? "active" : ""}`}
+                          onClick={() => setRoomCategoryFilter("lts")}
+                        >
+                          🏛️ LTs ({selectedSlotDetails.freeLTsCount})
+                        </button>
+                        <button
+                          type="button"
+                          className={`counter-filter-btn crs ${roomCategoryFilter === "crs" ? "active" : ""}`}
+                          onClick={() => setRoomCategoryFilter("crs")}
+                        >
+                          🏫 Classrooms ({selectedSlotDetails.freeCRsCount})
+                        </button>
+                      </div>
+
+                      {/* List of Available Free Venues (Read-Only) */}
+                      <div className="free-venues-grid">
+                        {selectedSlotDetails.freeRooms
+                          .filter((r) => {
+                            if (roomCategoryFilter === "labs") return r.group === "Labs";
+                            if (roomCategoryFilter === "lts") return r.group === "Lecture theatres";
+                            if (roomCategoryFilter === "crs")
+                              return r.group === "Classrooms" || r.group === "Lecture halls";
+                            return true;
+                          })
+                          .map((r) => {
+                            const cardType =
+                              r.group === "Labs" ? "lab" : r.group === "Lecture theatres" ? "lt" : "room";
+                            return (
+                              <div key={r.id} className={`venue-card ${cardType}`}>
+                                <div className="venue-info">
+                                  <span className="venue-group-tag">
+                                    {r.group === "Labs" ? "🧪 " : r.group === "Lecture theatres" ? "🏛️ " : "🏫 "}
+                                    {r.group}
+                                  </span>
+                                  <span className="venue-name">{r.name}</span>
+                                </div>
+
+                                <div className="venue-actions-row">
+                                  <button
+                                    type="button"
+                                    className="btn sm tap view-room-sched-btn"
+                                    onClick={() => open({ type: "room", id: r.id })}
+                                    title={`View ${r.name} schedule`}
+                                  >
+                                    <DoorOpen size={13} />
+                                    <span>View Timetable</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {/* Student Sharing & Notice Action Row */}
+                      <div className="venue-actions-row" style={{ marginTop: "0.85rem", paddingTop: "0.85rem", borderTop: "1px dashed var(--c-line)" }}>
+                        <button
+                          type="button"
+                          className="btn tap copy-venue-btn"
+                          onClick={() => handleCopyNotice(selectedSlotDetails)}
+                          title="Copy mutual free slot and vacant venues text"
+                        >
+                          {copiedSlotNotice ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                          <span>{copiedSlotNotice ? "Copied Details to Clipboard!" : "Copy Free Slot & Venues for WhatsApp / CR"}</span>
+                        </button>
+
+                        <a
+                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                            generateStudentNoticeText(selectedSlotDetails, leftName, rightName)
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="whatsapp-share-pill"
+                          title="Share this mutual free slot on WhatsApp"
+                        >
+                          <Share2 size={13} />
+                          <span>Share on WhatsApp</span>
+                        </a>
+                      </div>
+
+                      {/* Read-Only Notice - Enforcing No Booking For Students */}
+                      <div className="student-readonly-notice">
+                        <ShieldCheck size={18} color="var(--c-accent)" />
+                        <span>
+                          <strong>Live Campus Vacancy (Read-Only):</strong> Free classrooms, labs, and lecture theatres are displayed live. Room reservations and makeup class scheduling can only be initiated by authorized faculty members.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </section>
       )}
     </div>

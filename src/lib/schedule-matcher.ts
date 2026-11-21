@@ -15,6 +15,7 @@ import {
   type ClassEntry,
   type RoomGroup,
 } from "./schedule";
+import { isClassCancelled } from "./campus-pulse";
 
 export interface FreeRoomInfo {
   id: number;
@@ -67,6 +68,10 @@ export function computeScheduleOverlap(
   // Index entries by day and slot for rapid matching (including dynamic makeup classes)
   const entriesByCell = new Map<string, ClassEntry[]>();
   for (const entry of getAllEntries()) {
+    // If a class is cancelled, its teacher, batch, and room are freed
+    if (isClassCancelled(entry.day, entry.slot, entry.teacher, entry.batch, entry.room)) {
+      continue;
+    }
     const key = `${entry.day}-${entry.slot}`;
     const list = entriesByCell.get(key) || [];
     list.push(entry);
@@ -155,6 +160,113 @@ export function computeScheduleOverlap(
     teacherName,
     batchId,
     batchName,
+    totalSlots: 25,
+    bothFreeSlotsCount: bothFreeCount,
+    matrix,
+  };
+}
+
+/**
+ * Computes the complete 5-day x 5-slot comparison matrix between two teachers.
+ * Discovers mutual free consultation slots and unoccupied campus rooms/labs/theatres.
+ */
+export function computeTwoTeachersScheduleOverlap(
+  teacher1Id: number,
+  teacher2Id: number,
+): WeekComparisonSummary {
+  const teacher1Name = teachers[teacher1Id] || `Teacher #${teacher1Id}`;
+  const teacher2Name = teachers[teacher2Id] || `Teacher #${teacher2Id}`;
+
+  const entriesByCell = new Map<string, ClassEntry[]>();
+  for (const entry of getAllEntries()) {
+    if (isClassCancelled(entry.day, entry.slot, entry.teacher, entry.batch, entry.room)) {
+      continue;
+    }
+    const key = `${entry.day}-${entry.slot}`;
+    const list = entriesByCell.get(key) || [];
+    list.push(entry);
+    entriesByCell.set(key, list);
+  }
+
+  const matrix: SlotComparisonResult[][] = [];
+  let bothFreeCount = 0;
+
+  for (let day = 0; day < 5; day++) {
+    const daySlots: SlotComparisonResult[] = [];
+
+    for (let slot = 0; slot < 5; slot++) {
+      const cellEntries = entriesByCell.get(`${day}-${slot}`) || [];
+
+      const t1Entry = cellEntries.find((e) => e.teacher === teacher1Id);
+      const isTeacher1Free = !t1Entry;
+
+      const t2Entry = cellEntries.find((e) => e.teacher === teacher2Id);
+      const isTeacher2Free = !t2Entry;
+
+      const isBothFree = isTeacher1Free && isTeacher2Free;
+      if (isBothFree) {
+        bothFreeCount++;
+      }
+
+      const occupiedRooms = new Set<number>();
+      for (const e of cellEntries) {
+        occupiedRooms.add(e.room);
+      }
+
+      const freeRooms: FreeRoomInfo[] = [];
+      let freeLabsCount = 0;
+      let freeLTsCount = 0;
+      let freeCRsCount = 0;
+
+      if (isBothFree) {
+        for (let rId = 0; rId < rooms.length; rId++) {
+          if (!occupiedRooms.has(rId)) {
+            const name = rooms[rId];
+            const group = roomGroup(name);
+            freeRooms.push({ id: rId, name, group });
+
+            if (group === "Labs") freeLabsCount++;
+            else if (group === "Lecture theatres") freeLTsCount++;
+            else if (group === "Classrooms" || group === "Lecture halls") freeCRsCount++;
+          }
+        }
+      }
+
+      daySlots.push({
+        day,
+        slot,
+        isTeacherFree: isTeacher1Free,
+        isBatchFree: isTeacher2Free,
+        isBothFree,
+        teacherEntry: t1Entry
+          ? {
+              subject: subjects[t1Entry.subject] || "Subject",
+              batch: batches[t1Entry.batch] || "Batch",
+              room: rooms[t1Entry.room] || "Room",
+            }
+          : null,
+        batchEntry: t2Entry
+          ? {
+              subject: subjects[t2Entry.subject] || "Subject",
+              teacher: teachers[t2Entry.teacher] || "Teacher",
+              room: rooms[t2Entry.room] || "Room",
+            }
+          : null,
+        freeRooms,
+        freeLabsCount,
+        freeLTsCount,
+        freeCRsCount,
+      });
+    }
+
+    matrix.push(daySlots);
+  }
+
+  return {
+    teacherId: teacher1Id,
+    teacherName: teacher1Name,
+    batchId: teacher2Id,
+    batchName: teacher2Name,
     totalSlots: 25,
     bothFreeSlotsCount: bothFreeCount,
     matrix,

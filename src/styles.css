@@ -9525,6 +9525,40 @@ select optgroup {
   transform: translateY(-1px);
 }
 
+.view-room-sched-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  color: var(--c-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.view-room-sched-btn:hover {
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  border-color: var(--c-accent);
+}
+
+.student-readonly-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1.15rem;
+  background: color-mix(in srgb, var(--c-accent) 8%, var(--c-paper));
+  border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent);
+  border-radius: var(--r-md);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--c-ink);
+  margin-top: 0.85rem;
+}
+
 /* Booking Modal Dialog */
 .booking-modal-backdrop {
   position: fixed;
